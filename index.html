@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#ffce54" />
+  <link rel="manifest" href="pwa/manifest.json" />
+  <link rel="stylesheet" href="styles.css" />
+  <title>Kitai's Words</title>
+</head>
+<body>
+  <header>
+    <div class="logo">ことば</div>
+    <button id="parent-button" aria-label="Parent settings">⚙️</button>
+  </header>
+
+  <main>
+    <div id="status">
+      <span id="mode-label">Listen & Tap</span>
+      <span id="category-label">Mixed</span>
+      <span id="voice-warning" class="hidden">No Japanese voice found. Playing without speech.</span>
+    </div>
+
+    <section id="prompt-area">
+      <div id="prompt-word">???</div>
+      <button id="speak-btn" aria-label="Replay word">🔊</button>
+      <div id="feedback" aria-live="polite"></div>
+    </section>
+
+    <section id="cards" class="cards"></section>
+
+    <section id="dropzone-section" class="hidden">
+      <div id="dropzone" class="dropzone">Drop here</div>
+    </section>
+  </main>
+
+  <div id="settings-overlay" class="hidden">
+    <div id="settings" role="dialog" aria-modal="true">
+      <h2>Parent Settings</h2>
+      <label>Mode:
+        <select id="mode-select">
+          <option value="tap">Listen & Tap</option>
+          <option value="drag">Drag & Drop</option>
+        </select>
+      </label>
+      <label>Choices:
+        <select id="choice-count">
+          <option value="2">2</option>
+          <option value="3" selected>3</option>
+          <option value="4">4</option>
+        </select>
+      </label>
+      <label>Category:
+        <select id="category-select"></select>
+      </label>
+      <label>Voice:
+        <select id="voice-select"></select>
+      </label>
+      <label>
+        <input type="checkbox" id="romaji-toggle" />
+        Show romaji (off by default)
+      </label>
+      <button id="close-settings">Done</button>
+    </div>
+  </div>
+
+  <audio id="sfx-correct" preload="auto" src="assets/sfx/correct.mp3"></audio>
+  <script src="app.js"></script>
+</body>
+</html>

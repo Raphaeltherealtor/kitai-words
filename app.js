@@ -25,6 +25,8 @@ const state = {
   soundEnabled: true,
   theme: "default",
   imageOverrides: {},
+  imageCategoryId: "all",
+  imageModalItemId: null,
 };
 
 const els = {
@@ -42,6 +44,7 @@ const els = {
   overlay: document.getElementById("settings-overlay"),
   choiceCount: document.getElementById("choice-count"),
   categorySelect: document.getElementById("category-select"),
+  categoryQuick: document.getElementById("category-quick"),
   voiceSelect: document.getElementById("voice-select"),
   romajiToggle: document.getElementById("romaji-toggle"),
   vibrationToggle: document.getElementById("vibration-toggle"),
@@ -59,6 +62,16 @@ const els = {
   imageSearch: document.getElementById("image-search"),
   imageList: document.getElementById("image-list"),
   wrongOverlay: document.getElementById("wrong-overlay"),
+  imageCategoryPills: document.getElementById("image-category-pills"),
+  imageModal: document.getElementById("image-modal"),
+  imageModalTitle: document.getElementById("image-modal-title"),
+  imageModalImg: document.getElementById("image-modal-img"),
+  imageModalClose: document.getElementById("image-modal-close"),
+  imageModalUpload: document.getElementById("image-modal-upload"),
+  imageModalCamera: document.getElementById("image-modal-camera"),
+  imageModalReset: document.getElementById("image-modal-reset"),
+  imageModalFile: document.getElementById("image-modal-file"),
+  imageModalCameraInput: document.getElementById("image-modal-camera-input"),
 };
 
 document.addEventListener("DOMContentLoaded", init);
@@ -87,12 +100,19 @@ async function loadData() {
   mixedOpt.value = "mixed";
   mixedOpt.textContent = "Mixed";
   els.categorySelect.appendChild(mixedOpt);
+  if (els.categoryQuick) {
+    els.categoryQuick.innerHTML = "";
+    els.categoryQuick.appendChild(mixedOpt.cloneNode(true));
+  }
 
   state.categories.forEach((cat) => {
     const opt = document.createElement("option");
     opt.value = cat.id;
     opt.textContent = `${cat.emoji} ${cat.label_en}`;
     els.categorySelect.appendChild(opt);
+    if (els.categoryQuick) {
+      els.categoryQuick.appendChild(opt.cloneNode(true));
+    }
   });
 }
 
@@ -266,8 +286,25 @@ function bindUI() {
       e.target.value === "mixed"
         ? "Mixed"
         : state.categories.find((c) => c.id === e.target.value)?.label_en || "Mixed";
+    if (els.categoryQuick && els.categoryQuick.value !== e.target.value) {
+      els.categoryQuick.value = e.target.value;
+    }
     startRound();
   });
+
+  if (els.categoryQuick) {
+    els.categoryQuick.addEventListener("change", (e) => {
+      state.categoryId = e.target.value;
+      els.categoryLabel.textContent =
+        e.target.value === "mixed"
+          ? "Mixed"
+          : state.categories.find((c) => c.id === e.target.value)?.label_en || "Mixed";
+      if (els.categorySelect && els.categorySelect.value !== e.target.value) {
+        els.categorySelect.value = e.target.value;
+      }
+      startRound();
+    });
+  }
 
   els.voiceSelect.addEventListener("change", (e) => {
     state.voiceId = e.target.value;
@@ -299,6 +336,48 @@ function bindUI() {
 
   if (els.imageSearch) {
     els.imageSearch.addEventListener("input", renderImageList);
+  }
+
+  if (els.imageModalClose) {
+    els.imageModalClose.addEventListener("click", closeImageModal);
+  }
+  if (els.imageModalUpload) {
+    els.imageModalUpload.addEventListener("click", () => {
+      if (!els.imageModalFile || !state.imageModalItemId) return;
+      els.imageModalFile.dataset.itemId = state.imageModalItemId;
+      els.imageModalFile.click();
+    });
+  }
+  if (els.imageModalCamera) {
+    els.imageModalCamera.addEventListener("click", () => {
+      if (!els.imageModalCameraInput || !state.imageModalItemId) return;
+      els.imageModalCameraInput.dataset.itemId = state.imageModalItemId;
+      els.imageModalCameraInput.click();
+    });
+  }
+  if (els.imageModalReset) {
+    els.imageModalReset.addEventListener("click", () => {
+      if (state.imageModalItemId) removeImageOverride(state.imageModalItemId);
+      closeImageModal();
+    });
+  }
+  if (els.imageModalFile) {
+    els.imageModalFile.addEventListener("change", () => {
+      const id = els.imageModalFile.dataset.itemId;
+      const file = els.imageModalFile.files?.[0];
+      if (id && file) saveImageOverride(id, file);
+      els.imageModalFile.value = "";
+      closeImageModal();
+    });
+  }
+  if (els.imageModalCameraInput) {
+    els.imageModalCameraInput.addEventListener("change", () => {
+      const id = els.imageModalCameraInput.dataset.itemId;
+      const file = els.imageModalCameraInput.files?.[0];
+      if (id && file) saveImageOverride(id, file);
+      els.imageModalCameraInput.value = "";
+      closeImageModal();
+    });
   }
 
   els.modeButtons.forEach((btn) => {
@@ -353,89 +432,73 @@ function renderImageList() {
   const term = (els.imageSearch?.value || "").toLowerCase().trim();
   els.imageList.innerHTML = "";
 
-  state.categories.forEach((cat) => {
-    const catItems = state.items.filter((i) => i.categoryId === cat.id);
-    const filtered = catItems.filter((item) => {
-      if (!term) return true;
-      const haystack = `${item.en} ${item.jaKana} ${item.jaRomaji}`.toLowerCase();
-      return haystack.includes(term);
-    });
-    if (!filtered.length) return;
-
-    const section = document.createElement("div");
-    section.className = "image-section";
-    const title = document.createElement("h3");
-    title.textContent = `${cat.emoji} ${cat.label_en}`;
-    section.appendChild(title);
-
-    filtered.forEach((item) => {
-      const row = document.createElement("div");
-      row.className = "image-row";
-
-      const preview = document.createElement("div");
-      preview.className = "image-preview";
-      const img = document.createElement("img");
-      img.src = getImageSrc(item);
-      img.alt = item.en;
-      preview.appendChild(img);
-      row.appendChild(preview);
-
-      const meta = document.createElement("div");
-      meta.className = "image-meta";
-      const t = document.createElement("div");
-      t.className = "title";
-      t.textContent = `${item.en} (${item.jaKana})`;
-      const sub = document.createElement("div");
-      sub.className = "subtitle";
-      sub.textContent = state.imageOverrides[item.id] ? "Custom image in use" : "Using default";
-      meta.appendChild(t);
-      meta.appendChild(sub);
-
-      const actions = document.createElement("div");
-      actions.className = "image-actions";
-
-      const uploadInput = document.createElement("input");
-      uploadInput.type = "file";
-      uploadInput.accept = "image/*";
-      uploadInput.className = "hidden";
-      uploadInput.addEventListener("change", () => {
-        const file = uploadInput.files?.[0];
-        if (file) saveImageOverride(item.id, file);
-        uploadInput.value = "";
+  if (els.imageCategoryPills) {
+    els.imageCategoryPills.innerHTML = "";
+    const makePill = (id, label) => {
+      const btn = document.createElement("button");
+      btn.className = "pill-btn";
+      if (id === state.imageCategoryId) btn.classList.add("active");
+      btn.textContent = label;
+      btn.addEventListener("click", () => {
+        state.imageCategoryId = id;
+        renderImageList();
       });
-
-      const cameraInput = document.createElement("input");
-      cameraInput.type = "file";
-      cameraInput.accept = "image/*";
-      cameraInput.capture = "environment";
-      cameraInput.className = "hidden";
-      cameraInput.addEventListener("change", () => {
-        const file = cameraInput.files?.[0];
-        if (file) saveImageOverride(item.id, file);
-        cameraInput.value = "";
-      });
-
-      const uploadBtn = document.createElement("button");
-      uploadBtn.textContent = "Upload";
-      uploadBtn.addEventListener("click", () => uploadInput.click());
-
-      const cameraBtn = document.createElement("button");
-      cameraBtn.textContent = "Camera";
-      cameraBtn.addEventListener("click", () => cameraInput.click());
-
-      const resetBtn = document.createElement("button");
-      resetBtn.textContent = "Reset";
-      resetBtn.className = "reset";
-      resetBtn.disabled = !state.imageOverrides[item.id];
-      resetBtn.addEventListener("click", () => removeImageOverride(item.id));
-
-      actions.append(uploadInput, cameraInput, uploadBtn, cameraBtn, resetBtn);
-      meta.appendChild(actions);
-      row.appendChild(meta);
-      section.appendChild(row);
+      return btn;
+    };
+    els.imageCategoryPills.appendChild(makePill("all", "All"));
+    state.categories.forEach((cat) => {
+      els.imageCategoryPills.appendChild(makePill(cat.id, cat.label_en));
     });
-    els.imageList.appendChild(section);
+  }
+
+  const filteredItems = state.items.filter((item) => {
+    const catOk = state.imageCategoryId === "all" || item.categoryId === state.imageCategoryId;
+    if (!catOk) return false;
+    if (!term) return true;
+    const haystack = `${item.en} ${item.jaKana} ${item.jaRomaji}`.toLowerCase();
+    return haystack.includes(term);
   });
+
+  filteredItems.forEach((item) => {
+    const card = document.createElement("div");
+    card.className = "image-card";
+    const preview = document.createElement("div");
+    preview.className = "image-preview";
+    const img = document.createElement("img");
+    img.src = getImageSrc(item);
+    img.alt = item.en;
+    preview.appendChild(img);
+    card.appendChild(preview);
+
+    const title = document.createElement("div");
+    title.className = "title";
+    title.textContent = item.en;
+    card.appendChild(title);
+
+    const sub = document.createElement("div");
+    sub.className = "subtitle";
+    sub.textContent = state.imageOverrides[item.id] ? "Custom image" : "Default image";
+    card.appendChild(sub);
+
+    card.addEventListener("click", () => openImageModal(item));
+    els.imageList.appendChild(card);
+  });
+}
+
+function openImageModal(item) {
+  if (!els.imageModal || !els.imageModalTitle || !els.imageModalImg) return;
+  state.imageModalItemId = item.id;
+  els.imageModalTitle.textContent = `${item.en} (${item.jaKana})`;
+  els.imageModalImg.src = getImageSrc(item);
+  if (els.imageModalReset) {
+    els.imageModalReset.disabled = !state.imageOverrides[item.id];
+  }
+  els.imageModal.classList.remove("hidden");
+}
+
+function closeImageModal() {
+  state.imageModalItemId = null;
+  if (els.imageModal) els.imageModal.classList.add("hidden");
 }
 
 function setActiveModeButton(type) {
@@ -446,6 +509,7 @@ function setActiveModeButton(type) {
 
 function updateModeButtonsForTrack(track) {
   if (track === "vocab") {
+    if (els.categoryQuick) els.categoryQuick.parentElement.classList.remove("hidden");
     const [btn1, btn2] = els.modeButtons;
     btn1.dataset.gametype = "tap";
     btn1.textContent = "Listen & Tap";
@@ -455,6 +519,7 @@ function updateModeButtonsForTrack(track) {
     state.currentGameType = "tap";
     setActiveModeButton("tap");
   } else if (track === "hiragana" || track === "katakana") {
+    if (els.categoryQuick) els.categoryQuick.parentElement.classList.add("hidden");
     const [btn1, btn2] = els.modeButtons;
     btn1.dataset.gametype = "kana-tap";
     btn1.textContent = "Sound & Pick";
@@ -464,6 +529,7 @@ function updateModeButtonsForTrack(track) {
     state.currentGameType = "kana-tap";
     setActiveModeButton("kana-tap");
   } else {
+    if (els.categoryQuick) els.categoryQuick.parentElement.classList.add("hidden");
     els.modeButtons.forEach((b) => (b.disabled = true));
   }
 }
@@ -676,7 +742,12 @@ function buildDragCompleteRound(target) {
 
   const poolChars = Array.from(new Set(pickPool().flatMap((i) => Array.from(i.jaKana))));
   const distractors = shuffle(poolChars.filter((c) => c !== missingChar)).slice(0, 3);
-  const options = shuffle([missingChar, ...distractors]).slice(0, 3);
+  let options = shuffle([missingChar, ...distractors]).slice(0, 3);
+  if (!options.includes(missingChar)) {
+    options.pop();
+    options.push(missingChar);
+    options = shuffle(options);
+  }
 
   els.completeChoices.innerHTML = "";
   options.forEach((opt) => {
@@ -716,7 +787,12 @@ function buildKanaCompleteRound(word) {
     poolChars.splice(0, poolChars.length, ...kataSet);
   }
   const distractors = shuffle(poolChars.filter((c) => c !== missingChar)).slice(0, 3);
-  const options = shuffle([missingChar, ...distractors]).slice(0, 3);
+  let options = shuffle([missingChar, ...distractors]).slice(0, 3);
+  if (!options.includes(missingChar)) {
+    options.pop();
+    options.push(missingChar);
+    options = shuffle(options);
+  }
 
   els.completeChoices.innerHTML = "";
   options.forEach((opt) => {
@@ -784,7 +860,8 @@ function handleKanaCompleteChoice(opt, missingChar) {
 
 let dragData = { item: null, el: null };
 let wrongOverlayTimer = null;
-let dragOptionData = { value: null, el: null };
+let dragOptionData = { value: null, el: null, startX: 0, startY: 0 };
+let dragOptionHoverSlot = null;
 
 function handleDragStart(e, cardEl, item) {
   dragData = { item, el: cardEl };
@@ -807,22 +884,44 @@ function handleDragEnd(e) {
 }
 
 function handleChipDragStart(e, chipEl, value) {
-  dragOptionData = { value, el: chipEl };
+  dragOptionData = { value, el: chipEl, startX: e.clientX, startY: e.clientY };
   chipEl.setPointerCapture(e.pointerId);
   chipEl.classList.add("dragging");
+  chipEl.dataset.dragging = "true";
   chipEl.addEventListener("pointermove", handleChipDragMove);
   chipEl.addEventListener("pointerup", handleChipDragEnd);
 }
 
-function handleChipDragMove() {}
+function handleChipDragMove(e) {
+  const chipEl = dragOptionData.el;
+  if (!chipEl) return;
+  const dx = e.clientX - dragOptionData.startX;
+  const dy = e.clientY - dragOptionData.startY;
+  chipEl.style.transform = `translate(${dx}px, ${dy}px)`;
+  const targetEl = document.elementFromPoint(e.clientX, e.clientY);
+  const slot = targetEl?.closest(".blank-slot");
+  if (slot !== dragOptionHoverSlot) {
+    if (dragOptionHoverSlot) dragOptionHoverSlot.classList.remove("hover");
+    dragOptionHoverSlot = slot;
+    if (dragOptionHoverSlot) dragOptionHoverSlot.classList.add("hover");
+  }
+}
 
 function handleChipDragEnd(e) {
   const chipEl = dragOptionData.el;
+  if (!chipEl) return;
   chipEl.releasePointerCapture(e.pointerId);
+  const dropTarget = document.elementFromPoint(e.clientX, e.clientY);
+  const slot = dragOptionHoverSlot || dropTarget?.closest(".blank-slot");
+  if (slot) handleDropOnBlank(slot, slot.dataset.missing, state.currentTarget, dragOptionData.value);
+  if (dragOptionHoverSlot) dragOptionHoverSlot.classList.remove("hover");
+  dragOptionHoverSlot = null;
   chipEl.classList.remove("dragging");
+  chipEl.style.transform = "";
   chipEl.removeEventListener("pointermove", handleChipDragMove);
   chipEl.removeEventListener("pointerup", handleChipDragEnd);
-  dragOptionData = { value: null, el: null };
+  chipEl.dataset.dragging = "";
+  dragOptionData = { value: null, el: null, startX: 0, startY: 0 };
 }
 
 function handleDropOnBlank(slotEl, missingChar, target, chosenOverride = null) {
@@ -884,9 +983,9 @@ function speakCurrent() {
 
 function buzz() {
   if (!state.soundEnabled) return;
-  playTone(160, 0.18);
-  playTone(70, 0.15, 0.02);
-  playNoise(0.2);
+  playTone(180, 0.28);
+  playTone(90, 0.22, 0.03);
+  playNoise(0.28, 0.32);
   if (state.vibration && "vibrate" in navigator) navigator.vibrate([160]);
 }
 
@@ -915,7 +1014,7 @@ function playTone(freq, duration, delay = 0) {
   }
 }
 
-function playNoise(duration = 0.15) {
+function playNoise(duration = 0.15, decay = 0.2) {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const bufferSize = ctx.sampleRate * duration;
@@ -927,8 +1026,8 @@ function playNoise(duration = 0.15) {
     const source = ctx.createBufferSource();
     source.buffer = buffer;
     const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.25, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+    gain.gain.setValueAtTime(0.35, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + decay);
     source.connect(gain).connect(ctx.destination);
     source.start();
   } catch (e) {

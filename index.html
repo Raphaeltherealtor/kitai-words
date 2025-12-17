@@ -50,6 +50,9 @@
         <span id="mode-label">Listen & Tap</span>
         <span id="category-label">Mixed</span>
         <span id="voice-warning" class="hidden">No Japanese voice found. Playing without speech.</span>
+        <label id="category-quick-wrapper" class="hidden">Category:
+          <select id="category-quick"></select>
+        </label>
       </div>
 
       <div id="mode-switcher">
@@ -113,8 +116,28 @@
       <div class="theme-hint">Theme switcher is future-proofed; Halloween is a placeholder.</div>
       <div class="settings-subheader">Custom images</div>
       <input type="search" id="image-search" placeholder="Search words" aria-label="Search vocabulary" />
+      <div id="image-category-pills" class="pill-row"></div>
       <div id="image-list" class="image-list"></div>
       <button id="close-settings">Done</button>
+    </div>
+  </div>
+
+  <div id="image-modal" class="hidden" role="dialog" aria-modal="true">
+    <div class="image-modal-content">
+      <div class="image-modal-header">
+        <div id="image-modal-title"></div>
+        <button id="image-modal-close" aria-label="Close">✕</button>
+      </div>
+      <div class="image-modal-preview">
+        <img id="image-modal-img" alt="Preview" />
+      </div>
+      <div class="image-modal-actions">
+        <button id="image-modal-upload">Upload</button>
+        <button id="image-modal-camera">Camera</button>
+        <button id="image-modal-reset" class="reset">Reset</button>
+      </div>
+      <input type="file" id="image-modal-file" accept="image/*" class="hidden" />
+      <input type="file" id="image-modal-camera-input" accept="image/*" capture="environment" class="hidden" />
     </div>
   </div>
 

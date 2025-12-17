@@ -1,4 +1,4 @@
-const CACHE_NAME = "kitai-cache-v12";
+const CACHE_NAME = "kitai-cache-v13";
 const CORE_ASSETS = [
   "./",
   "./index.html",
@@ -26,13 +26,30 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   const { request } = event;
+  const { url } = request;
+
+  // Network-first for data files (always get latest when online)
+  if (url.includes("/data/")) {
+    event.respondWith(
+      fetch(request)
+        .then((resp) => {
+          const clone = resp.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          return resp;
+        })
+        .catch(() => caches.match(request))
+    );
+    return;
+  }
+
+  // Cache-first for everything else
   event.respondWith(
     caches.match(request).then((cached) => {
       if (cached) return cached;
       return fetch(request)
         .then((resp) => {
-          // runtime cache images and data
-          if (request.method === "GET" && (request.destination === "image" || request.url.includes("/data/"))) {
+          // runtime cache images
+          if (request.method === "GET" && request.destination === "image") {
             const clone = resp.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
           }

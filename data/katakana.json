@@ -1,0 +1,71 @@
+{
+  "characters": [
+    { "id": "a", "kana": "ア", "romaji": "a" },
+    { "id": "i", "kana": "イ", "romaji": "i" },
+    { "id": "u", "kana": "ウ", "romaji": "u" },
+    { "id": "e", "kana": "エ", "romaji": "e" },
+    { "id": "o", "kana": "オ", "romaji": "o" },
+
+    { "id": "ka", "kana": "カ", "romaji": "ka" },
+    { "id": "ki", "kana": "キ", "romaji": "ki" },
+    { "id": "ku", "kana": "ク", "romaji": "ku" },
+    { "id": "ke", "kana": "ケ", "romaji": "ke" },
+    { "id": "ko", "kana": "コ", "romaji": "ko" },
+
+    { "id": "sa", "kana": "サ", "romaji": "sa" },
+    { "id": "shi", "kana": "シ", "romaji": "shi" },
+    { "id": "su", "kana": "ス", "romaji": "su" },
+    { "id": "se", "kana": "セ", "romaji": "se" },
+    { "id": "so", "kana": "ソ", "romaji": "so" },
+
+    { "id": "ta", "kana": "タ", "romaji": "ta" },
+    { "id": "chi", "kana": "チ", "romaji": "chi" },
+    { "id": "tsu", "kana": "ツ", "romaji": "tsu" },
+    { "id": "te", "kana": "テ", "romaji": "te" },
+    { "id": "to", "kana": "ト", "romaji": "to" },
+
+    { "id": "na", "kana": "ナ", "romaji": "na" },
+    { "id": "ni", "kana": "ニ", "romaji": "ni" },
+    { "id": "nu", "kana": "ヌ", "romaji": "nu" },
+    { "id": "ne", "kana": "ネ", "romaji": "ne" },
+    { "id": "no", "kana": "ノ", "romaji": "no" },
+
+    { "id": "ha", "kana": "ハ", "romaji": "ha" },
+    { "id": "hi", "kana": "ヒ", "romaji": "hi" },
+    { "id": "fu", "kana": "フ", "romaji": "fu" },
+    { "id": "he", "kana": "ヘ", "romaji": "he" },
+    { "id": "ho", "kana": "ホ", "romaji": "ho" },
+
+    { "id": "ma", "kana": "マ", "romaji": "ma" },
+    { "id": "mi", "kana": "ミ", "romaji": "mi" },
+    { "id": "mu", "kana": "ム", "romaji": "mu" },
+    { "id": "me", "kana": "メ", "romaji": "me" },
+    { "id": "mo", "kana": "モ", "romaji": "mo" },
+
+    { "id": "ya", "kana": "ヤ", "romaji": "ya" },
+    { "id": "yu", "kana": "ユ", "romaji": "yu" },
+    { "id": "yo", "kana": "ヨ", "romaji": "yo" },
+
+    { "id": "ra", "kana": "ラ", "romaji": "ra" },
+    { "id": "ri", "kana": "リ", "romaji": "ri" },
+    { "id": "ru", "kana": "ル", "romaji": "ru" },
+    { "id": "re", "kana": "レ", "romaji": "re" },
+    { "id": "ro", "kana": "ロ", "romaji": "ro" },
+
+    { "id": "wa", "kana": "ワ", "romaji": "wa" },
+    { "id": "wo", "kana": "ヲ", "romaji": "wo" },
+    { "id": "n", "kana": "ン", "romaji": "n" }
+  ],
+  "words": [
+    { "id": "panda", "kana": "パンダ", "romaji": "panda" },
+    { "id": "pan", "kana": "パン", "romaji": "pan" },
+    { "id": "meron", "kana": "メロン", "romaji": "meron" },
+    { "id": "banana", "kana": "バナナ", "romaji": "banana" },
+    { "id": "kiwi", "kana": "キウイ", "romaji": "kiui" },
+    { "id": "sakana", "kana": "サカナ", "romaji": "sakana" },
+    { "id": "kutsu", "kana": "クツ", "romaji": "kutsu" },
+    { "id": "sushi", "kana": "スシ", "romaji": "sushi" },
+    { "id": "ramen", "kana": "ラーメン", "romaji": "raamen" },
+    { "id": "neko", "kana": "ネコ", "romaji": "neko" }
+  ]
+}

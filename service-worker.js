@@ -1,10 +1,12 @@
-const CACHE_NAME = "kitai-cache-v2";
+const CACHE_NAME = "kitai-cache-v4";
 const CORE_ASSETS = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
   "./data/vocab.json",
+  "./data/hiragana.json",
+  "./data/katakana.json",
   "./pwa/manifest.json",
 ];
 

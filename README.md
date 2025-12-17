@@ -30,8 +30,10 @@ A touch-friendly Japanese vocab game for toddlers. Runs on mobile browsers and a
 - Service worker is registered from the root so it works on GitHub Pages subpaths; it pre-caches core files and runtime-caches images after first load.
 
 ## Controls
-- Default mode: Listen & Tap.
-- Long-press the gear to open parent settings (mode, choices, category, voice, romaji).
+- Home tiles: Vocabulary, Hiragana, Katakana (Kanji coming later).
+- Vocab modes: Listen & Tap, Drag to Complete (missing kana).
+- Hiragana/Katakana modes: Sound → Pick, Drag to Complete (missing character).
+- Long-press the gear to open parent settings (choices, category, voice, romaji, vibration).
 - 🔊 replays audio; if no Japanese TTS is available, a warning shows and play continues silently.
 
 ## Known constraints

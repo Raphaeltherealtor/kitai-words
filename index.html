@@ -10,39 +10,75 @@
 </head>
 <body>
   <header>
-    <div class="logo">ことば</div>
-    <button id="parent-button" aria-label="Parent settings">⚙️</button>
+    <div class="logo">Kitai Words</div>
+    <div class="header-actions">
+      <button id="home-button" aria-label="Go to home">🏠</button>
+      <button id="parent-button" aria-label="Parent settings">⚙️</button>
+    </div>
   </header>
 
   <main>
-    <div id="status">
-      <span id="mode-label">Listen & Tap</span>
-      <span id="category-label">Mixed</span>
-      <span id="voice-warning" class="hidden">No Japanese voice found. Playing without speech.</span>
-    </div>
-
-    <section id="prompt-area">
-      <div id="prompt-word">???</div>
-      <button id="speak-btn" aria-label="Replay word">🔊</button>
-      <div id="feedback" aria-live="polite"></div>
+    <section id="home-screen">
+      <h1>Choose a track</h1>
+      <div class="tile-grid">
+        <button class="tile" data-track="vocab">
+          <div class="tile-emoji">🧸</div>
+          <div class="tile-title">Vocabulary</div>
+          <div class="tile-sub">Listen & match pictures</div>
+        </button>
+        <button class="tile" data-track="hiragana">
+          <div class="tile-emoji">あ</div>
+          <div class="tile-title">Hiragana</div>
+          <div class="tile-sub">Sound & pick, complete</div>
+        </button>
+        <button class="tile" data-track="katakana">
+          <div class="tile-emoji">カ</div>
+          <div class="tile-title">Katakana</div>
+          <div class="tile-sub">Sound & pick, complete</div>
+        </button>
+        <button class="tile disabled" data-track="kanji" aria-disabled="true">
+          <div class="tile-emoji">漢</div>
+          <div class="tile-title">Kanji</div>
+          <div class="tile-sub">Coming soon</div>
+        </button>
+      </div>
     </section>
 
-    <section id="cards" class="cards"></section>
+    <section id="game-screen" class="hidden">
+      <div id="status">
+        <span id="track-label">Vocabulary</span>
+        <span id="mode-label">Listen & Tap</span>
+        <span id="category-label">Mixed</span>
+        <span id="voice-warning" class="hidden">No Japanese voice found. Playing without speech.</span>
+      </div>
 
-    <section id="dropzone-section" class="hidden">
-      <div id="dropzone" class="dropzone">Drop here</div>
+      <div id="mode-switcher">
+        <button data-gametype="tap" class="mode-btn active">Listen & Tap</button>
+        <button data-gametype="drag-complete" class="mode-btn">Drag to Complete</button>
+      </div>
+
+      <section id="prompt-area">
+        <div id="prompt-word">???</div>
+        <button id="speak-btn" aria-label="Replay word">🔊</button>
+        <div id="feedback" aria-live="polite"></div>
+      </section>
+
+      <section id="cards" class="cards"></section>
+
+      <section id="dropzone-section" class="hidden">
+        <div id="dropzone" class="dropzone">Drop here</div>
+      </section>
+
+      <section id="complete-word-section" class="hidden">
+        <div id="complete-word-display"></div>
+        <div id="complete-choices" class="choices-row"></div>
+      </section>
     </section>
   </main>
 
   <div id="settings-overlay" class="hidden">
     <div id="settings" role="dialog" aria-modal="true">
       <h2>Parent Settings</h2>
-      <label>Mode:
-        <select id="mode-select">
-          <option value="tap">Listen & Tap</option>
-          <option value="drag">Drag & Drop</option>
-        </select>
-      </label>
       <label>Choices:
         <select id="choice-count">
           <option value="2">2</option>
@@ -60,11 +96,19 @@
         <input type="checkbox" id="romaji-toggle" />
         Show romaji (off by default)
       </label>
+      <label>
+        <input type="checkbox" id="vibration-toggle" checked />
+        Vibrate on wrong (if supported)
+      </label>
+      <div class="settings-subheader">Custom images</div>
+      <input type="search" id="image-search" placeholder="Search words" aria-label="Search vocabulary" />
+      <div id="image-list" class="image-list"></div>
       <button id="close-settings">Done</button>
     </div>
   </div>
 
-  <audio id="sfx-correct" preload="auto" src="assets/sfx/correct.mp3"></audio>
+  <div id="wrong-overlay" class="hidden">✕</div>
+
   <script src="app.js"></script>
 </body>
 </html>

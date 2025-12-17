@@ -100,6 +100,17 @@
         <input type="checkbox" id="vibration-toggle" checked />
         Vibrate on wrong (if supported)
       </label>
+      <label>
+        <input type="checkbox" id="sound-toggle" checked />
+        Enable sounds (chime/buzz)
+      </label>
+      <label>Theme:
+        <select id="theme-select">
+          <option value="default">Default</option>
+          <option value="halloween">Halloween (preview)</option>
+        </select>
+      </label>
+      <div class="theme-hint">Theme switcher is future-proofed; Halloween is a placeholder.</div>
       <div class="settings-subheader">Custom images</div>
       <input type="search" id="image-search" placeholder="Search words" aria-label="Search vocabulary" />
       <div id="image-list" class="image-list"></div>

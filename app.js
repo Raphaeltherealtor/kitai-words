@@ -22,6 +22,8 @@ const state = {
   currentKanaMissing: null,
   longPressTimer: null,
   longPressMs: 600,
+  soundEnabled: true,
+  theme: "default",
   imageOverrides: {},
 };
 
@@ -43,6 +45,8 @@ const els = {
   voiceSelect: document.getElementById("voice-select"),
   romajiToggle: document.getElementById("romaji-toggle"),
   vibrationToggle: document.getElementById("vibration-toggle"),
+  soundToggle: document.getElementById("sound-toggle"),
+  themeSelect: document.getElementById("theme-select"),
   closeSettings: document.getElementById("close-settings"),
   speakBtn: document.getElementById("speak-btn"),
   dropzoneSection: document.getElementById("dropzone-section"),
@@ -66,6 +70,7 @@ async function init() {
   await loadImageOverrides();
   buildImageManager();
   await setupVoices();
+  applyTheme();
   bindUI();
   registerServiceWorker();
   goHome();
@@ -110,6 +115,10 @@ async function loadKanji() {
   const kan = await res.json();
   state.kanjiChars = kan.characters;
   state.kanjiWords = kan.words;
+}
+
+function applyTheme() {
+  document.documentElement.dataset.theme = state.theme;
 }
 
 let imageDb = null;
@@ -237,7 +246,11 @@ function setupVoices() {
 function bindUI() {
   els.speakBtn.addEventListener("click", () => speakCurrent());
   els.parentBtn.addEventListener("pointerdown", startLongPress);
-  els.parentBtn.addEventListener("pointerup", cancelLongPress);
+  els.parentBtn.addEventListener("pointerup", (e) => {
+    cancelLongPress();
+    showSettings();
+  });
+  els.parentBtn.addEventListener("click", showSettings);
   els.parentBtn.addEventListener("pointerleave", cancelLongPress);
   els.homeBtn.addEventListener("click", goHome);
   els.closeSettings.addEventListener("click", hideSettings);
@@ -268,6 +281,19 @@ function bindUI() {
   els.vibrationToggle.addEventListener("change", (e) => {
     state.vibration = e.target.checked;
   });
+
+  if (els.soundToggle) {
+    els.soundToggle.addEventListener("change", (e) => {
+      state.soundEnabled = e.target.checked;
+    });
+  }
+
+  if (els.themeSelect) {
+    els.themeSelect.addEventListener("change", (e) => {
+      state.theme = e.target.value;
+      applyTheme();
+    });
+  }
 
   els.dropzone.addEventListener("pointerup", onDropZonePointerUp);
 
@@ -562,7 +588,7 @@ function renderKanaTapView() {
   els.dropzoneSection.classList.add("hidden");
   els.completeWordSection.classList.add("hidden");
   renderKanaCards(state.currentChoices);
-  els.promptWord.textContent = state.currentTarget.kana;
+  els.promptWord.textContent = "🔊 Listen & pick";
 }
 
 function renderKanaCompleteView() {
@@ -614,7 +640,7 @@ function renderKanaCards(items) {
 
     const label = document.createElement("div");
     label.className = "label-en";
-    label.textContent = state.romaji ? item.romaji : " ";
+    label.textContent = state.romaji ? item.romaji : "";
     card.appendChild(label);
 
     card.addEventListener("click", () => handleKanaTap(item, card));
@@ -641,6 +667,7 @@ function buildDragCompleteRound(target) {
   const chars = Array.from(target.jaKana);
   const missingIndex = Math.floor(Math.random() * chars.length);
   const missingChar = chars[missingIndex];
+  state.currentKanaMissing = missingChar;
   const display = chars
     .map((ch, idx) => (idx === missingIndex ? `<span class="blank-slot" data-missing="${missingChar}"></span>` : ch))
     .join("");
@@ -656,9 +683,20 @@ function buildDragCompleteRound(target) {
     const chip = document.createElement("div");
     chip.className = "choice-chip";
     chip.textContent = opt;
-    chip.addEventListener("click", () => handleCompleteChoice(opt, missingChar, target));
+    chip.addEventListener("pointerdown", (e) => handleChipDragStart(e, chip, opt));
+    chip.addEventListener("click", () => {
+      const slot = els.completeWordDisplay.querySelector(".blank-slot");
+      if (slot) handleDropOnBlank(slot, missingChar, target, opt);
+    });
     els.completeChoices.appendChild(chip);
   });
+
+  const slot = els.completeWordDisplay.querySelector(".blank-slot");
+  if (slot) {
+    slot.addEventListener("pointerup", () => handleDropOnBlank(slot, missingChar, target));
+    slot.addEventListener("pointerenter", () => slot.classList.add("hover"));
+    slot.addEventListener("pointerleave", () => slot.classList.remove("hover"));
+  }
 }
 
 function buildKanaCompleteRound(word) {
@@ -685,9 +723,20 @@ function buildKanaCompleteRound(word) {
     const chip = document.createElement("div");
     chip.className = "choice-chip";
     chip.textContent = opt;
-    chip.addEventListener("click", () => handleKanaCompleteChoice(opt, missingChar, word));
+    chip.addEventListener("pointerdown", (e) => handleChipDragStart(e, chip, opt));
+    chip.addEventListener("click", () => {
+      const slot = els.completeWordDisplay.querySelector(".blank-slot");
+      if (slot) handleDropOnBlank(slot, missingChar, word, opt);
+    });
     els.completeChoices.appendChild(chip);
   });
+
+  const slot = els.completeWordDisplay.querySelector(".blank-slot");
+  if (slot) {
+    slot.addEventListener("pointerup", () => handleDropOnBlank(slot, missingChar, word));
+    slot.addEventListener("pointerenter", () => slot.classList.add("hover"));
+    slot.addEventListener("pointerleave", () => slot.classList.remove("hover"));
+  }
 }
 
 function handleCompleteChoice(opt, missingChar, target) {
@@ -735,6 +784,7 @@ function handleKanaCompleteChoice(opt, missingChar) {
 
 let dragData = { item: null, el: null };
 let wrongOverlayTimer = null;
+let dragOptionData = { value: null, el: null };
 
 function handleDragStart(e, cardEl, item) {
   dragData = { item, el: cardEl };
@@ -754,6 +804,41 @@ function handleDragEnd(e) {
   cardEl.removeEventListener("pointermove", handleDragMove);
   cardEl.removeEventListener("pointerup", handleDragEnd);
   dragData = { item: null, el: null };
+}
+
+function handleChipDragStart(e, chipEl, value) {
+  dragOptionData = { value, el: chipEl };
+  chipEl.setPointerCapture(e.pointerId);
+  chipEl.classList.add("dragging");
+  chipEl.addEventListener("pointermove", handleChipDragMove);
+  chipEl.addEventListener("pointerup", handleChipDragEnd);
+}
+
+function handleChipDragMove() {}
+
+function handleChipDragEnd(e) {
+  const chipEl = dragOptionData.el;
+  chipEl.releasePointerCapture(e.pointerId);
+  chipEl.classList.remove("dragging");
+  chipEl.removeEventListener("pointermove", handleChipDragMove);
+  chipEl.removeEventListener("pointerup", handleChipDragEnd);
+  dragOptionData = { value: null, el: null };
+}
+
+function handleDropOnBlank(slotEl, missingChar, target, chosenOverride = null) {
+  const chosen = chosenOverride || dragOptionData.value;
+  if (!chosen) return;
+  if (chosen === missingChar) {
+    slotEl.textContent = missingChar;
+    els.feedback.textContent = "Great!";
+    playCorrect();
+    setTimeout(() => startRound(), 800);
+  } else {
+    els.feedback.textContent = "Try again!";
+    buzz();
+    showWrongOverlay();
+  }
+  handleChipDragEnd({ pointerId: 0 });
 }
 
 function onDropZonePointerUp() {
@@ -798,12 +883,15 @@ function speakCurrent() {
 }
 
 function buzz() {
-  playTone(120, 0.14);
-  playTone(80, 0.12, 0.02);
+  if (!state.soundEnabled) return;
+  playTone(160, 0.18);
+  playTone(70, 0.15, 0.02);
+  playNoise(0.2);
   if (state.vibration && "vibrate" in navigator) navigator.vibrate([160]);
 }
 
 function playCorrect() {
+  if (!state.soundEnabled) return;
   playChime();
   playClap();
 }
@@ -824,6 +912,27 @@ function playTone(freq, duration, delay = 0) {
     osc.stop(now + duration);
   } catch (e) {
     // ignore audio errors
+  }
+}
+
+function playNoise(duration = 0.15) {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const bufferSize = ctx.sampleRate * duration;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 2);
+    }
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.25, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+    source.connect(gain).connect(ctx.destination);
+    source.start();
+  } catch (e) {
+    // ignore
   }
 }
 

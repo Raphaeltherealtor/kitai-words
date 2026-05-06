@@ -1150,49 +1150,33 @@ function buzz() {
 
 function playCorrect() {
   if (!state.soundEnabled) return;
-  playChime();
-  playClap();
+  playBellTone(659.25, 1.0, 0);
+  playBellTone(523.25, 1.3, 0.28);
 }
 
-function playTone(freq, duration, delay = 0) {
+function playBellTone(freq, duration, delay = 0) {
   const ctx = getAudioCtx();
   if (!ctx) return;
-  const osc = ctx.createOscillator();
+  const start = ctx.currentTime + delay;
+  const fundamental = ctx.createOscillator();
+  const overtone = ctx.createOscillator();
   const gain = ctx.createGain();
-  osc.type = "sine";
-  osc.frequency.value = freq;
-  osc.connect(gain);
+  const overtoneGain = ctx.createGain();
+  fundamental.type = "sine";
+  overtone.type = "sine";
+  fundamental.frequency.value = freq;
+  overtone.frequency.value = freq * 2.76;
+  overtoneGain.gain.value = 0.22;
+  fundamental.connect(gain);
+  overtone.connect(overtoneGain).connect(gain);
   gain.connect(ctx.destination);
-  const now = ctx.currentTime + delay;
-  gain.gain.setValueAtTime(0.18, now);
-  gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
-  osc.start(now);
-  osc.stop(now + duration);
-}
-
-function playChime() {
-  playTone(523.25, 0.18);
-  playTone(659.25, 0.18, 0.09);
-  playTone(783.99, 0.18, 0.18);
-  playTone(1046.5, 0.22, 0.27);
-}
-
-function playClap() {
-  const ctx = getAudioCtx();
-  if (!ctx) return;
-  const bufferSize = ctx.sampleRate * 0.2;
-  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-  const data = buffer.getChannelData(0);
-  for (let i = 0; i < bufferSize; i++) {
-    data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 3);
-  }
-  const source = ctx.createBufferSource();
-  source.buffer = buffer;
-  const gain = ctx.createGain();
-  gain.gain.setValueAtTime(0.6, ctx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
-  source.connect(gain).connect(ctx.destination);
-  source.start();
+  gain.gain.setValueAtTime(0.0001, start);
+  gain.gain.exponentialRampToValueAtTime(0.55, start + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+  fundamental.start(start);
+  overtone.start(start);
+  fundamental.stop(start + duration);
+  overtone.stop(start + duration);
 }
 
 function showWrongOverlay() {

@@ -141,7 +141,20 @@
     </div>
   </div>
 
-  <div id="wrong-overlay" class="hidden">✕</div>
+  <div id="wrong-overlay" class="hidden">
+    <svg viewBox="0 0 200 200" aria-hidden="true">
+      <circle cx="100" cy="100" r="86" />
+      <line x1="55" y1="55" x2="145" y2="145" />
+      <line x1="145" y1="55" x2="55" y2="145" />
+    </svg>
+  </div>
+
+  <div id="correct-overlay" class="hidden">
+    <svg viewBox="0 0 200 200" aria-hidden="true">
+      <circle cx="100" cy="100" r="86" />
+      <polyline points="58,104 90,136 146,72" />
+    </svg>
+  </div>
 
   <script src="app.js"></script>
 </body>

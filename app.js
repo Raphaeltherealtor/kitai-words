@@ -62,6 +62,7 @@ const els = {
   imageSearch: document.getElementById("image-search"),
   imageList: document.getElementById("image-list"),
   wrongOverlay: document.getElementById("wrong-overlay"),
+  correctOverlay: document.getElementById("correct-overlay"),
   imageCategoryPills: document.getElementById("image-category-pills"),
   imageModal: document.getElementById("image-modal"),
   imageModalTitle: document.getElementById("image-modal-title"),
@@ -73,6 +74,10 @@ const els = {
   imageModalFile: document.getElementById("image-modal-file"),
   imageModalCameraInput: document.getElementById("image-modal-camera-input"),
 };
+
+const SUPABASE_URL = "https://nfaxncksesfcfqavmlae.supabase.co";
+const SUPABASE_KEY = "sb_publishable_tOW43SppvjqItz5vGlLpiQ_W3t4CMR_";
+const SUPABASE_BUCKET = "kitai-images";
 
 document.addEventListener("DOMContentLoaded", init);
 
@@ -87,6 +92,7 @@ async function init() {
   bindUI();
   registerServiceWorker();
   goHome();
+  syncImagesFromSupabase().catch(() => {});
 }
 
 async function loadData() {
@@ -205,6 +211,7 @@ async function saveImageOverride(itemId, file) {
   } catch (e) {
     // ignore storage errors
   }
+  uploadImageToSupabase(itemId, file).catch(() => {});
 }
 
 async function removeImageOverride(itemId) {
@@ -222,6 +229,108 @@ async function removeImageOverride(itemId) {
   }
   renderImageList();
   if (state.currentTrack === "vocab") renderCurrentView();
+  deleteImageFromSupabase(itemId).catch(() => {});
+}
+
+function getDeviceId() {
+  let id = null;
+  try { id = localStorage.getItem("kitai-device-id"); } catch (_) {}
+  if (!id) {
+    id = (crypto.randomUUID && crypto.randomUUID()) ||
+      `dev-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    try { localStorage.setItem("kitai-device-id", id); } catch (_) {}
+  }
+  return id;
+}
+
+function readPathMap() {
+  try { return JSON.parse(localStorage.getItem("kitai-image-paths") || "{}"); } catch (_) { return {}; }
+}
+function writePathMap(map) {
+  try { localStorage.setItem("kitai-image-paths", JSON.stringify(map)); } catch (_) {}
+}
+
+function supabasePublicUrl(path) {
+  return `${SUPABASE_URL}/storage/v1/object/public/${SUPABASE_BUCKET}/${path}`;
+}
+
+async function uploadImageToSupabase(itemId, file) {
+  const fallbackExt = (file.type && file.type.split("/")[1]) || "png";
+  const nameExt = file.name && file.name.includes(".") ? file.name.split(".").pop() : null;
+  const ext = (nameExt || fallbackExt).toLowerCase().replace(/[^a-z0-9]/g, "") || "png";
+  const path = `${getDeviceId()}/${itemId}.${ext}`;
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${SUPABASE_BUCKET}/${path}`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${SUPABASE_KEY}`,
+      "x-upsert": "true",
+      "Content-Type": file.type || "application/octet-stream",
+    },
+    body: file,
+  });
+  if (!res.ok) throw new Error(`Supabase upload failed: ${res.status}`);
+  const map = readPathMap();
+  if (map[itemId] && map[itemId] !== path) {
+    fetch(`${SUPABASE_URL}/storage/v1/object/${SUPABASE_BUCKET}/${map[itemId]}`, {
+      method: "DELETE",
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
+    }).catch(() => {});
+  }
+  map[itemId] = path;
+  writePathMap(map);
+}
+
+async function deleteImageFromSupabase(itemId) {
+  const map = readPathMap();
+  const path = map[itemId];
+  if (!path) return;
+  await fetch(`${SUPABASE_URL}/storage/v1/object/${SUPABASE_BUCKET}/${path}`, {
+    method: "DELETE",
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
+  });
+  delete map[itemId];
+  writePathMap(map);
+}
+
+async function syncImagesFromSupabase() {
+  const deviceId = getDeviceId();
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/list/${SUPABASE_BUCKET}`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${SUPABASE_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ prefix: `${deviceId}/`, limit: 1000, offset: 0 }),
+  });
+  if (!res.ok) return;
+  const files = await res.json();
+  if (!Array.isArray(files) || files.length === 0) return;
+  const map = readPathMap();
+  let touched = false;
+  for (const f of files) {
+    if (!f.name) continue;
+    const itemId = f.name.replace(/\.[^.]+$/, "");
+    const path = `${deviceId}/${f.name}`;
+    map[itemId] = path;
+    if (state.imageOverrides[itemId]) continue;
+    try {
+      const blobRes = await fetch(supabasePublicUrl(path));
+      if (!blobRes.ok) continue;
+      const blob = await blobRes.blob();
+      const db = await getImageDb();
+      const tx = db.transaction("images", "readwrite");
+      await requestToPromise(tx.objectStore("images").put({ id: itemId, blob }));
+      state.imageOverrides[itemId] = URL.createObjectURL(blob);
+      touched = true;
+    } catch (_) {}
+  }
+  writePathMap(map);
+  if (touched) {
+    renderImageList();
+    if (state.currentTrack === "vocab") renderCurrentView();
+  }
 }
 
 function setupVoiceOptions() {
@@ -719,7 +828,8 @@ function handleTap(item, cardEl) {
     cardEl.classList.add("correct");
     els.feedback.textContent = "Great!";
     playCorrect();
-    setTimeout(() => startRound(), 600);
+    showCorrectOverlay();
+    setTimeout(() => startRound(), 800);
   } else {
     cardEl.classList.add("wrong");
     els.feedback.textContent = "Try again!";
@@ -821,7 +931,8 @@ function handleCompleteChoice(opt, missingChar, target) {
     if (slot) slot.textContent = missingChar;
     els.feedback.textContent = "Great!";
     playCorrect();
-    setTimeout(() => startRound(), 800);
+    showCorrectOverlay();
+    setTimeout(() => startRound(), 900);
   } else {
     els.feedback.textContent = "Try again!";
     buzz();
@@ -834,7 +945,8 @@ function handleKanaTap(item, cardEl) {
     cardEl.classList.add("correct");
     els.feedback.textContent = "Great!";
     playCorrect();
-    setTimeout(() => startRound(), 600);
+    showCorrectOverlay();
+    setTimeout(() => startRound(), 800);
   } else {
     cardEl.classList.add("wrong");
     els.feedback.textContent = "Try again!";
@@ -850,7 +962,8 @@ function handleKanaCompleteChoice(opt, missingChar) {
     if (slot) slot.textContent = missingChar;
     els.feedback.textContent = "Great!";
     playCorrect();
-    setTimeout(() => startRound(), 800);
+    showCorrectOverlay();
+    setTimeout(() => startRound(), 900);
   } else {
     els.feedback.textContent = "Try again!";
     buzz();
@@ -910,10 +1023,10 @@ function handleChipDragMove(e) {
 function handleChipDragEnd(e) {
   const chipEl = dragOptionData.el;
   if (!chipEl) return;
-  chipEl.releasePointerCapture(e.pointerId);
-  const dropTarget = document.elementFromPoint(e.clientX, e.clientY);
+  try { chipEl.releasePointerCapture(e.pointerId); } catch (_) {}
+  const dropTarget = e.clientX != null ? document.elementFromPoint(e.clientX, e.clientY) : null;
   const slot = dragOptionHoverSlot || dropTarget?.closest(".blank-slot");
-  if (slot) handleDropOnBlank(slot, slot.dataset.missing, state.currentTarget, dragOptionData.value);
+  const value = dragOptionData.value;
   if (dragOptionHoverSlot) dragOptionHoverSlot.classList.remove("hover");
   dragOptionHoverSlot = null;
   chipEl.classList.remove("dragging");
@@ -922,6 +1035,7 @@ function handleChipDragEnd(e) {
   chipEl.removeEventListener("pointerup", handleChipDragEnd);
   chipEl.dataset.dragging = "";
   dragOptionData = { value: null, el: null, startX: 0, startY: 0 };
+  if (slot) handleDropOnBlank(slot, slot.dataset.missing, state.currentTarget, value);
 }
 
 function handleDropOnBlank(slotEl, missingChar, target, chosenOverride = null) {
@@ -931,13 +1045,13 @@ function handleDropOnBlank(slotEl, missingChar, target, chosenOverride = null) {
     slotEl.textContent = missingChar;
     els.feedback.textContent = "Great!";
     playCorrect();
-    setTimeout(() => startRound(), 800);
+    showCorrectOverlay();
+    setTimeout(() => startRound(), 900);
   } else {
     els.feedback.textContent = "Try again!";
     buzz();
     showWrongOverlay();
   }
-  handleChipDragEnd({ pointerId: 0 });
 }
 
 function onDropZonePointerUp() {
@@ -947,7 +1061,8 @@ function onDropZonePointerUp() {
     dragData.el.classList.add("correct");
     els.dropzone.textContent = "Nice!";
     playCorrect();
-    setTimeout(() => startRound(), 600);
+    showCorrectOverlay();
+    setTimeout(() => startRound(), 800);
   } else {
     dragData.el.classList.add("wrong");
     els.dropzone.textContent = "Try again!";
@@ -981,12 +1096,56 @@ function speakCurrent() {
   speechSynthesis.speak(utter);
 }
 
+let audioCtx = null;
+function getAudioCtx() {
+  if (!audioCtx) {
+    const Ctor = window.AudioContext || window.webkitAudioContext;
+    if (!Ctor) return null;
+    audioCtx = new Ctor();
+  }
+  if (audioCtx.state === "suspended") audioCtx.resume();
+  return audioCtx;
+}
+
 function buzz() {
   if (!state.soundEnabled) return;
-  playTone(180, 0.28);
-  playTone(90, 0.22, 0.03);
-  playNoise(0.28, 0.32);
-  if (state.vibration && "vibrate" in navigator) navigator.vibrate([160]);
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  const duration = 0.55;
+  const master = ctx.createGain();
+  master.gain.setValueAtTime(0.9, now);
+  master.gain.setValueAtTime(0.9, now + duration - 0.05);
+  master.gain.exponentialRampToValueAtTime(0.001, now + duration);
+  master.connect(ctx.destination);
+
+  // Square-wave fundamentals for that harsh game-show buzzer feel
+  [
+    { freq: 110, type: "square", gain: 0.5 },
+    { freq: 220, type: "square", gain: 0.35 },
+    { freq: 73, type: "sawtooth", gain: 0.4 },
+  ].forEach(({ freq, type, gain }) => {
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, now);
+    g.gain.setValueAtTime(gain, now);
+    osc.connect(g).connect(master);
+    osc.start(now);
+    osc.stop(now + duration);
+  });
+
+  // Amplitude tremolo to give it the ratchety buzz texture
+  const tremolo = ctx.createOscillator();
+  const tremGain = ctx.createGain();
+  tremolo.frequency.value = 28;
+  tremolo.type = "square";
+  tremGain.gain.value = 0.5;
+  tremolo.connect(tremGain).connect(master.gain);
+  tremolo.start(now);
+  tremolo.stop(now + duration);
+
+  if (state.vibration && "vibrate" in navigator) navigator.vibrate([200, 80, 200]);
 }
 
 function playCorrect() {
@@ -996,70 +1155,44 @@ function playCorrect() {
 }
 
 function playTone(freq, duration, delay = 0) {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = "sine";
-    osc.frequency.value = freq;
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    const now = ctx.currentTime + delay;
-    gain.gain.setValueAtTime(0.12, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
-    osc.start(now);
-    osc.stop(now + duration);
-  } catch (e) {
-    // ignore audio errors
-  }
-}
-
-function playNoise(duration = 0.15, decay = 0.2) {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const bufferSize = ctx.sampleRate * duration;
-    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 2);
-    }
-    const source = ctx.createBufferSource();
-    source.buffer = buffer;
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.35, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + decay);
-    source.connect(gain).connect(ctx.destination);
-    source.start();
-  } catch (e) {
-    // ignore
-  }
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = "sine";
+  osc.frequency.value = freq;
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  const now = ctx.currentTime + delay;
+  gain.gain.setValueAtTime(0.18, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+  osc.start(now);
+  osc.stop(now + duration);
 }
 
 function playChime() {
-  playTone(523.25, 0.15);
-  playTone(659.25, 0.15, 0.08);
-  playTone(783.99, 0.12, 0.16);
+  playTone(523.25, 0.18);
+  playTone(659.25, 0.18, 0.09);
+  playTone(783.99, 0.18, 0.18);
+  playTone(1046.5, 0.22, 0.27);
 }
 
 function playClap() {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const bufferSize = ctx.sampleRate * 0.2;
-    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 3);
-    }
-    const source = ctx.createBufferSource();
-    source.buffer = buffer;
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.6, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
-    source.connect(gain).connect(ctx.destination);
-    source.start();
-  } catch (e) {
-    // ignore audio errors
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+  const bufferSize = ctx.sampleRate * 0.2;
+  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) {
+    data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 3);
   }
+  const source = ctx.createBufferSource();
+  source.buffer = buffer;
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0.6, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+  source.connect(gain).connect(ctx.destination);
+  source.start();
 }
 
 function showWrongOverlay() {
@@ -1068,7 +1201,17 @@ function showWrongOverlay() {
   clearTimeout(wrongOverlayTimer);
   wrongOverlayTimer = setTimeout(() => {
     els.wrongOverlay.classList.add("hidden");
-  }, 600);
+  }, 700);
+}
+
+let correctOverlayTimer = null;
+function showCorrectOverlay() {
+  if (!els.correctOverlay) return;
+  els.correctOverlay.classList.remove("hidden");
+  clearTimeout(correctOverlayTimer);
+  correctOverlayTimer = setTimeout(() => {
+    els.correctOverlay.classList.add("hidden");
+  }, 700);
 }
 
 function shuffle(arr) {

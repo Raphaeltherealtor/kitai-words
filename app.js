@@ -89,6 +89,13 @@ const els = {
   installText: document.getElementById("install-text"),
   installBtn: document.getElementById("install-btn"),
   installDismiss: document.getElementById("install-dismiss"),
+  alphabetQuizSection: document.getElementById("alphabet-quiz-section"),
+  quizKana: document.getElementById("quiz-kana"),
+  quizChoices: document.getElementById("quiz-choices"),
+  quizFeedback: document.getElementById("quiz-feedback"),
+  quizSpeak: document.getElementById("quiz-speak"),
+  quizSkip: document.getElementById("quiz-skip"),
+  quizProgress: document.getElementById("quiz-progress"),
 };
 
 const SUPABASE_URL = "https://nfaxncksesfcfqavmlae.supabase.co";
@@ -569,6 +576,15 @@ function bindUI() {
     }, { passive: true });
   }
 
+  if (els.quizSpeak) {
+    els.quizSpeak.addEventListener("click", () => {
+      const set = getAlphabetSet();
+      if (!set) return;
+      speakAlphabetChar(set[state.alphabetIndex[state.currentTrack] || 0]);
+    });
+  }
+  if (els.quizSkip) els.quizSkip.addEventListener("click", () => advanceQuizAuto());
+
   setupInstallPrompt();
 }
 
@@ -710,7 +726,7 @@ function setActiveModeButton(type) {
 }
 
 function updateModeButtonsForTrack(track) {
-  const [btn1, btn2, btn3] = els.modeButtons;
+  const [btn1, btn2, btn3, btn4] = els.modeButtons;
   if (track === "vocab") {
     if (els.categoryQuick) els.categoryQuick.parentElement.classList.remove("hidden");
     btn1.dataset.gametype = "tap";
@@ -722,6 +738,7 @@ function updateModeButtonsForTrack(track) {
     btn2.classList.remove("hidden");
     btn2.disabled = false;
     if (btn3) btn3.classList.add("hidden");
+    if (btn4) btn4.classList.add("hidden");
     state.currentGameType = "tap";
     setActiveModeButton("tap");
   } else if (track === "hiragana" || track === "katakana") {
@@ -739,6 +756,12 @@ function updateModeButtonsForTrack(track) {
       btn3.textContent = "Alphabet";
       btn3.classList.remove("hidden");
       btn3.disabled = false;
+    }
+    if (btn4) {
+      btn4.dataset.gametype = "kana-alphabet-quiz";
+      btn4.textContent = "Quiz";
+      btn4.classList.remove("hidden");
+      btn4.disabled = false;
     }
     state.currentGameType = "kana-tap";
     setActiveModeButton("kana-tap");
@@ -819,7 +842,7 @@ function chooseKanaRound() {
 
 function startRound() {
   if (state.currentSection !== "game") return;
-  if (state.currentGameType === "kana-alphabet") {
+  if (state.currentGameType === "kana-alphabet" || state.currentGameType === "kana-alphabet-quiz") {
     renderCurrentView();
     return;
   }
@@ -847,6 +870,8 @@ function renderCurrentView() {
       renderKanaCompleteView();
     } else if (state.currentGameType === "kana-alphabet") {
       renderAlphabetView();
+    } else if (state.currentGameType === "kana-alphabet-quiz") {
+      renderAlphabetQuizView();
     }
   }
 }
@@ -861,6 +886,7 @@ function hideAllGameViews() {
   els.dropzoneSection.classList.add("hidden");
   els.completeWordSection.classList.add("hidden");
   if (els.alphabetSection) els.alphabetSection.classList.add("hidden");
+  if (els.alphabetQuizSection) els.alphabetQuizSection.classList.add("hidden");
 }
 
 function renderTapView() {
@@ -954,6 +980,73 @@ function advanceAlphabet(delta) {
   if (next < 0 || next >= set.length) return;
   state.alphabetIndex[trackKey] = next;
   renderAlphabetView();
+}
+
+function renderAlphabetQuizView() {
+  els.modeLabel.textContent = "Quiz";
+  hideAllGameViews();
+  showPromptArea(false);
+  if (!els.alphabetQuizSection) return;
+  els.alphabetQuizSection.classList.remove("hidden");
+  buildAlphabetQuizRound();
+}
+
+function buildAlphabetQuizRound() {
+  const set = getAlphabetSet();
+  if (!set || set.length === 0) return;
+  const trackKey = state.currentTrack;
+  let idx = state.alphabetIndex[trackKey] || 0;
+  if (idx >= set.length) idx = 0;
+  while (!set[idx].exampleEmoji && idx < set.length - 1) idx++;
+  state.alphabetIndex[trackKey] = idx;
+  const target = set[idx];
+
+  els.quizKana.textContent = target.kana;
+  els.quizFeedback.textContent = "";
+  els.quizProgress.textContent = `${idx + 1} / ${set.length}`;
+
+  const others = set.filter((c) => c.id !== target.id && c.exampleEmoji && c.exampleEmoji !== target.exampleEmoji);
+  const distractors = shuffle([...others]).slice(0, 2);
+  const choices = shuffle([target, ...distractors]);
+
+  els.quizChoices.innerHTML = "";
+  choices.forEach((ch) => {
+    const btn = document.createElement("button");
+    btn.className = "quiz-choice";
+    btn.textContent = ch.exampleEmoji;
+    btn.dataset.id = ch.id;
+    btn.setAttribute("aria-label", ch.exampleEn || ch.kana);
+    btn.addEventListener("click", () => handleQuizChoice(ch, target, btn));
+    els.quizChoices.appendChild(btn);
+  });
+
+  speakAlphabetChar(target);
+}
+
+function handleQuizChoice(chosen, target, btn) {
+  if (chosen.id === target.id) {
+    btn.classList.add("correct");
+    els.quizFeedback.textContent = `${target.exampleWord || target.kana} — ${target.exampleEn || ""}`.trim();
+    playCorrect();
+    showCorrectOverlay();
+    setTimeout(() => advanceQuizAuto(), 1100);
+  } else {
+    btn.classList.add("wrong");
+    setTimeout(() => btn.classList.remove("wrong"), 500);
+    buzz();
+    showWrongOverlay();
+  }
+}
+
+function advanceQuizAuto() {
+  const set = getAlphabetSet();
+  if (!set) return;
+  const trackKey = state.currentTrack;
+  let next = (state.alphabetIndex[trackKey] || 0) + 1;
+  while (next < set.length && !set[next].exampleEmoji) next++;
+  if (next >= set.length) next = 0;
+  state.alphabetIndex[trackKey] = next;
+  buildAlphabetQuizRound();
 }
 
 function renderCards(items) {

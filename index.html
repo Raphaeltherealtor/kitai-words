@@ -59,6 +59,7 @@
         <button data-gametype="tap" class="mode-btn active">Listen & Tap</button>
         <button data-gametype="drag-complete" class="mode-btn">Drag to Complete</button>
         <button data-gametype="kana-alphabet" class="mode-btn hidden">Alphabet</button>
+        <button data-gametype="kana-alphabet-quiz" class="mode-btn hidden">Quiz</button>
       </div>
 
       <section id="prompt-area">
@@ -76,6 +77,20 @@
       <section id="complete-word-section" class="hidden">
         <div id="complete-word-display"></div>
         <div id="complete-choices" class="choices-row"></div>
+      </section>
+
+      <section id="alphabet-quiz-section" class="hidden">
+        <div class="alphabet-card quiz-card">
+          <div id="quiz-kana" class="alphabet-kana"></div>
+          <div class="quiz-prompt-text">Pick the picture for this sound</div>
+        </div>
+        <div id="quiz-choices" class="quiz-choices"></div>
+        <div id="quiz-feedback" class="quiz-feedback" aria-live="polite"></div>
+        <div class="alphabet-controls">
+          <button id="quiz-speak" aria-label="Replay sound">🔊</button>
+          <button id="quiz-skip" aria-label="Skip">➡️</button>
+        </div>
+        <div id="quiz-progress"></div>
       </section>
 
       <section id="alphabet-section" class="hidden">

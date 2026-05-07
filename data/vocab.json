@@ -41,8 +41,8 @@
     { "id": "eggplant", "categoryId": "vegetables", "en": "Eggplant", "jaKana": "なす", "jaRomaji": "nasu", "imagePath": "assets/images/veg-eggplant.svg", "aliases": [] },
     { "id": "mushroom", "categoryId": "vegetables", "en": "Mushroom", "jaKana": "きのこ", "jaRomaji": "kinoko", "imagePath": "assets/images/veg-mushroom.svg", "aliases": [] },
 
-    { "id": "mom", "categoryId": "people", "en": "Mama", "jaKana": "ママ", "jaRomaji": "mama", "imagePath": "assets/images/people-mom.svg", "aliases": ["mother"] },
-    { "id": "dad", "categoryId": "people", "en": "Papa", "jaKana": "パパ", "jaRomaji": "papa", "imagePath": "assets/images/people-dad.svg", "aliases": ["father"] },
+    { "id": "mom", "categoryId": "people", "en": "Okaasan", "jaKana": "おかあさん", "jaRomaji": "okaasan", "imagePath": "assets/images/people-mom.svg", "aliases": ["mama", "mother", "mom"] },
+    { "id": "dad", "categoryId": "people", "en": "Otousan", "jaKana": "おとうさん", "jaRomaji": "otousan", "imagePath": "assets/images/people-dad.svg", "aliases": ["papa", "father", "dad"] },
     { "id": "grandma", "categoryId": "people", "en": "Grandma", "jaKana": "おばあちゃん", "jaRomaji": "obaachan", "imagePath": "assets/images/people-grandma.svg", "aliases": [] },
     { "id": "grandpa", "categoryId": "people", "en": "Grandpa", "jaKana": "おじいちゃん", "jaRomaji": "ojiichan", "imagePath": "assets/images/people-grandpa.svg", "aliases": [] },
     { "id": "baby", "categoryId": "people", "en": "Baby", "jaKana": "あかちゃん", "jaRomaji": "akachan", "imagePath": "assets/images/people-baby.svg", "aliases": [] },

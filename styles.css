@@ -692,21 +692,141 @@ main {
   padding: 6px 10px;
 }
 
-.image-modal-preview {
-  width: 100%;
-  aspect-ratio: 1;
-  border: 1px solid #eee;
-  border-radius: 12px;
+.image-modal-photos {
   display: grid;
-  place-items: center;
-  overflow: hidden;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 10px;
+  max-height: 50vh;
+  overflow-y: auto;
+  padding: 4px;
+  border-radius: 12px;
   background: #fafafa;
 }
 
-.image-modal-preview img {
+.modal-photo-wrap {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #eee;
+}
+
+.modal-photo-wrap.default {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: auto;
+  padding: 12px;
+  grid-column: 1 / -1;
+}
+
+.modal-photo {
   width: 100%;
   height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.modal-photo-wrap.default .modal-photo {
+  width: auto;
+  max-width: 60%;
+  max-height: 140px;
   object-fit: contain;
+}
+
+.modal-photo-note {
+  font-size: 0.85rem;
+  color: #888;
+  margin-top: 6px;
+}
+
+.modal-photo-delete {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+
+.image-modal-help {
+  font-size: 0.85rem;
+  color: #888;
+}
+
+.library-help {
+  font-size: 0.85rem;
+  color: #777;
+  line-height: 1.4;
+}
+
+.library-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.library-actions button {
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.library-actions .reset {
+  background: #ffe9e9;
+  border-color: #ffb3b3;
+}
+
+.library-status {
+  font-size: 0.85rem;
+  color: #555;
+  font-style: italic;
+}
+
+.image-card .image-preview {
+  position: relative;
+}
+
+.image-thumb.stack-0 {
+  object-fit: cover;
+  z-index: 2;
+  position: relative;
+}
+
+.image-thumb.stack-1,
+.image-thumb.stack-2 {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
+.image-thumb.stack-1 {
+  transform: rotate(4deg) translate(6px, 4px);
+  z-index: 1;
+  opacity: 0.65;
+}
+
+.image-thumb.stack-2 {
+  transform: rotate(-4deg) translate(-6px, 4px);
+  z-index: 0;
+  opacity: 0.45;
 }
 
 .image-modal-actions {

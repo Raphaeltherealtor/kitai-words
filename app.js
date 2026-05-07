@@ -28,6 +28,8 @@ const state = {
   imageCategoryId: "all",
   imageModalItemId: null,
   alphabetIndex: { hiragana: 0, katakana: 0 },
+  libraryConfig: { libraryId: "", pin: "" },
+  storagePrefix: null,
 };
 
 const els = {
@@ -96,6 +98,12 @@ const els = {
   quizSpeak: document.getElementById("quiz-speak"),
   quizSkip: document.getElementById("quiz-skip"),
   quizProgress: document.getElementById("quiz-progress"),
+  imageModalPhotos: document.getElementById("image-modal-photos"),
+  libraryIdInput: document.getElementById("library-id"),
+  libraryPinInput: document.getElementById("library-pin"),
+  librarySaveBtn: document.getElementById("library-save"),
+  libraryResetBtn: document.getElementById("library-reset"),
+  libraryStatus: document.getElementById("library-status"),
 };
 
 const SUPABASE_URL = "https://nfaxncksesfcfqavmlae.supabase.co";
@@ -105,6 +113,7 @@ const SUPABASE_BUCKET = "kitai-images";
 document.addEventListener("DOMContentLoaded", init);
 
 async function init() {
+  loadLibraryConfig();
   await loadData();
   await loadHiragana();
   await loadKatakana();
@@ -115,7 +124,7 @@ async function init() {
   bindUI();
   registerServiceWorker();
   goHome();
-  syncImagesFromSupabase().catch(() => {});
+  ensureStoragePrefix().then(() => syncImagesFromSupabase()).catch(() => {});
 }
 
 async function loadData() {
@@ -172,15 +181,38 @@ function applyTheme() {
 
 let imageDb = null;
 
+const MAX_PHOTOS_PER_ITEM = 10;
+
 function getImageDb() {
   if (imageDb) return Promise.resolve(imageDb);
   if (!("indexedDB" in window)) return Promise.reject(new Error("IndexedDB not supported"));
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open("kitai-images", 1);
-    req.onupgradeneeded = () => {
+    const req = indexedDB.open("kitai-images", 2);
+    req.onupgradeneeded = (e) => {
       const db = req.result;
-      if (!db.objectStoreNames.contains("images")) {
-        db.createObjectStore("images", { keyPath: "id" });
+      const tx = req.transaction;
+      let store;
+      if (e.oldVersion < 1) {
+        store = db.createObjectStore("images", { keyPath: "id" });
+      } else {
+        store = tx.objectStore("images");
+      }
+      if (!store.indexNames.contains("itemId")) {
+        store.createIndex("itemId", "itemId");
+      }
+      if (e.oldVersion < 2) {
+        const cursorReq = store.openCursor();
+        cursorReq.onsuccess = () => {
+          const cursor = cursorReq.result;
+          if (!cursor) return;
+          const rec = cursor.value;
+          if (!rec.itemId) {
+            rec.itemId = rec.id;
+            rec.addedAt = rec.addedAt || 0;
+            cursor.update(rec);
+          }
+          cursor.continue();
+        };
       }
     };
     req.onsuccess = () => {
@@ -198,61 +230,111 @@ function requestToPromise(req) {
   });
 }
 
+function revokeAllOverrideUrls() {
+  Object.values(state.imageOverrides).forEach((arr) => {
+    if (Array.isArray(arr)) arr.forEach((entry) => URL.revokeObjectURL(entry.url));
+  });
+  state.imageOverrides = {};
+}
+
 async function loadImageOverrides() {
+  revokeAllOverrideUrls();
   try {
     const db = await getImageDb();
     const tx = db.transaction("images", "readonly");
     const store = tx.objectStore("images");
     const records = await requestToPromise(store.getAll());
-    state.imageOverrides = {};
     records.forEach((rec) => {
-      if (rec.blob) {
-        const url = URL.createObjectURL(rec.blob);
-        state.imageOverrides[rec.id] = url;
-      }
+      if (!rec.blob) return;
+      const itemId = rec.itemId || rec.id;
+      const url = URL.createObjectURL(rec.blob);
+      if (!state.imageOverrides[itemId]) state.imageOverrides[itemId] = [];
+      state.imageOverrides[itemId].push({ imageId: rec.id, url, addedAt: rec.addedAt || 0 });
+    });
+    Object.keys(state.imageOverrides).forEach((k) => {
+      state.imageOverrides[k].sort((a, b) => a.addedAt - b.addedAt);
     });
   } catch (e) {
     state.imageOverrides = {};
   }
 }
 
+function getOverrideEntries(itemId) {
+  const arr = state.imageOverrides[itemId];
+  return Array.isArray(arr) ? arr : [];
+}
+
 function getImageSrc(item) {
-  return state.imageOverrides[item.id] || item.imagePath;
+  const arr = getOverrideEntries(item.id);
+  if (arr.length) {
+    const pick = arr[Math.floor(Math.random() * arr.length)];
+    return pick.url;
+  }
+  return item.imagePath;
+}
+
+function generateImageId() {
+  if (crypto.randomUUID) return crypto.randomUUID();
+  return `img-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
 async function saveImageOverride(itemId, file) {
   if (!file) return;
+  const imageId = generateImageId();
+  const addedAt = Date.now();
   try {
     const db = await getImageDb();
     const tx = db.transaction("images", "readwrite");
-    const store = tx.objectStore("images");
-    await requestToPromise(store.put({ id: itemId, blob: file }));
-    if (state.imageOverrides[itemId]) URL.revokeObjectURL(state.imageOverrides[itemId]);
-    state.imageOverrides[itemId] = URL.createObjectURL(file);
+    await requestToPromise(tx.objectStore("images").put({ id: imageId, itemId, blob: file, addedAt }));
+    if (!state.imageOverrides[itemId]) state.imageOverrides[itemId] = [];
+    state.imageOverrides[itemId].push({ imageId, url: URL.createObjectURL(file), addedAt });
+    while (state.imageOverrides[itemId].length > MAX_PHOTOS_PER_ITEM) {
+      const oldest = state.imageOverrides[itemId].shift();
+      URL.revokeObjectURL(oldest.url);
+      removeImageFromIdbAndCloud(oldest.imageId).catch(() => {});
+    }
     renderImageList();
+    renderImageModalContent();
     if (state.currentTrack === "vocab") renderCurrentView();
   } catch (e) {
-    // ignore storage errors
+    // ignore
   }
-  uploadImageToSupabase(itemId, file).catch(() => {});
+  uploadImageToSupabase(itemId, imageId, file).catch(() => {});
 }
 
-async function removeImageOverride(itemId) {
+async function removeImageFromIdbAndCloud(imageId) {
   try {
     const db = await getImageDb();
     const tx = db.transaction("images", "readwrite");
-    const store = tx.objectStore("images");
-    await requestToPromise(store.delete(itemId));
-  } catch (e) {
-    // ignore storage errors
+    await requestToPromise(tx.objectStore("images").delete(imageId));
+  } catch (_) {}
+  deleteImageFromSupabase(imageId).catch(() => {});
+}
+
+async function removeImageOverride(itemId, imageId) {
+  const arr = state.imageOverrides[itemId] || [];
+  const idx = arr.findIndex((e) => e.imageId === imageId);
+  if (idx >= 0) {
+    URL.revokeObjectURL(arr[idx].url);
+    arr.splice(idx, 1);
+    if (arr.length === 0) delete state.imageOverrides[itemId];
   }
-  if (state.imageOverrides[itemId]) {
-    URL.revokeObjectURL(state.imageOverrides[itemId]);
-    delete state.imageOverrides[itemId];
-  }
+  await removeImageFromIdbAndCloud(imageId);
   renderImageList();
+  renderImageModalContent();
   if (state.currentTrack === "vocab") renderCurrentView();
-  deleteImageFromSupabase(itemId).catch(() => {});
+}
+
+async function removeAllImagesForItem(itemId) {
+  const arr = (state.imageOverrides[itemId] || []).slice();
+  for (const entry of arr) {
+    URL.revokeObjectURL(entry.url);
+    await removeImageFromIdbAndCloud(entry.imageId);
+  }
+  delete state.imageOverrides[itemId];
+  renderImageList();
+  renderImageModalContent();
+  if (state.currentTrack === "vocab") renderCurrentView();
 }
 
 function getDeviceId() {
@@ -266,6 +348,47 @@ function getDeviceId() {
   return id;
 }
 
+function loadLibraryConfig() {
+  try {
+    state.libraryConfig.libraryId = localStorage.getItem("kitai-library-id") || "";
+    state.libraryConfig.pin = localStorage.getItem("kitai-library-pin") || "";
+  } catch (_) {}
+}
+
+function saveLibraryConfigToStorage(libraryId, pin) {
+  state.libraryConfig.libraryId = libraryId || "";
+  state.libraryConfig.pin = pin || "";
+  try {
+    if (libraryId) localStorage.setItem("kitai-library-id", libraryId);
+    else localStorage.removeItem("kitai-library-id");
+    if (pin) localStorage.setItem("kitai-library-pin", pin);
+    else localStorage.removeItem("kitai-library-pin");
+  } catch (_) {}
+}
+
+async function deriveLibraryPrefix(libraryId, pin) {
+  if (!crypto.subtle) return `lib-${libraryId}-${pin}`;
+  const data = new TextEncoder().encode(`kitai-v1::${libraryId}::${pin}`);
+  const buf = await crypto.subtle.digest("SHA-256", data);
+  return "lib-" + Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("")
+    .slice(0, 24);
+}
+
+async function computeStoragePrefix() {
+  const id = (state.libraryConfig.libraryId || "").trim();
+  const pin = (state.libraryConfig.pin || "").trim();
+  if (id && pin) return await deriveLibraryPrefix(id, pin);
+  return getDeviceId();
+}
+
+async function ensureStoragePrefix() {
+  if (state.storagePrefix) return state.storagePrefix;
+  state.storagePrefix = await computeStoragePrefix();
+  return state.storagePrefix;
+}
+
 function readPathMap() {
   try { return JSON.parse(localStorage.getItem("kitai-image-paths") || "{}"); } catch (_) { return {}; }
 }
@@ -277,11 +400,16 @@ function supabasePublicUrl(path) {
   return `${SUPABASE_URL}/storage/v1/object/public/${SUPABASE_BUCKET}/${path}`;
 }
 
-async function uploadImageToSupabase(itemId, file) {
-  const fallbackExt = (file.type && file.type.split("/")[1]) || "png";
+function fileExt(file) {
+  const fallback = (file.type && file.type.split("/")[1]) || "png";
   const nameExt = file.name && file.name.includes(".") ? file.name.split(".").pop() : null;
-  const ext = (nameExt || fallbackExt).toLowerCase().replace(/[^a-z0-9]/g, "") || "png";
-  const path = `${getDeviceId()}/${itemId}.${ext}`;
+  return (nameExt || fallback).toLowerCase().replace(/[^a-z0-9]/g, "") || "png";
+}
+
+async function uploadImageToSupabase(itemId, imageId, file) {
+  const ext = fileExt(file);
+  const prefix = await ensureStoragePrefix();
+  const path = `${prefix}/${itemId}/${imageId}.${ext}`;
   const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${SUPABASE_BUCKET}/${path}`, {
     method: "POST",
     headers: {
@@ -294,30 +422,23 @@ async function uploadImageToSupabase(itemId, file) {
   });
   if (!res.ok) throw new Error(`Supabase upload failed: ${res.status}`);
   const map = readPathMap();
-  if (map[itemId] && map[itemId] !== path) {
-    fetch(`${SUPABASE_URL}/storage/v1/object/${SUPABASE_BUCKET}/${map[itemId]}`, {
-      method: "DELETE",
-      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
-    }).catch(() => {});
-  }
-  map[itemId] = path;
+  map[imageId] = path;
   writePathMap(map);
 }
 
-async function deleteImageFromSupabase(itemId) {
+async function deleteImageFromSupabase(imageId) {
   const map = readPathMap();
-  const path = map[itemId];
+  const path = map[imageId];
   if (!path) return;
   await fetch(`${SUPABASE_URL}/storage/v1/object/${SUPABASE_BUCKET}/${path}`, {
     method: "DELETE",
     headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
   });
-  delete map[itemId];
+  delete map[imageId];
   writePathMap(map);
 }
 
-async function syncImagesFromSupabase() {
-  const deviceId = getDeviceId();
+async function listSupabase(prefix) {
   const res = await fetch(`${SUPABASE_URL}/storage/v1/object/list/${SUPABASE_BUCKET}`, {
     method: "POST",
     headers: {
@@ -325,35 +446,99 @@ async function syncImagesFromSupabase() {
       Authorization: `Bearer ${SUPABASE_KEY}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ prefix: `${deviceId}/`, limit: 1000, offset: 0 }),
+    body: JSON.stringify({ prefix, limit: 1000, offset: 0 }),
   });
-  if (!res.ok) return;
-  const files = await res.json();
-  if (!Array.isArray(files) || files.length === 0) return;
+  if (!res.ok) return [];
+  const data = await res.json();
+  return Array.isArray(data) ? data : [];
+}
+
+async function listSupabaseRecursive(rootPrefix) {
+  const all = [];
+  const queue = [rootPrefix];
+  let safety = 200;
+  while (queue.length && safety-- > 0) {
+    const p = queue.shift();
+    const list = await listSupabase(p);
+    for (const entry of list) {
+      if (!entry || !entry.name) continue;
+      if (entry.id) {
+        all.push({ path: `${p}${entry.name}`, name: entry.name });
+      } else {
+        queue.push(`${p}${entry.name}/`);
+      }
+    }
+  }
+  return all;
+}
+
+async function syncImagesFromSupabase() {
+  const prefix = await ensureStoragePrefix();
+  const all = await listSupabaseRecursive(`${prefix}/`);
+  if (all.length === 0) return;
+
+  const db = await getImageDb();
+  const existingKeys = new Set(
+    await requestToPromise(db.transaction("images", "readonly").objectStore("images").getAllKeys())
+  );
+
   const map = readPathMap();
   let touched = false;
-  for (const f of files) {
-    if (!f.name) continue;
-    const itemId = f.name.replace(/\.[^.]+$/, "");
-    const path = `${deviceId}/${f.name}`;
-    map[itemId] = path;
-    if (state.imageOverrides[itemId]) continue;
+  for (const entry of all) {
+    const rel = entry.path.slice(prefix.length + 1);
+    const parts = rel.split("/");
+    let itemId, imageId;
+    if (parts.length >= 2) {
+      itemId = parts[0];
+      imageId = parts[parts.length - 1].replace(/\.[^.]+$/, "");
+    } else {
+      itemId = parts[0].replace(/\.[^.]+$/, "");
+      imageId = `legacy-${itemId}`;
+    }
+    map[imageId] = entry.path;
+    if (existingKeys.has(imageId)) continue;
     try {
-      const blobRes = await fetch(supabasePublicUrl(path));
+      const blobRes = await fetch(supabasePublicUrl(entry.path));
       if (!blobRes.ok) continue;
       const blob = await blobRes.blob();
-      const db = await getImageDb();
-      const tx = db.transaction("images", "readwrite");
-      await requestToPromise(tx.objectStore("images").put({ id: itemId, blob }));
-      state.imageOverrides[itemId] = URL.createObjectURL(blob);
+      const addedAt = Date.now();
+      const wtx = db.transaction("images", "readwrite");
+      await requestToPromise(wtx.objectStore("images").put({ id: imageId, itemId, blob, addedAt }));
+      if (!state.imageOverrides[itemId]) state.imageOverrides[itemId] = [];
+      state.imageOverrides[itemId].push({ imageId, url: URL.createObjectURL(blob), addedAt });
       touched = true;
     } catch (_) {}
   }
   writePathMap(map);
   if (touched) {
+    Object.keys(state.imageOverrides).forEach((k) => {
+      state.imageOverrides[k].sort((a, b) => a.addedAt - b.addedAt);
+    });
     renderImageList();
+    renderImageModalContent();
     if (state.currentTrack === "vocab") renderCurrentView();
   }
+}
+
+async function clearImageDb() {
+  try {
+    const db = await getImageDb();
+    const tx = db.transaction("images", "readwrite");
+    await requestToPromise(tx.objectStore("images").clear());
+  } catch (_) {}
+}
+
+async function applyLibrarySwitch(libraryId, pin) {
+  saveLibraryConfigToStorage(libraryId, pin);
+  await clearImageDb();
+  revokeAllOverrideUrls();
+  writePathMap({});
+  state.storagePrefix = null;
+  await ensureStoragePrefix();
+  renderImageList();
+  renderImageModalContent();
+  if (state.currentTrack === "vocab") renderCurrentView();
+  syncImagesFromSupabase().catch(() => {});
 }
 
 function setupVoiceOptions() {
@@ -489,8 +674,7 @@ function bindUI() {
   }
   if (els.imageModalReset) {
     els.imageModalReset.addEventListener("click", () => {
-      if (state.imageModalItemId) removeImageOverride(state.imageModalItemId);
-      closeImageModal();
+      if (state.imageModalItemId) removeAllImagesForItem(state.imageModalItemId);
     });
   }
   if (els.imageModalFile) {
@@ -499,7 +683,6 @@ function bindUI() {
       const file = els.imageModalFile.files?.[0];
       if (id && file) saveImageOverride(id, file);
       els.imageModalFile.value = "";
-      closeImageModal();
     });
   }
   if (els.imageModalCameraInput) {
@@ -508,7 +691,6 @@ function bindUI() {
       const file = els.imageModalCameraInput.files?.[0];
       if (id && file) saveImageOverride(id, file);
       els.imageModalCameraInput.value = "";
-      closeImageModal();
     });
   }
 
@@ -586,6 +768,45 @@ function bindUI() {
   if (els.quizSkip) els.quizSkip.addEventListener("click", () => advanceQuizAuto());
 
   setupInstallPrompt();
+  setupLibraryControls();
+}
+
+function setupLibraryControls() {
+  if (els.libraryIdInput) els.libraryIdInput.value = state.libraryConfig.libraryId || "";
+  if (els.libraryPinInput) els.libraryPinInput.value = state.libraryConfig.pin || "";
+  updateLibraryStatusLabel();
+
+  if (els.librarySaveBtn) {
+    els.librarySaveBtn.addEventListener("click", () => {
+      const id = (els.libraryIdInput?.value || "").trim();
+      const pin = (els.libraryPinInput?.value || "").trim();
+      if (!id || !/^\d{4}$/.test(pin)) {
+        alert("Enter a Library ID and a 4-digit PIN to switch.");
+        return;
+      }
+      if (!confirm("Switching libraries will clear photos on this device and load the shared library. Continue?")) return;
+      applyLibrarySwitch(id, pin).then(updateLibraryStatusLabel);
+    });
+  }
+  if (els.libraryResetBtn) {
+    els.libraryResetBtn.addEventListener("click", () => {
+      if (!confirm("Reset to private device library? Photos already on the cloud library are not deleted; this device will go back to its own library.")) return;
+      if (els.libraryIdInput) els.libraryIdInput.value = "";
+      if (els.libraryPinInput) els.libraryPinInput.value = "";
+      applyLibrarySwitch("", "").then(updateLibraryStatusLabel);
+    });
+  }
+}
+
+function updateLibraryStatusLabel() {
+  if (!els.libraryStatus) return;
+  const id = (state.libraryConfig.libraryId || "").trim();
+  const pin = (state.libraryConfig.pin || "").trim();
+  if (id && pin) {
+    els.libraryStatus.textContent = `Connected: "${id}" (PIN ${pin.replace(/./g, "•")})`;
+  } else {
+    els.libraryStatus.textContent = "Private device library (default)";
+  }
 }
 
 let deferredInstallPrompt = null;
@@ -682,10 +903,22 @@ function renderImageList() {
     card.className = "image-card";
     const preview = document.createElement("div");
     preview.className = "image-preview";
-    const img = document.createElement("img");
-    img.src = getImageSrc(item);
-    img.alt = item.en;
-    preview.appendChild(img);
+    const arr = getOverrideEntries(item.id);
+    if (arr.length > 0) {
+      arr.slice(0, 3).forEach((entry, i) => {
+        const t = document.createElement("img");
+        t.src = entry.url;
+        t.className = "image-thumb stack-" + i;
+        t.alt = item.en;
+        preview.appendChild(t);
+      });
+    } else {
+      const img = document.createElement("img");
+      img.src = item.imagePath;
+      img.alt = item.en;
+      img.className = "image-thumb";
+      preview.appendChild(img);
+    }
     card.appendChild(preview);
 
     const title = document.createElement("div");
@@ -695,7 +928,9 @@ function renderImageList() {
 
     const sub = document.createElement("div");
     sub.className = "subtitle";
-    sub.textContent = state.imageOverrides[item.id] ? "Custom image" : "Default image";
+    sub.textContent = arr.length === 0
+      ? "Default image"
+      : arr.length === 1 ? "1 custom photo" : `${arr.length} custom photos`;
     card.appendChild(sub);
 
     card.addEventListener("click", () => openImageModal(item));
@@ -704,14 +939,59 @@ function renderImageList() {
 }
 
 function openImageModal(item) {
-  if (!els.imageModal || !els.imageModalTitle || !els.imageModalImg) return;
+  if (!els.imageModal || !els.imageModalTitle) return;
   state.imageModalItemId = item.id;
   els.imageModalTitle.textContent = `${item.en} (${item.jaKana})`;
-  els.imageModalImg.src = getImageSrc(item);
-  if (els.imageModalReset) {
-    els.imageModalReset.disabled = !state.imageOverrides[item.id];
-  }
+  renderImageModalContent();
   els.imageModal.classList.remove("hidden");
+}
+
+function renderImageModalContent() {
+  const itemId = state.imageModalItemId;
+  if (!itemId) return;
+  const item = state.items.find((i) => i.id === itemId);
+  if (!item) return;
+  const arr = getOverrideEntries(itemId);
+  if (els.imageModalPhotos) {
+    els.imageModalPhotos.innerHTML = "";
+    if (arr.length === 0) {
+      const wrap = document.createElement("div");
+      wrap.className = "modal-photo-wrap default";
+      const img = document.createElement("img");
+      img.src = item.imagePath;
+      img.alt = item.en;
+      img.className = "modal-photo";
+      wrap.appendChild(img);
+      const note = document.createElement("div");
+      note.className = "modal-photo-note";
+      note.textContent = "Default image";
+      wrap.appendChild(note);
+      els.imageModalPhotos.appendChild(wrap);
+    } else {
+      arr.forEach((entry) => {
+        const wrap = document.createElement("div");
+        wrap.className = "modal-photo-wrap";
+        const img = document.createElement("img");
+        img.src = entry.url;
+        img.className = "modal-photo";
+        wrap.appendChild(img);
+        const x = document.createElement("button");
+        x.className = "modal-photo-delete";
+        x.textContent = "×";
+        x.setAttribute("aria-label", "Delete photo");
+        x.addEventListener("click", (e) => {
+          e.stopPropagation();
+          removeImageOverride(itemId, entry.imageId);
+        });
+        wrap.appendChild(x);
+        els.imageModalPhotos.appendChild(wrap);
+      });
+    }
+  }
+  if (els.imageModalReset) {
+    els.imageModalReset.disabled = arr.length === 0;
+    els.imageModalReset.textContent = arr.length > 1 ? "Remove All" : "Reset";
+  }
 }
 
 function closeImageModal() {

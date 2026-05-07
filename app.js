@@ -844,10 +844,18 @@ function buildDragCompleteRound(target) {
   const missingIndex = Math.floor(Math.random() * chars.length);
   const missingChar = chars[missingIndex];
   state.currentKanaMissing = missingChar;
-  const display = chars
-    .map((ch, idx) => (idx === missingIndex ? `<span class="blank-slot" data-missing="${missingChar}"></span>` : ch))
-    .join("");
-  els.completeWordDisplay.innerHTML = display;
+  els.completeWordDisplay.innerHTML = "";
+  chars.forEach((ch, idx) => {
+    const cell = document.createElement("span");
+    cell.className = "letter-cell";
+    if (idx === missingIndex) {
+      cell.classList.add("blank-slot");
+      cell.dataset.missing = missingChar;
+    } else {
+      cell.textContent = ch;
+    }
+    els.completeWordDisplay.appendChild(cell);
+  });
   els.promptWord.textContent = target.en;
 
   const poolChars = Array.from(new Set(pickPool().flatMap((i) => Array.from(i.jaKana))));
@@ -867,17 +875,11 @@ function buildDragCompleteRound(target) {
     chip.addEventListener("pointerdown", (e) => handleChipDragStart(e, chip, opt));
     chip.addEventListener("click", () => {
       const slot = els.completeWordDisplay.querySelector(".blank-slot");
-      if (slot) handleDropOnBlank(slot, missingChar, target, opt);
+      if (slot && !chip.dataset.dragMoved) handleDropOnBlank(slot, missingChar, target, opt);
+      delete chip.dataset.dragMoved;
     });
     els.completeChoices.appendChild(chip);
   });
-
-  const slot = els.completeWordDisplay.querySelector(".blank-slot");
-  if (slot) {
-    slot.addEventListener("pointerup", () => handleDropOnBlank(slot, missingChar, target));
-    slot.addEventListener("pointerenter", () => slot.classList.add("hover"));
-    slot.addEventListener("pointerleave", () => slot.classList.remove("hover"));
-  }
 }
 
 function buildKanaCompleteRound(word) {
@@ -885,10 +887,18 @@ function buildKanaCompleteRound(word) {
   const missingIndex = Math.floor(Math.random() * chars.length);
   const missingChar = chars[missingIndex];
   state.currentKanaMissing = missingChar;
-  const display = chars
-    .map((ch, idx) => (idx === missingIndex ? `<span class="blank-slot" data-missing="${missingChar}"></span>` : ch))
-    .join("");
-  els.completeWordDisplay.innerHTML = display;
+  els.completeWordDisplay.innerHTML = "";
+  chars.forEach((ch, idx) => {
+    const cell = document.createElement("span");
+    cell.className = "letter-cell";
+    if (idx === missingIndex) {
+      cell.classList.add("blank-slot");
+      cell.dataset.missing = missingChar;
+    } else {
+      cell.textContent = ch;
+    }
+    els.completeWordDisplay.appendChild(cell);
+  });
   els.promptWord.textContent = word.romaji;
 
   const poolChars = Array.from(new Set(state.kanaChars.map((c) => c.kana)));
@@ -912,17 +922,11 @@ function buildKanaCompleteRound(word) {
     chip.addEventListener("pointerdown", (e) => handleChipDragStart(e, chip, opt));
     chip.addEventListener("click", () => {
       const slot = els.completeWordDisplay.querySelector(".blank-slot");
-      if (slot) handleDropOnBlank(slot, missingChar, word, opt);
+      if (slot && !chip.dataset.dragMoved) handleDropOnBlank(slot, missingChar, word, opt);
+      delete chip.dataset.dragMoved;
     });
     els.completeChoices.appendChild(chip);
   });
-
-  const slot = els.completeWordDisplay.querySelector(".blank-slot");
-  if (slot) {
-    slot.addEventListener("pointerup", () => handleDropOnBlank(slot, missingChar, word));
-    slot.addEventListener("pointerenter", () => slot.classList.add("hover"));
-    slot.addEventListener("pointerleave", () => slot.classList.remove("hover"));
-  }
 }
 
 function handleCompleteChoice(opt, missingChar, target) {
@@ -996,34 +1000,49 @@ function handleDragEnd(e) {
   dragData = { item: null, el: null };
 }
 
+let chipDragPointerId = null;
+const DRAG_THRESHOLD_PX = 6;
+
 function handleChipDragStart(e, chipEl, value) {
+  if (e.button != null && e.button !== 0) return;
+  e.preventDefault();
   dragOptionData = { value, el: chipEl, startX: e.clientX, startY: e.clientY };
-  chipEl.setPointerCapture(e.pointerId);
-  chipEl.classList.add("dragging");
-  chipEl.dataset.dragging = "true";
-  chipEl.addEventListener("pointermove", handleChipDragMove);
-  chipEl.addEventListener("pointerup", handleChipDragEnd);
+  chipDragPointerId = e.pointerId;
+  document.addEventListener("pointermove", handleChipDragMove);
+  document.addEventListener("pointerup", handleChipDragEnd);
+  document.addEventListener("pointercancel", handleChipDragEnd);
 }
 
 function handleChipDragMove(e) {
+  if (chipDragPointerId != null && e.pointerId !== chipDragPointerId) return;
   const chipEl = dragOptionData.el;
   if (!chipEl) return;
   const dx = e.clientX - dragOptionData.startX;
   const dy = e.clientY - dragOptionData.startY;
+  if (!chipEl.classList.contains("dragging")) {
+    if (Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
+    chipEl.classList.add("dragging");
+    chipEl.dataset.dragMoved = "true";
+  }
   chipEl.style.transform = `translate(${dx}px, ${dy}px)`;
   const targetEl = document.elementFromPoint(e.clientX, e.clientY);
   const slot = targetEl?.closest(".blank-slot");
   if (slot !== dragOptionHoverSlot) {
     if (dragOptionHoverSlot) dragOptionHoverSlot.classList.remove("hover");
-    dragOptionHoverSlot = slot;
+    dragOptionHoverSlot = slot || null;
     if (dragOptionHoverSlot) dragOptionHoverSlot.classList.add("hover");
   }
 }
 
 function handleChipDragEnd(e) {
+  if (chipDragPointerId != null && e.pointerId !== chipDragPointerId) return;
+  document.removeEventListener("pointermove", handleChipDragMove);
+  document.removeEventListener("pointerup", handleChipDragEnd);
+  document.removeEventListener("pointercancel", handleChipDragEnd);
+  chipDragPointerId = null;
   const chipEl = dragOptionData.el;
   if (!chipEl) return;
-  try { chipEl.releasePointerCapture(e.pointerId); } catch (_) {}
+  const wasDragging = chipEl.classList.contains("dragging");
   const dropTarget = e.clientX != null ? document.elementFromPoint(e.clientX, e.clientY) : null;
   const slot = dragOptionHoverSlot || dropTarget?.closest(".blank-slot");
   const value = dragOptionData.value;
@@ -1031,11 +1050,8 @@ function handleChipDragEnd(e) {
   dragOptionHoverSlot = null;
   chipEl.classList.remove("dragging");
   chipEl.style.transform = "";
-  chipEl.removeEventListener("pointermove", handleChipDragMove);
-  chipEl.removeEventListener("pointerup", handleChipDragEnd);
-  chipEl.dataset.dragging = "";
   dragOptionData = { value: null, el: null, startX: 0, startY: 0 };
-  if (slot) handleDropOnBlank(slot, slot.dataset.missing, state.currentTarget, value);
+  if (wasDragging && slot) handleDropOnBlank(slot, slot.dataset.missing, state.currentTarget, value);
 }
 
 function handleDropOnBlank(slotEl, missingChar, target, chosenOverride = null) {

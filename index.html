@@ -58,6 +58,7 @@
       <div id="mode-switcher">
         <button data-gametype="tap" class="mode-btn active">Listen & Tap</button>
         <button data-gametype="drag-complete" class="mode-btn">Drag to Complete</button>
+        <button data-gametype="kana-alphabet" class="mode-btn hidden">Alphabet</button>
       </div>
 
       <section id="prompt-area">
@@ -76,8 +77,34 @@
         <div id="complete-word-display"></div>
         <div id="complete-choices" class="choices-row"></div>
       </section>
+
+      <section id="alphabet-section" class="hidden">
+        <div class="alphabet-card">
+          <div id="alphabet-emoji" class="alphabet-emoji"></div>
+          <div id="alphabet-kana" class="alphabet-kana"></div>
+          <div class="alphabet-example">
+            <div id="alphabet-example-word"></div>
+            <div id="alphabet-example-romaji"></div>
+            <div id="alphabet-example-en"></div>
+          </div>
+        </div>
+        <div class="alphabet-controls">
+          <button id="alphabet-prev" aria-label="Previous">⬅️</button>
+          <button id="alphabet-speak" aria-label="Replay sound">🔊</button>
+          <button id="alphabet-next" aria-label="Next">➡️</button>
+        </div>
+        <div id="alphabet-progress"></div>
+      </section>
     </section>
   </main>
+
+  <div id="install-banner" class="hidden">
+    <div id="install-text">Install Kitai Words for offline play!</div>
+    <div class="install-actions">
+      <button id="install-btn">Install</button>
+      <button id="install-dismiss" aria-label="Dismiss">✕</button>
+    </div>
+  </div>
 
   <div id="settings-overlay" class="hidden">
     <div id="settings" role="dialog" aria-modal="true">

@@ -27,6 +27,7 @@ const state = {
   imageOverrides: {},
   imageCategoryId: "all",
   imageModalItemId: null,
+  alphabetIndex: { hiragana: 0, katakana: 0 },
 };
 
 const els = {
@@ -73,6 +74,21 @@ const els = {
   imageModalReset: document.getElementById("image-modal-reset"),
   imageModalFile: document.getElementById("image-modal-file"),
   imageModalCameraInput: document.getElementById("image-modal-camera-input"),
+  promptArea: document.getElementById("prompt-area"),
+  alphabetSection: document.getElementById("alphabet-section"),
+  alphabetEmoji: document.getElementById("alphabet-emoji"),
+  alphabetKana: document.getElementById("alphabet-kana"),
+  alphabetExampleWord: document.getElementById("alphabet-example-word"),
+  alphabetExampleRomaji: document.getElementById("alphabet-example-romaji"),
+  alphabetExampleEn: document.getElementById("alphabet-example-en"),
+  alphabetPrev: document.getElementById("alphabet-prev"),
+  alphabetNext: document.getElementById("alphabet-next"),
+  alphabetSpeak: document.getElementById("alphabet-speak"),
+  alphabetProgress: document.getElementById("alphabet-progress"),
+  installBanner: document.getElementById("install-banner"),
+  installText: document.getElementById("install-text"),
+  installBtn: document.getElementById("install-btn"),
+  installDismiss: document.getElementById("install-dismiss"),
 };
 
 const SUPABASE_URL = "https://nfaxncksesfcfqavmlae.supabase.co";
@@ -529,6 +545,83 @@ function bindUI() {
       startRound();
     });
   });
+
+  if (els.alphabetPrev) els.alphabetPrev.addEventListener("click", () => advanceAlphabet(-1));
+  if (els.alphabetNext) els.alphabetNext.addEventListener("click", () => advanceAlphabet(1));
+  if (els.alphabetSpeak) {
+    els.alphabetSpeak.addEventListener("click", () => {
+      const set = getAlphabetSet();
+      if (!set) return;
+      const idx = state.alphabetIndex[state.currentTrack] || 0;
+      speakAlphabetChar(set[idx]);
+    });
+  }
+  if (els.alphabetSection) {
+    let touchStartX = null;
+    els.alphabetSection.addEventListener("touchstart", (e) => {
+      if (e.touches.length === 1) touchStartX = e.touches[0].clientX;
+    }, { passive: true });
+    els.alphabetSection.addEventListener("touchend", (e) => {
+      if (touchStartX == null) return;
+      const dx = (e.changedTouches[0]?.clientX ?? touchStartX) - touchStartX;
+      touchStartX = null;
+      if (Math.abs(dx) > 50) advanceAlphabet(dx < 0 ? 1 : -1);
+    }, { passive: true });
+  }
+
+  setupInstallPrompt();
+}
+
+let deferredInstallPrompt = null;
+function setupInstallPrompt() {
+  const dismissed = (() => {
+    try { return localStorage.getItem("install-dismissed") === "1"; } catch { return false; }
+  })();
+  const isStandalone = window.matchMedia?.("(display-mode: standalone)").matches ||
+    window.navigator.standalone === true;
+  if (isStandalone) return;
+
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    if (dismissed) return;
+    showInstallBanner("Install Kitai Words for offline play!", true);
+  });
+
+  window.addEventListener("appinstalled", () => {
+    if (els.installBanner) els.installBanner.classList.add("hidden");
+    deferredInstallPrompt = null;
+  });
+
+  if (els.installBtn) {
+    els.installBtn.addEventListener("click", async () => {
+      if (!deferredInstallPrompt) return;
+      els.installBanner.classList.add("hidden");
+      deferredInstallPrompt.prompt();
+      try { await deferredInstallPrompt.userChoice; } catch (_) {}
+      deferredInstallPrompt = null;
+    });
+  }
+  if (els.installDismiss) {
+    els.installDismiss.addEventListener("click", () => {
+      els.installBanner.classList.add("hidden");
+      try { localStorage.setItem("install-dismissed", "1"); } catch (_) {}
+    });
+  }
+
+  const ua = navigator.userAgent;
+  const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+  const isSafari = /^((?!chrome|android|crios|fxios).)*safari/i.test(ua);
+  if (isIOS && isSafari && !dismissed) {
+    showInstallBanner("Install: tap the Share icon, then “Add to Home Screen”.", false);
+  }
+}
+
+function showInstallBanner(message, withInstallButton) {
+  if (!els.installBanner) return;
+  if (els.installText) els.installText.textContent = message;
+  if (els.installBtn) els.installBtn.classList.toggle("hidden", !withInstallButton);
+  els.installBanner.classList.remove("hidden");
 }
 
 function buildImageManager() {
@@ -617,24 +710,36 @@ function setActiveModeButton(type) {
 }
 
 function updateModeButtonsForTrack(track) {
+  const [btn1, btn2, btn3] = els.modeButtons;
   if (track === "vocab") {
     if (els.categoryQuick) els.categoryQuick.parentElement.classList.remove("hidden");
-    const [btn1, btn2] = els.modeButtons;
     btn1.dataset.gametype = "tap";
     btn1.textContent = "Listen & Tap";
+    btn1.classList.remove("hidden");
+    btn1.disabled = false;
     btn2.dataset.gametype = "drag-complete";
     btn2.textContent = "Drag to Complete";
-    els.modeButtons.forEach((b) => (b.disabled = false));
+    btn2.classList.remove("hidden");
+    btn2.disabled = false;
+    if (btn3) btn3.classList.add("hidden");
     state.currentGameType = "tap";
     setActiveModeButton("tap");
   } else if (track === "hiragana" || track === "katakana") {
     if (els.categoryQuick) els.categoryQuick.parentElement.classList.add("hidden");
-    const [btn1, btn2] = els.modeButtons;
     btn1.dataset.gametype = "kana-tap";
     btn1.textContent = "Sound & Pick";
+    btn1.classList.remove("hidden");
+    btn1.disabled = false;
     btn2.dataset.gametype = "kana-complete";
     btn2.textContent = "Drag to Complete";
-    els.modeButtons.forEach((b) => (b.disabled = false));
+    btn2.classList.remove("hidden");
+    btn2.disabled = false;
+    if (btn3) {
+      btn3.dataset.gametype = "kana-alphabet";
+      btn3.textContent = "Alphabet";
+      btn3.classList.remove("hidden");
+      btn3.disabled = false;
+    }
     state.currentGameType = "kana-tap";
     setActiveModeButton("kana-tap");
   } else {
@@ -714,6 +819,10 @@ function chooseKanaRound() {
 
 function startRound() {
   if (state.currentSection !== "game") return;
+  if (state.currentGameType === "kana-alphabet") {
+    renderCurrentView();
+    return;
+  }
   if (state.currentTrack === "vocab") {
     chooseRoundItems();
   } else if (state.currentTrack === "hiragana" || state.currentTrack === "katakana") {
@@ -734,44 +843,117 @@ function renderCurrentView() {
   } else if (state.currentTrack === "hiragana" || state.currentTrack === "katakana") {
     if (state.currentGameType === "kana-tap") {
       renderKanaTapView();
-    } else {
+    } else if (state.currentGameType === "kana-complete") {
       renderKanaCompleteView();
+    } else if (state.currentGameType === "kana-alphabet") {
+      renderAlphabetView();
     }
   }
 }
 
-function renderTapView() {
-  els.modeLabel.textContent = "Listen & Tap";
-  els.cards.classList.remove("hidden");
+function showPromptArea(show) {
+  if (!els.promptArea) return;
+  els.promptArea.classList.toggle("hidden", !show);
+}
+
+function hideAllGameViews() {
+  els.cards.classList.add("hidden");
   els.dropzoneSection.classList.add("hidden");
   els.completeWordSection.classList.add("hidden");
+  if (els.alphabetSection) els.alphabetSection.classList.add("hidden");
+}
+
+function renderTapView() {
+  els.modeLabel.textContent = "Listen & Tap";
+  hideAllGameViews();
+  showPromptArea(true);
+  els.cards.classList.remove("hidden");
   renderCards(state.currentChoices);
   els.promptWord.textContent = state.currentTarget.jaKana;
 }
 
 function renderDragCompleteView() {
   els.modeLabel.textContent = "Drag to Complete";
-  els.cards.classList.add("hidden");
-  els.dropzoneSection.classList.add("hidden");
+  hideAllGameViews();
+  showPromptArea(true);
   els.completeWordSection.classList.remove("hidden");
   buildDragCompleteRound(state.currentTarget);
 }
 
 function renderKanaTapView() {
   els.modeLabel.textContent = "Sound & Pick";
+  hideAllGameViews();
+  showPromptArea(true);
   els.cards.classList.remove("hidden");
-  els.dropzoneSection.classList.add("hidden");
-  els.completeWordSection.classList.add("hidden");
   renderKanaCards(state.currentChoices);
   els.promptWord.textContent = "🔊 Listen & pick";
 }
 
 function renderKanaCompleteView() {
   els.modeLabel.textContent = "Drag to Complete";
-  els.cards.classList.add("hidden");
-  els.dropzoneSection.classList.add("hidden");
+  hideAllGameViews();
+  showPromptArea(true);
   els.completeWordSection.classList.remove("hidden");
   buildKanaCompleteRound(state.currentTarget);
+}
+
+function getAlphabetSet() {
+  return state.currentTrack === "katakana" ? state.kataChars : state.kanaChars;
+}
+
+function renderAlphabetView() {
+  els.modeLabel.textContent = "Alphabet";
+  hideAllGameViews();
+  showPromptArea(false);
+  if (!els.alphabetSection) return;
+  els.alphabetSection.classList.remove("hidden");
+  const set = getAlphabetSet();
+  if (!set || set.length === 0) return;
+  const trackKey = state.currentTrack;
+  let idx = state.alphabetIndex[trackKey] || 0;
+  if (idx >= set.length) idx = 0;
+  state.alphabetIndex[trackKey] = idx;
+  const ch = set[idx];
+  els.alphabetEmoji.textContent = ch.exampleEmoji || "";
+  els.alphabetKana.textContent = ch.kana;
+  els.alphabetExampleWord.textContent = ch.exampleWord || "";
+  els.alphabetExampleRomaji.textContent = ch.exampleRomaji || "";
+  els.alphabetExampleEn.textContent = ch.exampleEn || "";
+  els.alphabetProgress.textContent = `${idx + 1} / ${set.length}`;
+  els.alphabetPrev.disabled = idx === 0;
+  els.alphabetNext.disabled = idx === set.length - 1;
+  speakAlphabetChar(ch);
+}
+
+function speakAlphabetChar(ch) {
+  if (!ch) return;
+  const phrase = ch.exampleWord ? `${ch.kana}。${ch.exampleWord}` : ch.kana;
+  speakText(phrase);
+}
+
+function speakText(text) {
+  if (!text) return;
+  if (!("speechSynthesis" in window)) return;
+  try {
+    speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = "ja-JP";
+    const voice = state.voices.find((v) => v.voiceURI === state.voiceId) ||
+      state.voices.find((v) => v.lang && v.lang.startsWith("ja"));
+    if (voice) utter.voice = voice;
+    utter.rate = 0.9;
+    speechSynthesis.speak(utter);
+  } catch (_) {}
+}
+
+function advanceAlphabet(delta) {
+  const set = getAlphabetSet();
+  if (!set) return;
+  const trackKey = state.currentTrack;
+  const next = (state.alphabetIndex[trackKey] || 0) + delta;
+  if (next < 0 || next >= set.length) return;
+  state.alphabetIndex[trackKey] = next;
+  renderAlphabetView();
 }
 
 function renderCards(items) {

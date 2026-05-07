@@ -438,6 +438,142 @@ main {
   display: none !important;
 }
 
+#alphabet-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 8px 0 24px;
+}
+
+.alphabet-card {
+  width: 100%;
+  max-width: 480px;
+  background: #fff;
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+  padding: 28px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+}
+
+.alphabet-emoji {
+  font-size: clamp(5rem, 22vw, 8rem);
+  line-height: 1;
+}
+
+.alphabet-kana {
+  font-size: clamp(5rem, 22vw, 8rem);
+  font-weight: 800;
+  line-height: 1;
+  color: var(--text);
+}
+
+.alphabet-example {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+#alphabet-example-word {
+  font-size: clamp(1.6rem, 6vw, 2.2rem);
+  font-weight: 700;
+  color: var(--text);
+}
+
+#alphabet-example-romaji {
+  font-size: clamp(1rem, 4vw, 1.25rem);
+  color: #888;
+  font-style: italic;
+}
+
+#alphabet-example-en {
+  font-size: clamp(1.1rem, 4.5vw, 1.4rem);
+  color: var(--text);
+}
+
+.alphabet-controls {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+}
+
+.alphabet-controls button {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent-2, #2ec4b6);
+  color: white;
+  font-size: 1.6rem;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+
+.alphabet-controls button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+#alphabet-progress {
+  font-size: 1rem;
+  color: #888;
+}
+
+#install-banner {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 1400;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+#install-text {
+  font-weight: 600;
+  color: var(--text);
+  flex: 1;
+  font-size: 0.95rem;
+}
+
+.install-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+#install-btn {
+  background: var(--accent-2, #2ec4b6);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+#install-dismiss {
+  background: transparent;
+  border: none;
+  font-size: 1.2rem;
+  color: #999;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
 #image-modal {
   position: fixed;
   inset: 0;

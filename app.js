@@ -839,23 +839,34 @@ function handleTap(item, cardEl) {
   }
 }
 
+function renderSplitWordDisplay(chars, missingIndex, missingChar) {
+  els.completeWordDisplay.innerHTML = "";
+  const prefix = chars.slice(0, missingIndex).join("");
+  const suffix = chars.slice(missingIndex + 1).join("");
+  if (prefix) {
+    const left = document.createElement("span");
+    left.className = "word-section";
+    left.textContent = prefix;
+    els.completeWordDisplay.appendChild(left);
+  }
+  const slot = document.createElement("span");
+  slot.className = "letter-cell blank-slot";
+  slot.dataset.missing = missingChar;
+  els.completeWordDisplay.appendChild(slot);
+  if (suffix) {
+    const right = document.createElement("span");
+    right.className = "word-section";
+    right.textContent = suffix;
+    els.completeWordDisplay.appendChild(right);
+  }
+}
+
 function buildDragCompleteRound(target) {
   const chars = Array.from(target.jaKana);
   const missingIndex = Math.floor(Math.random() * chars.length);
   const missingChar = chars[missingIndex];
   state.currentKanaMissing = missingChar;
-  els.completeWordDisplay.innerHTML = "";
-  chars.forEach((ch, idx) => {
-    const cell = document.createElement("span");
-    cell.className = "letter-cell";
-    if (idx === missingIndex) {
-      cell.classList.add("blank-slot");
-      cell.dataset.missing = missingChar;
-    } else {
-      cell.textContent = ch;
-    }
-    els.completeWordDisplay.appendChild(cell);
-  });
+  renderSplitWordDisplay(chars, missingIndex, missingChar);
   els.promptWord.textContent = target.en;
 
   const poolChars = Array.from(new Set(pickPool().flatMap((i) => Array.from(i.jaKana))));
@@ -887,18 +898,7 @@ function buildKanaCompleteRound(word) {
   const missingIndex = Math.floor(Math.random() * chars.length);
   const missingChar = chars[missingIndex];
   state.currentKanaMissing = missingChar;
-  els.completeWordDisplay.innerHTML = "";
-  chars.forEach((ch, idx) => {
-    const cell = document.createElement("span");
-    cell.className = "letter-cell";
-    if (idx === missingIndex) {
-      cell.classList.add("blank-slot");
-      cell.dataset.missing = missingChar;
-    } else {
-      cell.textContent = ch;
-    }
-    els.completeWordDisplay.appendChild(cell);
-  });
+  renderSplitWordDisplay(chars, missingIndex, missingChar);
   els.promptWord.textContent = word.romaji;
 
   const poolChars = Array.from(new Set(state.kanaChars.map((c) => c.kana)));

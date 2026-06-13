@@ -5,7 +5,8 @@
     { "id": "vegetables", "label_en": "Vegetables", "label_ja": "やさい", "emoji": "🥕" },
     { "id": "people", "label_en": "People", "label_ja": "ひと", "emoji": "🧑" },
     { "id": "places", "label_en": "Places", "label_ja": "ばしょ", "emoji": "🏠" },
-    { "id": "food", "label_en": "Food Items", "label_ja": "たべもの", "emoji": "🍚" }
+    { "id": "food", "label_en": "Food Items", "label_ja": "たべもの", "emoji": "🍚" },
+    { "id": "colors", "label_en": "Colors", "label_ja": "いろ", "emoji": "🎨" }
   ],
   "items": [
     { "id": "cat", "categoryId": "animals", "en": "Cat", "jaKana": "ねこ", "jaRomaji": "neko", "imagePath": "assets/images/animal-cat.svg", "aliases": ["kitty", "neko"] },
@@ -72,6 +73,17 @@
     { "id": "soup", "categoryId": "food", "en": "Soup", "jaKana": "スープ", "jaRomaji": "suupu", "imagePath": "assets/images/food-soup.svg", "aliases": [] },
     { "id": "cheese", "categoryId": "food", "en": "Cheese", "jaKana": "チーズ", "jaRomaji": "chiizu", "imagePath": "assets/images/food-cheese.svg", "aliases": [] },
     { "id": "cookie", "categoryId": "food", "en": "Cookie", "jaKana": "クッキー", "jaRomaji": "kukkii", "imagePath": "assets/images/food-cookie.svg", "aliases": [] },
-    { "id": "cake", "categoryId": "food", "en": "Cake", "jaKana": "ケーキ", "jaRomaji": "keeki", "imagePath": "assets/images/food-cake.svg", "aliases": [] }
+    { "id": "cake", "categoryId": "food", "en": "Cake", "jaKana": "ケーキ", "jaRomaji": "keeki", "imagePath": "assets/images/food-cake.svg", "aliases": [] },
+
+    { "id": "color-red", "categoryId": "colors", "en": "Red", "jaKana": "あか", "jaRomaji": "aka", "imagePath": "assets/images/color-red.svg", "aliases": ["aka"] },
+    { "id": "color-blue", "categoryId": "colors", "en": "Blue", "jaKana": "あお", "jaRomaji": "ao", "imagePath": "assets/images/color-blue.svg", "aliases": ["ao"] },
+    { "id": "color-yellow", "categoryId": "colors", "en": "Yellow", "jaKana": "きいろ", "jaRomaji": "kiiro", "imagePath": "assets/images/color-yellow.svg", "aliases": ["kiiro"] },
+    { "id": "color-green", "categoryId": "colors", "en": "Green", "jaKana": "みどり", "jaRomaji": "midori", "imagePath": "assets/images/color-green.svg", "aliases": ["midori"] },
+    { "id": "color-white", "categoryId": "colors", "en": "White", "jaKana": "しろ", "jaRomaji": "shiro", "imagePath": "assets/images/color-white.svg", "aliases": ["shiro"] },
+    { "id": "color-black", "categoryId": "colors", "en": "Black", "jaKana": "くろ", "jaRomaji": "kuro", "imagePath": "assets/images/color-black.svg", "aliases": ["kuro"] },
+    { "id": "color-pink", "categoryId": "colors", "en": "Pink", "jaKana": "ピンク", "jaRomaji": "pinku", "imagePath": "assets/images/color-pink.svg", "aliases": ["pinku"] },
+    { "id": "color-orange", "categoryId": "colors", "en": "Orange", "jaKana": "オレンジ", "jaRomaji": "orenji", "imagePath": "assets/images/color-orange.svg", "aliases": ["orenji"] },
+    { "id": "color-purple", "categoryId": "colors", "en": "Purple", "jaKana": "むらさき", "jaRomaji": "murasaki", "imagePath": "assets/images/color-purple.svg", "aliases": ["murasaki"] },
+    { "id": "color-brown", "categoryId": "colors", "en": "Brown", "jaKana": "ちゃいろ", "jaRomaji": "chairo", "imagePath": "assets/images/color-brown.svg", "aliases": ["chairo"] }
   ]
 }

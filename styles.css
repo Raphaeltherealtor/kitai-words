@@ -145,6 +145,40 @@ main {
   color: #fff;
 }
 
+#find-count-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.find-count-label {
+  font-weight: 700;
+}
+
+.find-count-options {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.find-count-btn {
+  border: none;
+  background: #fff;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  font-weight: 800;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.find-count-btn.active {
+  background: var(--accent);
+  color: #fff;
+}
+
 #prompt-area {
   display: grid;
   grid-template-columns: 1fr auto;

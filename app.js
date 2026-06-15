@@ -4,8 +4,9 @@ const state = {
   categories: [],
   currentSection: "home",
   currentTrack: "vocab",
-  currentGameType: "tap", // tap | drag-complete | kana-tap | kana-complete
+  currentGameType: "tap", // tap | drag-complete | find | kana-tap | kana-complete
   choiceCount: 3,
+  findCount: 6,
   categoryId: "mixed",
   romaji: false,
   vibration: true,
@@ -58,6 +59,8 @@ const els = {
   dropzoneSection: document.getElementById("dropzone-section"),
   dropzone: document.getElementById("dropzone"),
   modeButtons: document.querySelectorAll(".mode-btn"),
+  findCountBar: document.getElementById("find-count-bar"),
+  findCountOptions: document.getElementById("find-count-options"),
   tileButtons: document.querySelectorAll(".tile[data-track]"),
   completeWordSection: document.getElementById("complete-word-section"),
   completeWordDisplay: document.getElementById("complete-word-display"),
@@ -767,8 +770,34 @@ function bindUI() {
   }
   if (els.quizSkip) els.quizSkip.addEventListener("click", () => advanceQuizAuto());
 
+  buildFindCountBar();
   setupInstallPrompt();
   setupLibraryControls();
+}
+
+function buildFindCountBar() {
+  if (!els.findCountOptions) return;
+  els.findCountOptions.innerHTML = "";
+  for (let n = 3; n <= 10; n++) {
+    const btn = document.createElement("button");
+    btn.className = "find-count-btn";
+    btn.textContent = String(n);
+    btn.dataset.count = String(n);
+    if (n === state.findCount) btn.classList.add("active");
+    btn.addEventListener("click", () => {
+      state.findCount = n;
+      updateFindCountButtons();
+      startRound();
+    });
+    els.findCountOptions.appendChild(btn);
+  }
+}
+
+function updateFindCountButtons() {
+  if (!els.findCountOptions) return;
+  els.findCountOptions.querySelectorAll(".find-count-btn").forEach((b) => {
+    b.classList.toggle("active", Number(b.dataset.count) === state.findCount);
+  });
 }
 
 function setupLibraryControls() {
@@ -1017,7 +1046,12 @@ function updateModeButtonsForTrack(track) {
     btn2.textContent = "Drag to Complete";
     btn2.classList.remove("hidden");
     btn2.disabled = false;
-    if (btn3) btn3.classList.add("hidden");
+    if (btn3) {
+      btn3.dataset.gametype = "find";
+      btn3.textContent = "Find It 🔍";
+      btn3.classList.remove("hidden");
+      btn3.disabled = false;
+    }
     if (btn4) btn4.classList.add("hidden");
     state.currentGameType = "tap";
     setActiveModeButton("tap");
@@ -1086,13 +1120,14 @@ function pickPool() {
 
 function chooseRoundItems() {
   const pool = pickPool();
+  const count = state.currentGameType === "find" ? state.findCount : state.choiceCount;
   const target = pool[Math.floor(Math.random() * pool.length)];
   const others = pool.filter((i) => i.id !== target.id);
   shuffle(others);
 
-  const needed = Math.max(1, state.choiceCount - 1);
+  const needed = Math.max(1, count - 1);
   const distractors = others.slice(0, needed);
-  const choices = shuffle([target, ...distractors]).slice(0, state.choiceCount);
+  const choices = shuffle([target, ...distractors]).slice(0, count);
 
   state.currentTarget = target;
   state.currentChoices = choices;
@@ -1140,6 +1175,8 @@ function renderCurrentView() {
   if (state.currentTrack === "vocab") {
     if (state.currentGameType === "tap") {
       renderTapView();
+    } else if (state.currentGameType === "find") {
+      renderFindView();
     } else {
       renderDragCompleteView();
     }
@@ -1165,6 +1202,7 @@ function hideAllGameViews() {
   els.cards.classList.add("hidden");
   els.dropzoneSection.classList.add("hidden");
   els.completeWordSection.classList.add("hidden");
+  if (els.findCountBar) els.findCountBar.classList.add("hidden");
   if (els.alphabetSection) els.alphabetSection.classList.add("hidden");
   if (els.alphabetQuizSection) els.alphabetQuizSection.classList.add("hidden");
 }
@@ -1173,6 +1211,17 @@ function renderTapView() {
   els.modeLabel.textContent = "Listen & Tap";
   hideAllGameViews();
   showPromptArea(true);
+  els.cards.classList.remove("hidden");
+  renderCards(state.currentChoices);
+  els.promptWord.textContent = state.currentTarget.jaKana;
+}
+
+function renderFindView() {
+  els.modeLabel.textContent = "Find It";
+  hideAllGameViews();
+  showPromptArea(true);
+  if (els.findCountBar) els.findCountBar.classList.remove("hidden");
+  updateFindCountButtons();
   els.cards.classList.remove("hidden");
   renderCards(state.currentChoices);
   els.promptWord.textContent = state.currentTarget.jaKana;

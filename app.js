@@ -1,6 +1,8 @@
 const state = {
   data: null,
   items: [],
+  builtinItems: [],
+  wordManifest: null,
   categories: [],
   currentSection: "home",
   currentTrack: "vocab",
@@ -140,14 +142,21 @@ async function init() {
   bindUI();
   registerServiceWorker();
   goHome();
-  ensureStoragePrefix().then(() => syncImagesFromSupabase()).catch(() => {});
+  ensureStoragePrefix()
+    .then(() => {
+      syncImagesFromSupabase().catch(() => {});
+      syncWordsWithCloud().catch(() => {});
+    })
+    .catch(() => {});
 }
 
 async function loadData() {
   const res = await fetch("data/vocab.json");
   state.data = await res.json();
   state.categories = state.data.categories;
-  state.items = state.data.items.concat(loadCustomItems());
+  state.builtinItems = state.data.items;
+  state.wordManifest = loadWordManifest();
+  applyWordManifestToState();
 
   if (els.newWordCategory) {
     els.newWordCategory.innerHTML = "";
@@ -332,24 +341,166 @@ function applyItemImage(img, item) {
   applyDefaultImage(img, item);
 }
 
-// --- Custom words (parent-added, saved on this device) ---
+// --- Custom words (parent-added, synced via the Shared Library) ---
+//
+// Stored as a manifest { items: {id: word}, deleted: {id: ts} }. Each word and
+// each deletion carries a timestamp, so merging two devices' manifests is a
+// last-write-wins union with tombstones: adds and deletes both propagate and a
+// deleted word never re-appears. The same manifest lives in localStorage (for
+// offline) and in Supabase Storage under the Shared Library prefix.
 
-const CUSTOM_ITEMS_KEY = "kitai-custom-items";
+const WORD_MANIFEST_KEY = "kitai-words-manifest";
+const LEGACY_CUSTOM_KEY = "kitai-custom-items";
 
-function loadCustomItems() {
+function emptyManifest() {
+  return { items: {}, deleted: {} };
+}
+
+function loadWordManifest() {
   try {
-    const arr = JSON.parse(localStorage.getItem(CUSTOM_ITEMS_KEY) || "[]");
-    return Array.isArray(arr) ? arr.filter((i) => i && i.id && i.categoryId) : [];
+    const raw = localStorage.getItem(WORD_MANIFEST_KEY);
+    if (raw) {
+      const m = JSON.parse(raw);
+      if (m && typeof m === "object") return { items: m.items || {}, deleted: m.deleted || {} };
+    }
+  } catch (_) {}
+  // Migrate the earlier device-only array form, if present.
+  try {
+    const legacy = JSON.parse(localStorage.getItem(LEGACY_CUSTOM_KEY) || "[]");
+    if (Array.isArray(legacy) && legacy.length) {
+      const m = emptyManifest();
+      const now = Date.now();
+      legacy.forEach((it) => {
+        if (it && it.id && it.categoryId) m.items[it.id] = serializeWord(it, now);
+      });
+      saveWordManifest(m);
+      return m;
+    }
+  } catch (_) {}
+  return emptyManifest();
+}
+
+function saveWordManifest(m) {
+  try {
+    localStorage.setItem(WORD_MANIFEST_KEY, JSON.stringify(m));
+  } catch (_) {}
+}
+
+function serializeWord(item, ts) {
+  const w = {
+    id: item.id,
+    categoryId: item.categoryId,
+    en: item.en,
+    jaKana: item.jaKana,
+    jaRomaji: item.jaRomaji || "",
+    updatedAt: ts || item.updatedAt || Date.now(),
+  };
+  if (item.photoUrl) w.photoUrl = item.photoUrl;
+  return w;
+}
+
+// Turn a stored word record into a live, renderable item (art regenerated).
+function wordToItem(w) {
+  const cat = state.categories.find((c) => c.id === w.categoryId);
+  const item = {
+    id: w.id,
+    categoryId: w.categoryId,
+    en: w.en,
+    jaKana: w.jaKana,
+    jaRomaji: w.jaRomaji || "",
+    imagePath: placeholderImage(cat ? cat.emoji : "⭐"),
+    aliases: [],
+    custom: true,
+    updatedAt: w.updatedAt || 0,
+  };
+  if (w.photoUrl) item.photoUrl = w.photoUrl;
+  return item;
+}
+
+function applyWordManifestToState() {
+  const base = state.builtinItems || [];
+  const m = state.wordManifest || emptyManifest();
+  state.items = base.concat(Object.values(m.items).map(wordToItem));
+}
+
+function mergeManifests(a, b) {
+  const out = emptyManifest();
+  const ids = new Set([
+    ...Object.keys(a.items || {}),
+    ...Object.keys(b.items || {}),
+    ...Object.keys(a.deleted || {}),
+    ...Object.keys(b.deleted || {}),
+  ]);
+  ids.forEach((id) => {
+    const ai = (a.items || {})[id];
+    const bi = (b.items || {})[id];
+    const item = ai && bi ? ((ai.updatedAt || 0) >= (bi.updatedAt || 0) ? ai : bi) : ai || bi;
+    const itemTs = item ? item.updatedAt || 0 : 0;
+    const delTs = Math.max((a.deleted || {})[id] || 0, (b.deleted || {})[id] || 0);
+    if (delTs && delTs >= itemTs) {
+      out.deleted[id] = delTs;
+    } else if (item) {
+      out.items[id] = item;
+    }
+  });
+  return out;
+}
+
+// --- Cloud sync for the word manifest (mirrors the image sync prefix) ---
+
+function wordsCloudPath(prefix) {
+  return `${prefix}/__words__/manifest.json`;
+}
+
+async function fetchCloudWordManifest() {
+  const prefix = await ensureStoragePrefix();
+  try {
+    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${SUPABASE_BUCKET}/${wordsCloudPath(prefix)}`, {
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
+      cache: "no-store",
+    });
+    if (!res.ok) return emptyManifest();
+    const m = await res.json();
+    return { items: m.items || {}, deleted: m.deleted || {} };
   } catch (_) {
-    return [];
+    return emptyManifest();
   }
 }
 
-function persistCustomItems() {
-  const custom = state.items.filter((i) => i.custom);
+async function pushCloudWordManifest(m) {
+  const prefix = await ensureStoragePrefix();
+  const body = new Blob([JSON.stringify(m)], { type: "application/json" });
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${SUPABASE_BUCKET}/${wordsCloudPath(prefix)}`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${SUPABASE_KEY}`,
+      "x-upsert": "true",
+      "Content-Type": "application/json",
+    },
+    body,
+  });
+  if (!res.ok) throw new Error(`Word manifest upload failed: ${res.status}`);
+}
+
+let wordSyncInFlight = false;
+async function syncWordsWithCloud() {
+  if (wordSyncInFlight) return;
+  wordSyncInFlight = true;
   try {
-    localStorage.setItem(CUSTOM_ITEMS_KEY, JSON.stringify(custom));
-  } catch (_) {}
+    const remote = await fetchCloudWordManifest();
+    const merged = mergeManifests(state.wordManifest || emptyManifest(), remote);
+    state.wordManifest = merged;
+    saveWordManifest(merged);
+    applyWordManifestToState();
+    renderImageList();
+    if (state.currentTrack === "vocab") renderCurrentView();
+    await pushCloudWordManifest(merged); // let other devices converge
+  } catch (_) {
+    // offline or failed; the local manifest is already applied
+  } finally {
+    wordSyncInFlight = false;
+  }
 }
 
 // A simple emoji-on-color placeholder (data URI) so a new word always has art
@@ -391,20 +542,16 @@ function addCustomItemFromForm() {
   }
 
   const cat = state.categories.find((c) => c.id === categoryId);
-  const item = {
-    id: `custom-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-    categoryId,
-    en,
-    jaKana: kana,
-    jaRomaji: romaji,
-    imagePath: placeholderImage(cat ? cat.emoji : "⭐"),
-    aliases: [],
-    custom: true,
-  };
-  if (photo) item.photoUrl = photo;
+  const now = Date.now();
+  const id = `custom-${now}-${Math.random().toString(36).slice(2, 7)}`;
+  const word = { id, categoryId, en, jaKana: kana, jaRomaji: romaji, updatedAt: now };
+  if (photo) word.photoUrl = photo;
 
-  state.items.push(item);
-  persistCustomItems();
+  if (!state.wordManifest) state.wordManifest = emptyManifest();
+  state.wordManifest.items[id] = word;
+  delete state.wordManifest.deleted[id];
+  saveWordManifest(state.wordManifest);
+  applyWordManifestToState();
 
   els.newWordEn.value = "";
   els.newWordKana.value = "";
@@ -414,14 +561,17 @@ function addCustomItemFromForm() {
 
   renderImageList();
   if (state.currentTrack === "vocab") renderCurrentView();
+  syncWordsWithCloud().catch(() => {});
 }
 
 function removeCustomItem(id) {
-  const idx = state.items.findIndex((i) => i.id === id && i.custom);
-  if (idx < 0) return;
-  const removed = state.items[idx];
+  const removed = state.items.find((i) => i.id === id && i.custom);
+  if (!removed) return;
   if (!confirm(`Remove the word "${removed.en}"?`)) return;
-  state.items.splice(idx, 1);
+  if (!state.wordManifest) state.wordManifest = emptyManifest();
+  delete state.wordManifest.items[id];
+  state.wordManifest.deleted[id] = Date.now();
+  saveWordManifest(state.wordManifest);
   // Drop any photos that were attached to this custom word.
   const overrides = getOverrideEntries(id);
   overrides.forEach((e) => {
@@ -429,9 +579,10 @@ function removeCustomItem(id) {
     removeImageFromIdbAndCloud(e.imageId).catch(() => {});
   });
   delete state.imageOverrides[id];
-  persistCustomItems();
+  applyWordManifestToState();
   renderImageList();
   if (state.currentTrack === "vocab") renderCurrentView();
+  syncWordsWithCloud().catch(() => {});
 }
 
 function generateImageId() {
@@ -647,6 +798,7 @@ async function syncImagesFromSupabase() {
   let touched = false;
   for (const entry of all) {
     const rel = entry.path.slice(prefix.length + 1);
+    if (rel.startsWith("__words__/")) continue; // word manifest, not an image
     const parts = rel.split("/");
     let itemId, imageId;
     if (parts.length >= 2) {
@@ -700,6 +852,8 @@ async function applyLibrarySwitch(libraryId, pin) {
   renderImageModalContent();
   if (state.currentTrack === "vocab") renderCurrentView();
   syncImagesFromSupabase().catch(() => {});
+  // Custom words follow the library too (local words merge up into it).
+  syncWordsWithCloud().catch(() => {});
 }
 
 function setupVoiceOptions() {

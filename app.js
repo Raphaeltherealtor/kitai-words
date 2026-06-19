@@ -279,7 +279,40 @@ function getImageSrc(item) {
     const pick = arr[Math.floor(Math.random() * arr.length)];
     return pick.url;
   }
-  return item.imagePath;
+  return item.photoUrl || item.imagePath;
+}
+
+// If a curated/remote photo fails to load, quietly swap in the bundled art
+// so the user never sees a broken image.
+function onImageLoadError(e) {
+  const img = e.currentTarget;
+  const fallback = img.dataset.fallbackSrc;
+  if (fallback && img.getAttribute("src") !== fallback) {
+    img.src = fallback;
+  }
+}
+
+// Set the built-in image for an item: prefer the curated real photo,
+// fall back to the bundled SVG art if it fails to load.
+function applyDefaultImage(img, item) {
+  if (item.photoUrl) {
+    img.dataset.fallbackSrc = item.imagePath;
+    img.addEventListener("error", onImageLoadError, { once: true });
+    img.src = item.photoUrl;
+  } else {
+    img.src = item.imagePath;
+  }
+}
+
+// Set the image shown in gameplay cards: a user's custom photo wins,
+// otherwise the curated photo (with fallback to bundled art).
+function applyItemImage(img, item) {
+  const arr = getOverrideEntries(item.id);
+  if (arr.length) {
+    img.src = arr[Math.floor(Math.random() * arr.length)].url;
+    return;
+  }
+  applyDefaultImage(img, item);
 }
 
 function generateImageId() {
@@ -953,7 +986,7 @@ function renderImageList() {
       });
     } else {
       const img = document.createElement("img");
-      img.src = item.imagePath;
+      applyDefaultImage(img, item);
       img.alt = item.en;
       img.className = "image-thumb";
       preview.appendChild(img);
@@ -997,13 +1030,13 @@ function renderImageModalContent() {
       const wrap = document.createElement("div");
       wrap.className = "modal-photo-wrap default";
       const img = document.createElement("img");
-      img.src = item.imagePath;
+      applyDefaultImage(img, item);
       img.alt = item.en;
       img.className = "modal-photo";
       wrap.appendChild(img);
       const note = document.createElement("div");
       note.className = "modal-photo-note";
-      note.textContent = "Default image";
+      note.textContent = item.photoUrl ? "Default photo" : "Default image";
       wrap.appendChild(note);
       els.imageModalPhotos.appendChild(wrap);
     } else {
@@ -1439,7 +1472,7 @@ function renderCards(items) {
     card.dataset.id = item.id;
 
     const img = document.createElement("img");
-    img.src = getImageSrc(item);
+    applyItemImage(img, item);
     img.alt = item.en;
     card.appendChild(img);
 

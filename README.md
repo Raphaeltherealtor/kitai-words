@@ -24,6 +24,13 @@ A touch-friendly Japanese vocab game for toddlers. Runs on mobile browsers and a
 - Drop the matching image file in `assets/images/` and point to it via `imagePath`.
 - No code changes needed; the app is data-driven.
 
+## Real photos
+- Each item may include an optional `photoUrl` pointing at a real photograph. When present it is shown instead of the bundled `imagePath` art (parents' custom uploads still win over both).
+- Animals use free-licensed photos from Wikimedia Commons via `Special:FilePath` (resolved by filename on the device, with a `?width=` thumbnail param). These render in the user's browser, not at build time.
+- Robust fallback: if a `photoUrl` fails to load, the app automatically swaps in the bundled `imagePath` SVG, so a bad/changed URL never shows a broken image — just the old art for that one item.
+- The service worker runtime-caches photos after first view, so they work offline afterward.
+- To change a photo, edit that item's `photoUrl` in `data/vocab.json` (one line). To find a clean image, search [Wikimedia Commons](https://commons.wikimedia.org), open the file, and use its exact filename: `https://commons.wikimedia.org/wiki/Special:FilePath/<File%20name>.jpg?width=400`.
+
 ## PWA notes
 - `pwa/manifest.json` and `service-worker.js` (root) enable install + offline.
 - Icons: add `pwa/icons/icon-192.png` and `pwa/icons/icon-512.png` (simple colored squares work).

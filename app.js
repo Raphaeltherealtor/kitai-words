@@ -7,6 +7,12 @@ const state = {
   currentGameType: "tap", // tap | drag-complete | find | kana-tap | kana-complete
   choiceCount: 3,
   findCount: 6,
+  // Find It locks onto one word for several rounds (reshuffling distractors)
+  // before moving on. findTarget = the locked item, findRepsTarget = how many
+  // finds before advancing (random 5–7), findRepsDone = finds completed so far.
+  findTarget: null,
+  findRepsTarget: 0,
+  findRepsDone: 0,
   categoryId: "mixed",
   romaji: false,
   vibration: true,
@@ -707,6 +713,7 @@ function bindUI() {
         els.modeButtons.forEach((b) => b.classList.remove("active"));
         btn.classList.add("active");
         state.currentGameType = btn.dataset.gametype;
+        if (state.currentGameType === "find") resetFindSession();
         startRound();
       }
     });
@@ -1121,7 +1128,28 @@ function pickPool() {
 function chooseRoundItems() {
   const pool = pickPool();
   const count = state.currentGameType === "find" ? state.findCount : state.choiceCount;
-  const target = pool[Math.floor(Math.random() * pool.length)];
+
+  let target;
+  if (state.currentGameType === "find") {
+    // Stay on the same word for findRepsTarget rounds, then pick a new one.
+    const needNewWord =
+      !state.findTarget ||
+      !pool.some((i) => i.id === state.findTarget.id) ||
+      state.findRepsDone >= state.findRepsTarget;
+    if (needNewWord) {
+      const candidates = state.findTarget
+        ? pool.filter((i) => i.id !== state.findTarget.id)
+        : pool;
+      const fromPool = candidates.length ? candidates : pool;
+      state.findTarget = fromPool[Math.floor(Math.random() * fromPool.length)];
+      state.findRepsTarget = 5 + Math.floor(Math.random() * 3); // 5, 6, or 7 times
+      state.findRepsDone = 0;
+    }
+    target = state.findTarget;
+  } else {
+    target = pool[Math.floor(Math.random() * pool.length)];
+  }
+
   const others = pool.filter((i) => i.id !== target.id);
   shuffle(others);
 
@@ -1131,6 +1159,12 @@ function chooseRoundItems() {
 
   state.currentTarget = target;
   state.currentChoices = choices;
+}
+
+function resetFindSession() {
+  state.findTarget = null;
+  state.findRepsTarget = 0;
+  state.findRepsDone = 0;
 }
 
 function chooseKanaRound() {
@@ -1431,6 +1465,7 @@ function handleTap(item, cardEl) {
   if (item.id === state.currentTarget.id) {
     cardEl.classList.add("correct");
     els.feedback.textContent = "Great!";
+    if (state.currentGameType === "find") state.findRepsDone++;
     playCorrect();
     showCorrectOverlay();
     setTimeout(() => startRound(), 800);
@@ -1702,16 +1737,20 @@ function speakCurrent() {
   const voices = speechSynthesis.getVoices();
   const voice =
     voices.find((v) => v.voiceURI === state.voiceId) || voices.find((v) => v.lang?.startsWith("ja"));
-  if (!voice) return;
 
   const phrase =
     state.currentTrack === "hiragana" || state.currentTrack === "katakana"
       ? state.currentTarget.kana || state.currentTarget.romaji
       : state.currentTarget.jaKana;
+  if (!phrase) return;
 
   const utter = new SpeechSynthesisUtterance(phrase);
   utter.lang = "ja-JP";
-  utter.voice = voice;
+  // Fall back to letting the browser pick a ja-JP voice when no explicit
+  // voice object is available (e.g. getVoices() is empty/late on iOS, or the
+  // OS dropped its Japanese voice). Bailing here would mute the word entirely.
+  if (voice) utter.voice = voice;
+  utter.rate = 0.9;
   speechSynthesis.cancel();
   speechSynthesis.speak(utter);
 }

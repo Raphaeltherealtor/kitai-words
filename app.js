@@ -590,6 +590,9 @@ function setupVoices() {
 }
 
 function bindUI() {
+  // Unlock iOS speech on the very first interaction anywhere in the app.
+  document.addEventListener("pointerdown", primeSpeech);
+  document.addEventListener("touchend", primeSpeech);
   els.speakBtn.addEventListener("click", () => speakCurrent());
   els.parentBtn.addEventListener("pointerdown", startLongPress);
   els.parentBtn.addEventListener("pointerup", (e) => {
@@ -1320,11 +1323,27 @@ function speakAlphabetChar(ch) {
   speakText(phrase);
 }
 
+// iOS Safari stays silent until speechSynthesis is "unlocked" by a real user
+// gesture. Speak a tiny silent utterance on the first touch so later spoken
+// words (speak button, card reveals) actually produce audio.
+let speechPrimed = false;
+function primeSpeech() {
+  if (speechPrimed || !("speechSynthesis" in window)) return;
+  try {
+    speechSynthesis.resume();
+    const u = new SpeechSynthesisUtterance(" ");
+    u.volume = 0;
+    speechSynthesis.speak(u);
+    speechPrimed = true;
+  } catch (_) {}
+}
+
 function speakText(text) {
   if (!text) return;
   if (!("speechSynthesis" in window)) return;
   try {
     speechSynthesis.cancel();
+    speechSynthesis.resume(); // iOS often leaves the queue paused after backgrounding
     const utter = new SpeechSynthesisUtterance(text);
     utter.lang = "ja-JP";
     const voice = state.voices.find((v) => v.voiceURI === state.voiceId) ||
@@ -1751,8 +1770,11 @@ function speakCurrent() {
   // OS dropped its Japanese voice). Bailing here would mute the word entirely.
   if (voice) utter.voice = voice;
   utter.rate = 0.9;
-  speechSynthesis.cancel();
-  speechSynthesis.speak(utter);
+  try {
+    speechSynthesis.cancel();
+    speechSynthesis.resume(); // iOS often leaves the queue paused after backgrounding
+    speechSynthesis.speak(utter);
+  } catch (_) {}
 }
 
 let audioCtx = null;

@@ -1,4 +1,4 @@
-const CACHE_NAME = "kitai-cache-v28";
+const CACHE_NAME = "kitai-cache-v29";
 const CORE_ASSETS = [
   "./",
   "./index.html",

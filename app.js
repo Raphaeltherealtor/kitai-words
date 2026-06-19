@@ -3,6 +3,7 @@ const state = {
   items: [],
   builtinItems: [],
   wordManifest: null,
+  wordSync: "idle", // idle | syncing | ok | error
   categories: [],
   currentSection: "home",
   currentTrack: "vocab",
@@ -122,6 +123,7 @@ const els = {
   newWordPhoto: document.getElementById("new-word-photo"),
   newWordAdd: document.getElementById("new-word-add"),
   newWordStatus: document.getElementById("new-word-status"),
+  wordSyncIndicator: document.getElementById("word-sync-indicator"),
 };
 
 const SUPABASE_URL = "https://nfaxncksesfcfqavmlae.supabase.co";
@@ -157,6 +159,7 @@ async function loadData() {
   state.builtinItems = state.data.items;
   state.wordManifest = loadWordManifest();
   applyWordManifestToState();
+  updateWordSyncIndicator();
 
   if (els.newWordCategory) {
     els.newWordCategory.innerHTML = "";
@@ -483,10 +486,45 @@ async function pushCloudWordManifest(m) {
   if (!res.ok) throw new Error(`Word manifest upload failed: ${res.status}`);
 }
 
+function isLibraryConfigured() {
+  const id = (state.libraryConfig.libraryId || "").trim();
+  const pin = (state.libraryConfig.pin || "").trim();
+  return !!(id && pin);
+}
+
+function updateWordSyncIndicator() {
+  const el = els.wordSyncIndicator;
+  if (!el) return;
+  if (!isLibraryConfigured()) {
+    el.textContent = "● Saved on this device — connect a Shared Library below to sync across devices";
+    el.style.color = "#8a8594";
+    return;
+  }
+  switch (state.wordSync) {
+    case "syncing":
+      el.textContent = "⟳ Syncing…";
+      el.style.color = "#8a8594";
+      break;
+    case "ok":
+      el.textContent = "✓ Synced to your Shared Library";
+      el.style.color = "#2a9d8f";
+      break;
+    case "error":
+      el.textContent = "⚠ Offline — changes will sync when you're back online";
+      el.style.color = "#e76f51";
+      break;
+    default:
+      el.textContent = "● Connected to Shared Library";
+      el.style.color = "#8a8594";
+  }
+}
+
 let wordSyncInFlight = false;
 async function syncWordsWithCloud() {
   if (wordSyncInFlight) return;
   wordSyncInFlight = true;
+  state.wordSync = "syncing";
+  updateWordSyncIndicator();
   try {
     const remote = await fetchCloudWordManifest();
     const merged = mergeManifests(state.wordManifest || emptyManifest(), remote);
@@ -496,10 +534,13 @@ async function syncWordsWithCloud() {
     renderImageList();
     if (state.currentTrack === "vocab") renderCurrentView();
     await pushCloudWordManifest(merged); // let other devices converge
+    state.wordSync = "ok";
   } catch (_) {
     // offline or failed; the local manifest is already applied
+    state.wordSync = "error";
   } finally {
     wordSyncInFlight = false;
+    updateWordSyncIndicator();
   }
 }
 
@@ -1430,6 +1471,7 @@ function cancelLongPress() {
 
 function showSettings() {
   els.overlay.classList.remove("hidden");
+  updateWordSyncIndicator();
 }
 
 function hideSettings() {

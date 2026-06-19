@@ -1751,11 +1751,6 @@ function onDropZonePointerUp() {
 
 function speakCurrent() {
   if (!state.currentTarget) return;
-  if (!("speechSynthesis" in window)) return;
-
-  const voices = speechSynthesis.getVoices();
-  const voice =
-    voices.find((v) => v.voiceURI === state.voiceId) || voices.find((v) => v.lang?.startsWith("ja"));
 
   const phrase =
     state.currentTrack === "hiragana" || state.currentTrack === "katakana"
@@ -1763,18 +1758,37 @@ function speakCurrent() {
       : state.currentTarget.jaKana;
   if (!phrase) return;
 
+  if (!("speechSynthesis" in window)) {
+    els.feedback.textContent = "This device has no speech engine.";
+    return;
+  }
+
+  const voices = speechSynthesis.getVoices();
+  const jaVoices = voices.filter((v) => v.lang && v.lang.toLowerCase().startsWith("ja"));
+  const voice = voices.find((v) => v.voiceURI === state.voiceId) || jaVoices[0];
+
   const utter = new SpeechSynthesisUtterance(phrase);
   utter.lang = "ja-JP";
   // Fall back to letting the browser pick a ja-JP voice when no explicit
-  // voice object is available (e.g. getVoices() is empty/late on iOS, or the
-  // OS dropped its Japanese voice). Bailing here would mute the word entirely.
+  // voice object is available (e.g. getVoices() is empty/late, or the OS
+  // dropped its Japanese voice). Bailing here would mute the word entirely.
   if (voice) utter.voice = voice;
   utter.rate = 0.9;
+  // Surface the real failure on screen so silent-speech issues are diagnosable
+  // (e.g. Android with no Japanese TTS data → "language-unavailable").
+  utter.onerror = (e) => {
+    els.feedback.textContent = `Voice error: ${e.error || "unknown"} · voices ${voices.length}, JA ${jaVoices.length}`;
+  };
   try {
     speechSynthesis.cancel();
-    speechSynthesis.resume(); // iOS often leaves the queue paused after backgrounding
+    speechSynthesis.resume(); // some engines leave the queue paused after backgrounding
     speechSynthesis.speak(utter);
-  } catch (_) {}
+    if (!jaVoices.length) {
+      els.feedback.textContent = `No Japanese voice installed (device has ${voices.length} voices). Install Japanese TTS in Android settings.`;
+    }
+  } catch (err) {
+    els.feedback.textContent = `Speech failed: ${err && err.message ? err.message : err}`;
+  }
 }
 
 let audioCtx = null;

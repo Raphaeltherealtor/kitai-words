@@ -13,13 +13,32 @@
   box-sizing: border-box;
 }
 
+/* Kiosk lock: keep the page pinned so a baby/toddler can't scroll, bounce,
+   pull-to-refresh, or pinch-zoom it. Taps and the drag-to-complete gestures
+   still work; only browser pan/scroll/zoom is disabled. Parent-facing
+   scrollable areas (settings, image manager) re-enable scrolling below. */
+html,
 body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  /* manipulation = taps fire instantly (no double-tap-zoom delay) while child
+     scroll containers (settings) can still pan. position:fixed + overflow
+     hidden already remove any page scroll/bounce. */
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  position: fixed;
+  inset: 0;
   margin: 0;
   background: var(--bg);
   color: var(--text);
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
 }
 
 header {
@@ -54,9 +73,15 @@ header button {
 main {
   padding: 12px 12px 32px;
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  /* Only scrolls if a screen is taller than the viewport; stays self-contained
+     so it never rubber-bands or pulls the locked page around. */
+  overflow-y: auto;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
 }
 
 #home-screen h1 {
@@ -372,6 +397,9 @@ main {
   justify-content: center;
   padding: 20px;
   overflow-y: auto;
+  /* Parent settings still scroll, but kept self-contained so the page stays locked */
+  touch-action: pan-y;
+  overscroll-behavior: contain;
 }
 
 #settings {
@@ -384,6 +412,8 @@ main {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
   overflow-y: auto;
 }
 
@@ -735,6 +765,8 @@ main {
   padding: 4px;
   border-radius: 12px;
   background: #fafafa;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
 }
 
 .modal-photo-wrap {

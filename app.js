@@ -113,6 +113,13 @@ const els = {
   librarySaveBtn: document.getElementById("library-save"),
   libraryResetBtn: document.getElementById("library-reset"),
   libraryStatus: document.getElementById("library-status"),
+  newWordCategory: document.getElementById("new-word-category"),
+  newWordEn: document.getElementById("new-word-en"),
+  newWordKana: document.getElementById("new-word-kana"),
+  newWordRomaji: document.getElementById("new-word-romaji"),
+  newWordPhoto: document.getElementById("new-word-photo"),
+  newWordAdd: document.getElementById("new-word-add"),
+  newWordStatus: document.getElementById("new-word-status"),
 };
 
 const SUPABASE_URL = "https://nfaxncksesfcfqavmlae.supabase.co";
@@ -140,7 +147,17 @@ async function loadData() {
   const res = await fetch("data/vocab.json");
   state.data = await res.json();
   state.categories = state.data.categories;
-  state.items = state.data.items;
+  state.items = state.data.items.concat(loadCustomItems());
+
+  if (els.newWordCategory) {
+    els.newWordCategory.innerHTML = "";
+    state.categories.forEach((cat) => {
+      const opt = document.createElement("option");
+      opt.value = cat.id;
+      opt.textContent = `${cat.emoji} ${cat.label_en}`;
+      els.newWordCategory.appendChild(opt);
+    });
+  }
 
   els.categorySelect.innerHTML = "";
   const mixedOpt = document.createElement("option");
@@ -313,6 +330,108 @@ function applyItemImage(img, item) {
     return;
   }
   applyDefaultImage(img, item);
+}
+
+// --- Custom words (parent-added, saved on this device) ---
+
+const CUSTOM_ITEMS_KEY = "kitai-custom-items";
+
+function loadCustomItems() {
+  try {
+    const arr = JSON.parse(localStorage.getItem(CUSTOM_ITEMS_KEY) || "[]");
+    return Array.isArray(arr) ? arr.filter((i) => i && i.id && i.categoryId) : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function persistCustomItems() {
+  const custom = state.items.filter((i) => i.custom);
+  try {
+    localStorage.setItem(CUSTOM_ITEMS_KEY, JSON.stringify(custom));
+  } catch (_) {}
+}
+
+// A simple emoji-on-color placeholder (data URI) so a new word always has art
+// even before a photo is added — matches the bundled SVG style.
+function placeholderImage(emoji) {
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">' +
+    '<rect width="200" height="200" rx="32" fill="#ffe0b2"/>' +
+    '<text x="100" y="115" font-size="96" text-anchor="middle" dominant-baseline="middle" dy="-5">' +
+    (emoji || "⭐") +
+    "</text></svg>";
+  return "data:image/svg+xml," + encodeURIComponent(svg);
+}
+
+function setNewWordStatus(msg, isError) {
+  if (!els.newWordStatus) return;
+  els.newWordStatus.textContent = msg;
+  els.newWordStatus.style.color = isError ? "#d62828" : "#2a9d8f";
+}
+
+function addCustomItemFromForm() {
+  const categoryId = els.newWordCategory ? els.newWordCategory.value : "";
+  const en = (els.newWordEn?.value || "").trim();
+  const kana = (els.newWordKana?.value || "").trim();
+  const romaji = (els.newWordRomaji?.value || "").trim();
+  const photo = (els.newWordPhoto?.value || "").trim();
+
+  if (!categoryId) {
+    setNewWordStatus("Please pick a category.", true);
+    return;
+  }
+  if (!en || !kana) {
+    setNewWordStatus("Please enter both English and Japanese (kana).", true);
+    return;
+  }
+  if (photo && !/^https?:\/\//i.test(photo)) {
+    setNewWordStatus("Photo URL must start with http:// or https://", true);
+    return;
+  }
+
+  const cat = state.categories.find((c) => c.id === categoryId);
+  const item = {
+    id: `custom-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    categoryId,
+    en,
+    jaKana: kana,
+    jaRomaji: romaji,
+    imagePath: placeholderImage(cat ? cat.emoji : "⭐"),
+    aliases: [],
+    custom: true,
+  };
+  if (photo) item.photoUrl = photo;
+
+  state.items.push(item);
+  persistCustomItems();
+
+  els.newWordEn.value = "";
+  els.newWordKana.value = "";
+  els.newWordRomaji.value = "";
+  els.newWordPhoto.value = "";
+  setNewWordStatus(`Added "${en}" to ${cat ? cat.label_en : categoryId}. ✓`);
+
+  renderImageList();
+  if (state.currentTrack === "vocab") renderCurrentView();
+}
+
+function removeCustomItem(id) {
+  const idx = state.items.findIndex((i) => i.id === id && i.custom);
+  if (idx < 0) return;
+  const removed = state.items[idx];
+  if (!confirm(`Remove the word "${removed.en}"?`)) return;
+  state.items.splice(idx, 1);
+  // Drop any photos that were attached to this custom word.
+  const overrides = getOverrideEntries(id);
+  overrides.forEach((e) => {
+    URL.revokeObjectURL(e.url);
+    removeImageFromIdbAndCloud(e.imageId).catch(() => {});
+  });
+  delete state.imageOverrides[id];
+  persistCustomItems();
+  renderImageList();
+  if (state.currentTrack === "vocab") renderCurrentView();
 }
 
 function generateImageId() {
@@ -700,6 +819,10 @@ function bindUI() {
     els.imageSearch.addEventListener("input", renderImageList);
   }
 
+  if (els.newWordAdd) {
+    els.newWordAdd.addEventListener("click", addCustomItemFromForm);
+  }
+
   if (els.imageModalClose) {
     els.imageModalClose.addEventListener("click", closeImageModal);
   }
@@ -1000,10 +1123,25 @@ function renderImageList() {
 
     const sub = document.createElement("div");
     sub.className = "subtitle";
-    sub.textContent = arr.length === 0
-      ? "Default image"
-      : arr.length === 1 ? "1 custom photo" : `${arr.length} custom photos`;
+    if (arr.length === 0) {
+      sub.textContent = item.custom ? "Custom word" : "Default image";
+    } else {
+      sub.textContent = arr.length === 1 ? "1 custom photo" : `${arr.length} custom photos`;
+    }
     card.appendChild(sub);
+
+    if (item.custom) {
+      const del = document.createElement("button");
+      del.className = "word-delete";
+      del.textContent = "✕";
+      del.setAttribute("aria-label", `Remove word ${item.en}`);
+      del.title = "Remove word";
+      del.addEventListener("click", (e) => {
+        e.stopPropagation();
+        removeCustomItem(item.id);
+      });
+      card.appendChild(del);
+    }
 
     card.addEventListener("click", () => openImageModal(item));
     els.imageList.appendChild(card);

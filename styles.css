@@ -521,6 +521,42 @@ main {
   font-size: 0.85rem;
 }
 
+/* Add-a-word form */
+#settings input[type="text"],
+#settings input[type="url"] {
+  flex: 1;
+  min-width: 0;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+}
+
+#settings #new-word-add {
+  align-self: stretch;
+  background: var(--accent);
+  font-weight: 800;
+  font-size: 1.05rem;
+}
+
+.image-card {
+  position: relative;
+}
+
+#settings .image-card .word-delete {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 50%;
+  background: rgba(230, 57, 70, 0.92);
+  color: #fff;
+  font-size: 0.85rem;
+  line-height: 1;
+  z-index: 2;
+}
+
 .hidden {
   display: none !important;
 }

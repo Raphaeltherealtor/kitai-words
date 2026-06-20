@@ -2450,7 +2450,25 @@ function shuffle(arr) {
 }
 
 function registerServiceWorker() {
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("service-worker.js").catch(() => {});
-  }
+  if (!("serviceWorker" in navigator)) return;
+  // Auto-reload once when a new service worker takes control, so a freshly
+  // deployed version replaces the running one without a manual force-close.
+  // Skip the first-ever install (which also fires controllerchange via claim()).
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloading = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (reloading || !hadController) return;
+    reloading = true;
+    window.location.reload();
+  });
+  navigator.serviceWorker
+    .register("service-worker.js")
+    .then((reg) => {
+      reg.update();
+      // Check for updates whenever the app is brought back to the foreground.
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") reg.update();
+      });
+    })
+    .catch(() => {});
 }

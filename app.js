@@ -1719,20 +1719,85 @@ function primeSpeech() {
   } catch (_) {}
 }
 
-function speakText(text) {
-  if (!text) return;
-  if (!("speechSynthesis" in window)) return;
-  try {
-    speechSynthesis.cancel();
-    speechSynthesis.resume(); // iOS often leaves the queue paused after backgrounding
-    const utter = new SpeechSynthesisUtterance(text);
+function pickJaVoice(preferLocal) {
+  const voices = speechSynthesis.getVoices();
+  if (state.voiceId) {
+    const saved = voices.find((v) => v.voiceURI === state.voiceId);
+    if (saved) return saved;
+  }
+  const ja = voices.filter((v) => v.lang && v.lang.toLowerCase().startsWith("ja"));
+  if (preferLocal) {
+    const local = ja.find((v) => v.localService);
+    if (local) return local;
+  }
+  return ja[0] || null;
+}
+
+// Robust Japanese TTS with retry. Android/Chrome (especially Samsung) throws
+// "synthesis-failed" intermittently, and one specific voice can fail while the
+// OS-default engine works. So we: (1) put a tick between cancel() and speak() to
+// dodge the cancel→speak race, and (2) retry on failure, dropping the explicit
+// voice on later attempts so the system routes to its default engine.
+function synthesize(phrase, opts) {
+  const showErrors = !!(opts && opts.showErrors);
+  if (!phrase) return;
+  if (!("speechSynthesis" in window)) {
+    if (showErrors) els.feedback.textContent = "This device has no speech engine.";
+    return;
+  }
+  const synth = speechSynthesis;
+  const allVoices = synth.getVoices();
+  const jaCount = allVoices.filter((v) => v.lang && v.lang.toLowerCase().startsWith("ja")).length;
+  const maxAttempts = 3;
+  let attempt = 0;
+
+  const run = () => {
+    attempt++;
+    const utter = new SpeechSynthesisUtterance(phrase);
     utter.lang = "ja-JP";
-    const voice = state.voices.find((v) => v.voiceURI === state.voiceId) ||
-      state.voices.find((v) => v.lang && v.lang.startsWith("ja"));
-    if (voice) utter.voice = voice;
     utter.rate = 0.9;
-    speechSynthesis.speak(utter);
-  } catch (_) {}
+    // First attempt uses the chosen/local Japanese voice; retries drop it so the
+    // OS picks its default engine (works around a single bad/network voice).
+    if (attempt === 1) {
+      const v = pickJaVoice(true);
+      if (v) utter.voice = v;
+    }
+    utter.onstart = () => {
+      if (showErrors) els.feedback.textContent = "";
+    };
+    utter.onerror = (e) => {
+      const err = (e && e.error) || "unknown";
+      if (err === "interrupted" || err === "canceled") return; // our own cancel / re-tap
+      if ((err === "synthesis-failed" || err === "audio-busy" || err === "network") && attempt < maxAttempts) {
+        setTimeout(run, 250);
+        return;
+      }
+      if (showErrors) {
+        els.feedback.textContent =
+          `Voice error (${err}). In Android Settings → Text-to-speech, set "Google" as the engine and install Japanese voice data. (voices ${allVoices.length}, JA ${jaCount})`;
+      }
+    };
+    try { synth.cancel(); } catch (_) {}
+    // Let cancel settle before speaking to avoid the Android cancel→speak race.
+    setTimeout(() => {
+      try {
+        synth.resume();
+        synth.speak(utter);
+      } catch (err) {
+        if (showErrors) els.feedback.textContent = `Speech failed: ${err && err.message ? err.message : err}`;
+      }
+    }, attempt === 1 ? 50 : 200);
+  };
+
+  if (!jaCount && !state.voiceId && showErrors) {
+    els.feedback.textContent =
+      `No Japanese voice installed (device has ${allVoices.length} voices). Install Japanese TTS in Android settings.`;
+  }
+  run();
+}
+
+function speakText(text) {
+  synthesize(text, { showErrors: false });
 }
 
 function advanceAlphabet(delta) {
@@ -2137,39 +2202,8 @@ function speakCurrent() {
     state.currentTrack === "hiragana" || state.currentTrack === "katakana"
       ? state.currentTarget.kana || state.currentTarget.romaji
       : state.currentTarget.jaKana;
-  if (!phrase) return;
 
-  if (!("speechSynthesis" in window)) {
-    els.feedback.textContent = "This device has no speech engine.";
-    return;
-  }
-
-  const voices = speechSynthesis.getVoices();
-  const jaVoices = voices.filter((v) => v.lang && v.lang.toLowerCase().startsWith("ja"));
-  const voice = voices.find((v) => v.voiceURI === state.voiceId) || jaVoices[0];
-
-  const utter = new SpeechSynthesisUtterance(phrase);
-  utter.lang = "ja-JP";
-  // Fall back to letting the browser pick a ja-JP voice when no explicit
-  // voice object is available (e.g. getVoices() is empty/late, or the OS
-  // dropped its Japanese voice). Bailing here would mute the word entirely.
-  if (voice) utter.voice = voice;
-  utter.rate = 0.9;
-  // Surface the real failure on screen so silent-speech issues are diagnosable
-  // (e.g. Android with no Japanese TTS data → "language-unavailable").
-  utter.onerror = (e) => {
-    els.feedback.textContent = `Voice error: ${e.error || "unknown"} · voices ${voices.length}, JA ${jaVoices.length}`;
-  };
-  try {
-    speechSynthesis.cancel();
-    speechSynthesis.resume(); // some engines leave the queue paused after backgrounding
-    speechSynthesis.speak(utter);
-    if (!jaVoices.length) {
-      els.feedback.textContent = `No Japanese voice installed (device has ${voices.length} voices). Install Japanese TTS in Android settings.`;
-    }
-  } catch (err) {
-    els.feedback.textContent = `Speech failed: ${err && err.message ? err.message : err}`;
-  }
+  synthesize(phrase, { showErrors: true });
 }
 
 let audioCtx = null;

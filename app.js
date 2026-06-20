@@ -124,6 +124,8 @@ const els = {
   newWordAdd: document.getElementById("new-word-add"),
   newWordStatus: document.getElementById("new-word-status"),
   wordSyncIndicator: document.getElementById("word-sync-indicator"),
+  voiceTestBtn: document.getElementById("voice-test-btn"),
+  voiceTestStatus: document.getElementById("voice-test-status"),
 };
 
 const SUPABASE_URL = "https://nfaxncksesfcfqavmlae.supabase.co";
@@ -955,6 +957,7 @@ function bindUI() {
   document.addEventListener("pointerdown", primeSpeech);
   document.addEventListener("touchend", primeSpeech);
   els.speakBtn.addEventListener("click", () => speakCurrent());
+  if (els.voiceTestBtn) els.voiceTestBtn.addEventListener("click", testVoice);
   els.parentBtn.addEventListener("pointerdown", startLongPress);
   els.parentBtn.addEventListener("pointerup", (e) => {
     cancelLongPress();
@@ -1739,10 +1742,13 @@ function pickJaVoice(preferLocal) {
 // dodge the cancel→speak race, and (2) retry on failure, dropping the explicit
 // voice on later attempts so the system routes to its default engine.
 function synthesize(phrase, opts) {
-  const showErrors = !!(opts && opts.showErrors);
+  opts = opts || {};
+  const showErrors = !!opts.showErrors;
+  const onStatus = typeof opts.onStatus === "function" ? opts.onStatus : null;
   if (!phrase) return;
   if (!("speechSynthesis" in window)) {
-    if (showErrors) els.feedback.textContent = "This device has no speech engine.";
+    if (onStatus) onStatus("error", "no-engine");
+    else if (showErrors) els.feedback.textContent = "This device has no speech engine.";
     return;
   }
   const synth = speechSynthesis;
@@ -1763,7 +1769,8 @@ function synthesize(phrase, opts) {
       if (v) utter.voice = v;
     }
     utter.onstart = () => {
-      if (showErrors) els.feedback.textContent = "";
+      if (onStatus) onStatus("start");
+      else if (showErrors) els.feedback.textContent = "";
     };
     utter.onerror = (e) => {
       const err = (e && e.error) || "unknown";
@@ -1772,7 +1779,8 @@ function synthesize(phrase, opts) {
         setTimeout(run, 250);
         return;
       }
-      if (showErrors) {
+      if (onStatus) onStatus("error", err);
+      else if (showErrors) {
         els.feedback.textContent =
           `Voice error (${err}). In Android Settings → Text-to-speech, set "Google" as the engine and install Japanese voice data. (voices ${allVoices.length}, JA ${jaCount})`;
       }
@@ -1784,16 +1792,51 @@ function synthesize(phrase, opts) {
         synth.resume();
         synth.speak(utter);
       } catch (err) {
-        if (showErrors) els.feedback.textContent = `Speech failed: ${err && err.message ? err.message : err}`;
+        if (onStatus) onStatus("error", (err && err.message) || "exception");
+        else if (showErrors) els.feedback.textContent = `Speech failed: ${err && err.message ? err.message : err}`;
       }
     }, attempt === 1 ? 50 : 200);
   };
 
-  if (!jaCount && !state.voiceId && showErrors) {
+  if (!jaCount && !state.voiceId && showErrors && !onStatus) {
     els.feedback.textContent =
       `No Japanese voice installed (device has ${allVoices.length} voices). Install Japanese TTS in Android settings.`;
   }
   run();
+}
+
+// Parent Settings: speak a sample and report which Japanese voice is used and
+// whether synthesis actually works on this device.
+function testVoice() {
+  const el = els.voiceTestStatus;
+  if (!el) return;
+  if (!("speechSynthesis" in window)) {
+    el.style.color = "#d62828";
+    el.textContent = "This device has no speech engine.";
+    return;
+  }
+  const voices = speechSynthesis.getVoices();
+  const ja = voices.filter((v) => v.lang && v.lang.toLowerCase().startsWith("ja"));
+  const chosen = pickJaVoice(true);
+  const desc = chosen
+    ? `${chosen.name} (${chosen.lang}, ${chosen.localService ? "offline" : "network"})`
+    : "browser default — no Japanese voice found";
+  const info = `Voice: ${desc} · ${voices.length} total, ${ja.length} Japanese.`;
+  el.style.color = "#5a5564";
+  el.textContent = `${info} 🔊 Speaking…`;
+  synthesize("こんにちは。ねこ。", {
+    showErrors: true,
+    onStatus: (s, err) => {
+      if (s === "start") {
+        el.style.color = "#2a9d8f";
+        el.textContent = `${info} ✓ Working!`;
+      } else if (s === "error") {
+        el.style.color = "#d62828";
+        el.textContent =
+          `${info} ⚠ Failed (${err}). In Android Settings → Text-to-speech, set "Google" as the engine and install Japanese voice data.`;
+      }
+    },
+  });
 }
 
 function speakText(text) {

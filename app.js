@@ -22,6 +22,7 @@ const state = {
   voices: [],
   voiceId: null,
   preferOnlineVoice: false,
+  ttsApiKey: "",
   currentTarget: null,
   currentChoices: [],
   kanaChars: [],
@@ -129,6 +130,7 @@ const els = {
   voiceRefreshBtn: document.getElementById("voice-refresh-btn"),
   voiceTestStatus: document.getElementById("voice-test-status"),
   onlineVoiceToggle: document.getElementById("online-voice-toggle"),
+  ttsApiKeyInput: document.getElementById("tts-api-key"),
 };
 
 const SUPABASE_URL = "https://nfaxncksesfcfqavmlae.supabase.co";
@@ -958,8 +960,10 @@ function loadVoicePref() {
     const v = localStorage.getItem(VOICE_KEY);
     if (v) state.voiceId = v;
     state.preferOnlineVoice = localStorage.getItem("kitai-prefer-online-voice") === "1";
+    state.ttsApiKey = localStorage.getItem("kitai-tts-key") || "";
   } catch (_) {}
   if (els.onlineVoiceToggle) els.onlineVoiceToggle.checked = state.preferOnlineVoice;
+  if (els.ttsApiKeyInput) els.ttsApiKeyInput.value = state.ttsApiKey;
 }
 
 function saveVoicePref() {
@@ -1011,6 +1015,18 @@ function bindUI() {
     els.onlineVoiceToggle.addEventListener("change", (e) => {
       state.preferOnlineVoice = e.target.checked;
       try { localStorage.setItem("kitai-prefer-online-voice", state.preferOnlineVoice ? "1" : "0"); } catch (_) {}
+    });
+  }
+  if (els.ttsApiKeyInput) {
+    els.ttsApiKeyInput.addEventListener("change", (e) => {
+      state.ttsApiKey = e.target.value.trim();
+      try { localStorage.setItem("kitai-tts-key", state.ttsApiKey); } catch (_) {}
+      // A key means they want the online voice — switch to it automatically.
+      if (state.ttsApiKey && !state.preferOnlineVoice) {
+        state.preferOnlineVoice = true;
+        if (els.onlineVoiceToggle) els.onlineVoiceToggle.checked = true;
+        try { localStorage.setItem("kitai-prefer-online-voice", "1"); } catch (_) {}
+      }
     });
   }
   els.parentBtn.addEventListener("pointerdown", startLongPress);
@@ -1792,22 +1808,30 @@ function pickJaVoice(preferLocal) {
   return ja[0] || null;
 }
 
-// Online voice fallback. Some devices (e.g. Samsung's TTS engine) list a
-// Japanese voice that throws "synthesis-failed" no matter what. When the
-// device engine can't talk, we fetch spoken audio from a free TTS service and
-// play it through an <audio> element so the app still speaks (needs internet).
-const ONLINE_TTS_URLS = (text) => [
-  `https://api.streamelements.com/kappa/v2/speech?voice=Mizuki&text=${encodeURIComponent(text)}`,
-  `https://translate.google.com/translate_tts?ie=UTF-8&tl=ja&client=tw-ob&q=${encodeURIComponent(text)}`,
-];
+// Online voice via VoiceRSS (https://www.voicerss.org) — a real TTS service
+// that reliably serves Japanese audio with a free API key. Played through an
+// <audio> element so the app speaks even when the device TTS engine is broken.
+function onlineTtsUrls(text) {
+  const key = (state.ttsApiKey || "").trim();
+  if (!key) return [];
+  const params = new URLSearchParams({
+    key,
+    hl: "ja-jp",
+    c: "MP3",
+    f: "44khz_16bit_mono",
+    r: "0",
+    src: text,
+  });
+  return [`https://api.voicerss.org/?${params.toString()}`];
+}
 
 let onlineAudio = null;
 function playOnlineTts(phrase, handlers) {
-  const urls = ONLINE_TTS_URLS(phrase);
+  const urls = onlineTtsUrls(phrase);
   let i = 0;
   const attempt = () => {
     if (i >= urls.length) {
-      if (handlers.onFail) handlers.onFail("online-unavailable");
+      if (handlers.onFail) handlers.onFail(state.ttsApiKey ? "online-unavailable" : "no-api-key");
       return;
     }
     const url = urls[i++];
@@ -1888,7 +1912,9 @@ function synthesize(phrase, opts) {
     if (onStatus) onStatus("error", err);
     else if (showErrors) {
       els.feedback.textContent =
-        `Voice error (${err}). Turn on "Prefer online voice" in Parent Settings (needs internet), or set Google as the Android TTS engine and install Japanese voice data.`;
+        err === "no-api-key"
+          ? `No voice available. Add a free online-voice key in Parent Settings (Voice → "Online voice key").`
+          : `Voice error (${err}). Check your internet, or add/verify the online-voice key in Parent Settings.`;
     }
   };
   const goOnline = (origErr) =>
@@ -1901,10 +1927,40 @@ function synthesize(phrase, opts) {
   deviceSpeak(phrase, { onStart: () => succeed("device"), onFail: (err) => goOnline(err) });
 }
 
-// Parent Settings: speak a sample and report which voice path actually works.
-function testVoice() {
+// Parent Settings: speak a sample and report whether the voice works. When an
+// online-voice key is set, validate it directly (VoiceRSS returns a readable
+// "ERROR: ..." message for a bad/missing key); otherwise test the device voice.
+async function testVoice() {
   const el = els.voiceTestStatus;
   if (!el) return;
+  const key = (state.ttsApiKey || "").trim();
+
+  if (key) {
+    el.style.color = "#5a5564";
+    el.textContent = "🔊 Testing online voice…";
+    const url = onlineTtsUrls("こんにちは。ねこ。")[0];
+    try {
+      const res = await fetch(url, { cache: "no-store" });
+      const ct = (res.headers.get("content-type") || "").toLowerCase();
+      if (res.ok && ct.includes("audio")) {
+        try { onlineAudio = new Audio(url); onlineAudio.play().catch(() => {}); } catch (_) {}
+        el.style.color = "#2a9d8f";
+        el.textContent = "✓ Online voice working!";
+      } else {
+        const txt = (await res.text()).trim();
+        el.style.color = "#d62828";
+        el.textContent = `⚠ ${txt.slice(0, 140) || "Online voice failed — check your API key."}`;
+      }
+    } catch (_) {
+      // A CORS/network error blocked the diagnostic; just try to play it.
+      playOnlineTts("こんにちは。ねこ。", {
+        onStart: () => { el.style.color = "#2a9d8f"; el.textContent = "✓ Online voice working!"; },
+        onFail: () => { el.style.color = "#d62828"; el.textContent = "⚠ Couldn't reach the online voice. Check your internet and the key."; },
+      });
+    }
+    return;
+  }
+
   const voices = ("speechSynthesis" in window) ? speechSynthesis.getVoices() : [];
   const ja = voices.filter((v) => v.lang && v.lang.toLowerCase().startsWith("ja"));
   const chosen = ("speechSynthesis" in window) ? pickJaVoice(true) : null;
@@ -1923,7 +1979,7 @@ function testVoice() {
       } else if (s === "error") {
         el.style.color = "#d62828";
         el.textContent =
-          `${info} ⚠ Still failed. Turn on "Prefer online voice" below and check your internet, or set Google as the Android TTS engine + install Japanese voice data.`;
+          `${info} ⚠ Still failed. Add a free online-voice key below (Voice → "Online voice key") and tap Test voice again.`;
       }
     },
   });

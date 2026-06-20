@@ -33,7 +33,7 @@ const state = {
   longPressTimer: null,
   longPressMs: 600,
   soundEnabled: true,
-  theme: "default",
+  theme: "ocean",
   imageOverrides: {},
   imageCategoryId: "all",
   imageModalItemId: null,
@@ -133,6 +133,7 @@ const SUPABASE_BUCKET = "kitai-images";
 document.addEventListener("DOMContentLoaded", init);
 
 async function init() {
+  loadThemePref();
   loadLibraryConfig();
   await loadData();
   await loadHiragana();
@@ -213,8 +214,21 @@ async function loadKanji() {
   state.kanjiWords = kan.words;
 }
 
+const THEME_KEY = "kitai-theme";
+const VALID_THEMES = ["ocean", "galaxy", "sky", "sunshine"];
+
+function loadThemePref() {
+  try {
+    const saved = localStorage.getItem(THEME_KEY);
+    if (saved && VALID_THEMES.includes(saved)) state.theme = saved;
+  } catch (_) {}
+}
+
 function applyTheme() {
+  if (!VALID_THEMES.includes(state.theme)) state.theme = "ocean";
   document.documentElement.dataset.theme = state.theme;
+  if (els.themeSelect) els.themeSelect.value = state.theme;
+  try { localStorage.setItem(THEME_KEY, state.theme); } catch (_) {}
 }
 
 let imageDb = null;

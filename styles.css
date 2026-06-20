@@ -1,12 +1,62 @@
 :root {
-  --bg: #fff7df;
+  /* Default theme = Ocean (bluish). Other themes override these below. */
+  --bg: linear-gradient(160deg, #5ee7df 0%, #4facfe 45%, #6a8cff 100%);
   --card: #fff;
+  --accent: #ff6b6b;
+  --accent-2: #1fd1a5;
+  --accent-3: #845ef7;
+  --header: linear-gradient(120deg, #00c6fb, #005bea);
+  --header-text: #ffffff;
+  --text: #15233f;
+  --on-bg: #ffffff; /* text that sits directly on the background gradient */
+  --on-bg-shadow: 0 2px 6px rgba(0, 0, 0, 0.28);
+  --shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  font-family: "Baloo 2", "Segoe UI", system-ui, sans-serif;
+}
+
+:root[data-theme="ocean"] {
+  --bg: linear-gradient(160deg, #5ee7df 0%, #4facfe 45%, #6a8cff 100%);
+  --header: linear-gradient(120deg, #00c6fb, #005bea);
+  --header-text: #ffffff;
+  --accent: #ff6b6b;
+  --accent-2: #1fd1a5;
+  --accent-3: #845ef7;
+  --on-bg: #ffffff;
+  --on-bg-shadow: 0 2px 6px rgba(0, 0, 0, 0.28);
+}
+
+:root[data-theme="galaxy"] {
+  --bg: linear-gradient(160deg, #3a1c71 0%, #2b5bd7 52%, #00c6fb 100%);
+  --header: linear-gradient(120deg, #7b2ff7, #2b5bd7);
+  --header-text: #ffffff;
+  --accent: #ff8fab;
+  --accent-2: #2fe0c0;
+  --accent-3: #ffd93d;
+  --on-bg: #ffffff;
+  --on-bg-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+
+:root[data-theme="sky"] {
+  --bg: linear-gradient(160deg, #a1ffce 0%, #5ee7ff 40%, #4f9cff 100%);
+  --header: linear-gradient(120deg, #2af5e0, #2b8cff);
+  --header-text: #053b6b;
+  --accent: #ff7a59;
+  --accent-2: #12b886;
+  --accent-3: #5b6cff;
+  --on-bg: #08365f;
+  --on-bg-shadow: 0 1px 2px rgba(255, 255, 255, 0.45);
+}
+
+:root[data-theme="sunshine"] {
+  /* The original warm yellow look, kept as an option. */
+  --bg: #fff7df;
+  --header: linear-gradient(120deg, #ffd166, #ff9f1c);
+  --header-text: #1f1300;
   --accent: #ff9f1c;
   --accent-2: #2ec4b6;
   --accent-3: #6c63ff;
-  --text: #2d2a32;
-  --shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
-  font-family: "Baloo 2", "Segoe UI", system-ui, sans-serif;
+  --on-bg: #2d2a32;
+  --on-bg-shadow: none;
 }
 
 * {
@@ -36,6 +86,7 @@ body {
   inset: 0;
   margin: 0;
   background: var(--bg);
+  background-attachment: fixed;
   color: var(--text);
   display: flex;
   flex-direction: column;
@@ -46,8 +97,8 @@ header {
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  background: linear-gradient(120deg, #ffd166, #ff9f1c);
-  color: #1f1300;
+  background: var(--header);
+  color: var(--header-text);
   font-weight: 700;
   letter-spacing: 0.5px;
 }
@@ -86,6 +137,8 @@ main {
 
 #home-screen h1 {
   margin: 8px 0 12px;
+  color: var(--on-bg);
+  text-shadow: var(--on-bg-shadow);
 }
 
 .tile-grid {
@@ -131,6 +184,8 @@ main {
   gap: 10px;
   flex-wrap: wrap;
   font-weight: 600;
+  color: var(--on-bg);
+  text-shadow: var(--on-bg-shadow);
 }
 
 #voice-warning {
@@ -142,6 +197,8 @@ main {
   align-items: center;
   gap: 6px;
   font-weight: 600;
+  color: var(--on-bg);
+  text-shadow: var(--on-bg-shadow);
 }
 
 #category-quick {
@@ -234,6 +291,8 @@ main {
 #feedback {
   min-height: 28px;
   font-size: 1.4rem;
+  color: var(--on-bg);
+  text-shadow: var(--on-bg-shadow);
 }
 
 .cards {
@@ -652,7 +711,9 @@ main {
 
 #alphabet-progress {
   font-size: 1rem;
-  color: #888;
+  color: var(--on-bg);
+  text-shadow: var(--on-bg-shadow);
+  opacity: 0.85;
 }
 
 #alphabet-quiz-section {
@@ -727,14 +788,17 @@ main {
 .quiz-feedback {
   font-size: 1.1rem;
   font-weight: 600;
-  color: var(--text);
+  color: var(--on-bg);
+  text-shadow: var(--on-bg-shadow);
   min-height: 1.5em;
   text-align: center;
 }
 
 #quiz-progress {
   font-size: 1rem;
-  color: #888;
+  color: var(--on-bg);
+  text-shadow: var(--on-bg-shadow);
+  opacity: 0.85;
 }
 
 #install-banner {

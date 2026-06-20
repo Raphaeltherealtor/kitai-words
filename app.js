@@ -21,6 +21,7 @@ const state = {
   vibration: true,
   voices: [],
   voiceId: null,
+  preferOnlineVoice: false,
   currentTarget: null,
   currentChoices: [],
   kanaChars: [],
@@ -127,6 +128,7 @@ const els = {
   voiceTestBtn: document.getElementById("voice-test-btn"),
   voiceRefreshBtn: document.getElementById("voice-refresh-btn"),
   voiceTestStatus: document.getElementById("voice-test-status"),
+  onlineVoiceToggle: document.getElementById("online-voice-toggle"),
 };
 
 const SUPABASE_URL = "https://nfaxncksesfcfqavmlae.supabase.co";
@@ -955,7 +957,9 @@ function loadVoicePref() {
   try {
     const v = localStorage.getItem(VOICE_KEY);
     if (v) state.voiceId = v;
+    state.preferOnlineVoice = localStorage.getItem("kitai-prefer-online-voice") === "1";
   } catch (_) {}
+  if (els.onlineVoiceToggle) els.onlineVoiceToggle.checked = state.preferOnlineVoice;
 }
 
 function saveVoicePref() {
@@ -1003,6 +1007,12 @@ function bindUI() {
   els.speakBtn.addEventListener("click", () => speakCurrent());
   if (els.voiceTestBtn) els.voiceTestBtn.addEventListener("click", testVoice);
   if (els.voiceRefreshBtn) els.voiceRefreshBtn.addEventListener("click", refreshVoices);
+  if (els.onlineVoiceToggle) {
+    els.onlineVoiceToggle.addEventListener("change", (e) => {
+      state.preferOnlineVoice = e.target.checked;
+      try { localStorage.setItem("kitai-prefer-online-voice", state.preferOnlineVoice ? "1" : "0"); } catch (_) {}
+    });
+  }
   els.parentBtn.addEventListener("pointerdown", startLongPress);
   els.parentBtn.addEventListener("pointerup", (e) => {
     cancelLongPress();
@@ -1782,104 +1792,138 @@ function pickJaVoice(preferLocal) {
   return ja[0] || null;
 }
 
-// Robust Japanese TTS with retry. Android/Chrome (especially Samsung) throws
-// "synthesis-failed" intermittently, and one specific voice can fail while the
-// OS-default engine works. So we: (1) put a tick between cancel() and speak() to
-// dodge the cancel→speak race, and (2) retry on failure, dropping the explicit
-// voice on later attempts so the system routes to its default engine.
-function synthesize(phrase, opts) {
-  opts = opts || {};
-  const showErrors = !!opts.showErrors;
-  const onStatus = typeof opts.onStatus === "function" ? opts.onStatus : null;
-  if (!phrase) return;
-  if (!("speechSynthesis" in window)) {
-    if (onStatus) onStatus("error", "no-engine");
-    else if (showErrors) els.feedback.textContent = "This device has no speech engine.";
-    return;
-  }
+// Online voice fallback. Some devices (e.g. Samsung's TTS engine) list a
+// Japanese voice that throws "synthesis-failed" no matter what. When the
+// device engine can't talk, we fetch spoken audio from a free TTS service and
+// play it through an <audio> element so the app still speaks (needs internet).
+const ONLINE_TTS_URLS = (text) => [
+  `https://api.streamelements.com/kappa/v2/speech?voice=Mizuki&text=${encodeURIComponent(text)}`,
+  `https://translate.google.com/translate_tts?ie=UTF-8&tl=ja&client=tw-ob&q=${encodeURIComponent(text)}`,
+];
+
+let onlineAudio = null;
+function playOnlineTts(phrase, handlers) {
+  const urls = ONLINE_TTS_URLS(phrase);
+  let i = 0;
+  const attempt = () => {
+    if (i >= urls.length) {
+      if (handlers.onFail) handlers.onFail("online-unavailable");
+      return;
+    }
+    const url = urls[i++];
+    const audio = new Audio();
+    let advanced = false;
+    const next = () => {
+      if (advanced) return;
+      advanced = true;
+      attempt();
+    };
+    audio.addEventListener("playing", () => {
+      advanced = true;
+      if (handlers.onStart) handlers.onStart();
+    }, { once: true });
+    audio.addEventListener("error", next, { once: true });
+    audio.src = url;
+    const p = audio.play();
+    if (p && p.catch) p.catch(() => next());
+    onlineAudio = audio;
+  };
+  attempt();
+}
+
+// Robust device TTS with retry. Android/Chrome (especially Samsung) throws
+// "synthesis-failed" intermittently, and a specific voice can fail while the
+// OS-default engine works. So we: (1) put a tick between cancel() and speak()
+// to dodge the cancel→speak race, and (2) retry on failure, dropping the
+// explicit voice on later attempts so the system routes to its default engine.
+function deviceSpeak(phrase, handlers) {
   const synth = speechSynthesis;
-  const allVoices = synth.getVoices();
-  const jaCount = allVoices.filter((v) => v.lang && v.lang.toLowerCase().startsWith("ja")).length;
   const maxAttempts = 3;
   let attempt = 0;
-
   const run = () => {
     attempt++;
     const utter = new SpeechSynthesisUtterance(phrase);
     utter.lang = "ja-JP";
     utter.rate = 0.9;
-    // First attempt uses the chosen/local Japanese voice; retries drop it so the
-    // OS picks its default engine (works around a single bad/network voice).
     if (attempt === 1) {
       const v = pickJaVoice(true);
       if (v) utter.voice = v;
     }
-    utter.onstart = () => {
-      if (onStatus) onStatus("start");
-      else if (showErrors) els.feedback.textContent = "";
-    };
+    utter.onstart = () => handlers.onStart && handlers.onStart();
     utter.onerror = (e) => {
       const err = (e && e.error) || "unknown";
-      if (err === "interrupted" || err === "canceled") return; // our own cancel / re-tap
+      if (err === "interrupted" || err === "canceled") return; // our cancel / re-tap
       if ((err === "synthesis-failed" || err === "audio-busy" || err === "network") && attempt < maxAttempts) {
         setTimeout(run, 250);
         return;
       }
-      if (onStatus) onStatus("error", err);
-      else if (showErrors) {
-        els.feedback.textContent =
-          `Voice error (${err}). In Android Settings → Text-to-speech, set "Google" as the engine and install Japanese voice data. (voices ${allVoices.length}, JA ${jaCount})`;
-      }
+      handlers.onFail && handlers.onFail(err);
     };
     try { synth.cancel(); } catch (_) {}
-    // Let cancel settle before speaking to avoid the Android cancel→speak race.
     setTimeout(() => {
       try {
         synth.resume();
         synth.speak(utter);
       } catch (err) {
-        if (onStatus) onStatus("error", (err && err.message) || "exception");
-        else if (showErrors) els.feedback.textContent = `Speech failed: ${err && err.message ? err.message : err}`;
+        handlers.onFail && handlers.onFail((err && err.message) || "exception");
       }
     }, attempt === 1 ? 50 : 200);
   };
-
-  if (!jaCount && !state.voiceId && showErrors && !onStatus) {
-    els.feedback.textContent =
-      `No Japanese voice installed (device has ${allVoices.length} voices). Install Japanese TTS in Android settings.`;
-  }
   run();
 }
 
-// Parent Settings: speak a sample and report which Japanese voice is used and
-// whether synthesis actually works on this device.
+// Top-level speak: device voice first (offline-friendly), online voice as a
+// fallback — or online first when the parent turns on "Prefer online voice".
+function synthesize(phrase, opts) {
+  opts = opts || {};
+  const showErrors = !!opts.showErrors;
+  const onStatus = typeof opts.onStatus === "function" ? opts.onStatus : null;
+  if (!phrase) return;
+
+  const succeed = (kind) => {
+    if (onStatus) onStatus("start", kind);
+    else if (showErrors) els.feedback.textContent = "";
+  };
+  const failFinal = (err) => {
+    if (onStatus) onStatus("error", err);
+    else if (showErrors) {
+      els.feedback.textContent =
+        `Voice error (${err}). Turn on "Prefer online voice" in Parent Settings (needs internet), or set Google as the Android TTS engine and install Japanese voice data.`;
+    }
+  };
+  const goOnline = (origErr) =>
+    playOnlineTts(phrase, { onStart: () => succeed("online"), onFail: () => failFinal(origErr || "online-unavailable") });
+
+  if (state.preferOnlineVoice || !("speechSynthesis" in window)) {
+    goOnline("device-unavailable");
+    return;
+  }
+  deviceSpeak(phrase, { onStart: () => succeed("device"), onFail: (err) => goOnline(err) });
+}
+
+// Parent Settings: speak a sample and report which voice path actually works.
 function testVoice() {
   const el = els.voiceTestStatus;
   if (!el) return;
-  if (!("speechSynthesis" in window)) {
-    el.style.color = "#d62828";
-    el.textContent = "This device has no speech engine.";
-    return;
-  }
-  const voices = speechSynthesis.getVoices();
+  const voices = ("speechSynthesis" in window) ? speechSynthesis.getVoices() : [];
   const ja = voices.filter((v) => v.lang && v.lang.toLowerCase().startsWith("ja"));
-  const chosen = pickJaVoice(true);
+  const chosen = ("speechSynthesis" in window) ? pickJaVoice(true) : null;
   const desc = chosen
     ? `${chosen.name} (${chosen.lang}, ${chosen.localService ? "offline" : "network"})`
-    : "browser default — no Japanese voice found";
-  const info = `Voice: ${desc} · ${voices.length} total, ${ja.length} Japanese.`;
+    : "no device Japanese voice";
+  const info = `Device voice: ${desc} · ${ja.length} JA / ${voices.length} total.`;
   el.style.color = "#5a5564";
   el.textContent = `${info} 🔊 Speaking…`;
   synthesize("こんにちは。ねこ。", {
     showErrors: true,
-    onStatus: (s, err) => {
+    onStatus: (s, kind) => {
       if (s === "start") {
         el.style.color = "#2a9d8f";
-        el.textContent = `${info} ✓ Working!`;
+        el.textContent = `${info} ✓ Working (${kind === "online" ? "online" : "device"} voice).`;
       } else if (s === "error") {
         el.style.color = "#d62828";
         el.textContent =
-          `${info} ⚠ Failed (${err}). In Android Settings → Text-to-speech, set "Google" as the engine and install Japanese voice data.`;
+          `${info} ⚠ Still failed. Turn on "Prefer online voice" below and check your internet, or set Google as the Android TTS engine + install Japanese voice data.`;
       }
     },
   });

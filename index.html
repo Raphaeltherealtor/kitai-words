@@ -142,7 +142,11 @@
       <label>Voice:
         <select id="voice-select"></select>
       </label>
-      <button id="voice-test-btn">🔊 Test voice</button>
+      <div class="library-actions">
+        <button id="voice-test-btn">🔊 Test voice</button>
+        <button id="voice-refresh-btn" class="reset">↻ Refresh voices</button>
+      </div>
+      <div class="theme-hint">After installing a Japanese voice in Android settings, tap Refresh. Offline voices are preferred automatically.</div>
       <div id="voice-test-status" class="library-status"></div>
       <label>
         <input type="checkbox" id="romaji-toggle" />

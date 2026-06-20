@@ -125,6 +125,7 @@ const els = {
   newWordStatus: document.getElementById("new-word-status"),
   wordSyncIndicator: document.getElementById("word-sync-indicator"),
   voiceTestBtn: document.getElementById("voice-test-btn"),
+  voiceRefreshBtn: document.getElementById("voice-refresh-btn"),
   voiceTestStatus: document.getElementById("voice-test-status"),
 };
 
@@ -136,6 +137,7 @@ document.addEventListener("DOMContentLoaded", init);
 
 async function init() {
   loadThemePref();
+  loadVoicePref();
   loadLibraryConfig();
   await loadData();
   await loadHiragana();
@@ -915,7 +917,7 @@ async function applyLibrarySwitch(libraryId, pin) {
 
 function setupVoiceOptions() {
   els.voiceSelect.innerHTML = "";
-  const voices = speechSynthesis.getVoices().filter((v) => v.lang && v.lang.startsWith("ja"));
+  const voices = speechSynthesis.getVoices().filter((v) => v.lang && v.lang.toLowerCase().startsWith("ja"));
   state.voices = voices;
 
   if (!voices.length) {
@@ -928,14 +930,56 @@ function setupVoiceOptions() {
   }
 
   els.voiceWarning.classList.add("hidden");
-  voices.forEach((v, idx) => {
+
+  // Pick the default: the previously saved voice if it's still here, otherwise
+  // prefer an offline (local) voice — they're far more reliable than network
+  // voices — and finally fall back to the first Japanese voice.
+  const saved = state.voiceId && voices.find((v) => v.voiceURI === state.voiceId);
+  const local = voices.find((v) => v.localService);
+  const chosen = saved || local || voices[0];
+  state.voiceId = chosen.voiceURI;
+  saveVoicePref();
+
+  voices.forEach((v) => {
     const opt = document.createElement("option");
     opt.value = v.voiceURI;
-    opt.textContent = `${v.name} (${v.lang})`;
-    if (idx === 0) opt.selected = true;
+    opt.textContent = `${v.name} (${v.lang})${v.localService ? " · offline" : " · network"}`;
+    if (v.voiceURI === state.voiceId) opt.selected = true;
     els.voiceSelect.appendChild(opt);
   });
-  state.voiceId = voices[0]?.voiceURI || null;
+}
+
+const VOICE_KEY = "kitai-voice-id";
+
+function loadVoicePref() {
+  try {
+    const v = localStorage.getItem(VOICE_KEY);
+    if (v) state.voiceId = v;
+  } catch (_) {}
+}
+
+function saveVoicePref() {
+  try {
+    if (state.voiceId) localStorage.setItem(VOICE_KEY, state.voiceId);
+  } catch (_) {}
+}
+
+// Re-query the OS voice list (e.g. after installing Japanese TTS data) and
+// rebuild the dropdown without restarting the app.
+function refreshVoices() {
+  speechSynthesis.getVoices(); // nudge engines that load voices lazily
+  setupVoiceOptions();
+  const el = els.voiceTestStatus;
+  if (!el) return;
+  const n = state.voices.length;
+  if (n) {
+    const cur = state.voices.find((v) => v.voiceURI === state.voiceId);
+    el.style.color = "#2a9d8f";
+    el.textContent = `Found ${n} Japanese voice${n > 1 ? "s" : ""}. Selected: ${cur ? cur.name : "default"}.`;
+  } else {
+    el.style.color = "#d62828";
+    el.textContent = "No Japanese voice found yet. Install Japanese TTS in Android settings, then tap Refresh again.";
+  }
 }
 
 function setupVoices() {
@@ -958,6 +1002,7 @@ function bindUI() {
   document.addEventListener("touchend", primeSpeech);
   els.speakBtn.addEventListener("click", () => speakCurrent());
   if (els.voiceTestBtn) els.voiceTestBtn.addEventListener("click", testVoice);
+  if (els.voiceRefreshBtn) els.voiceRefreshBtn.addEventListener("click", refreshVoices);
   els.parentBtn.addEventListener("pointerdown", startLongPress);
   els.parentBtn.addEventListener("pointerup", (e) => {
     cancelLongPress();
@@ -1001,6 +1046,7 @@ function bindUI() {
 
   els.voiceSelect.addEventListener("change", (e) => {
     state.voiceId = e.target.value;
+    saveVoicePref();
   });
 
   els.romajiToggle.addEventListener("change", (e) => {

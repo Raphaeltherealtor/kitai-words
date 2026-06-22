@@ -1004,11 +1004,39 @@ function setupVoices() {
   });
 }
 
+// Activate on a per-pointer tap instead of "click". When a second finger (a
+// resting thumb gripping the tablet) is already on the screen, the browser
+// will NOT synthesize a click for a poke from another finger — it assumes a
+// gesture may be starting — so click-based buttons silently fail under
+// multi-touch. Pointer events fire per pointerId, so each finger's tap is
+// handled independently regardless of other fingers held down elsewhere.
+function onTap(el, handler) {
+  if (!el) return;
+  let downId = null;
+  let sx = 0;
+  let sy = 0;
+  el.addEventListener("pointerdown", (e) => {
+    downId = e.pointerId;
+    sx = e.clientX;
+    sy = e.clientY;
+  });
+  el.addEventListener("pointerup", (e) => {
+    if (e.pointerId !== downId) return;
+    downId = null;
+    // Ignore drags/swipes; only count a roughly-stationary press as a tap.
+    if (Math.abs(e.clientX - sx) > 28 || Math.abs(e.clientY - sy) > 28) return;
+    handler(e);
+  });
+  el.addEventListener("pointercancel", () => {
+    downId = null;
+  });
+}
+
 function bindUI() {
   // Unlock iOS speech on the very first interaction anywhere in the app.
   document.addEventListener("pointerdown", primeSpeech);
   document.addEventListener("touchend", primeSpeech);
-  els.speakBtn.addEventListener("click", () => speakCurrent());
+  onTap(els.speakBtn, () => speakCurrent());
   if (els.voiceTestBtn) els.voiceTestBtn.addEventListener("click", testVoice);
   if (els.voiceRefreshBtn) els.voiceRefreshBtn.addEventListener("click", refreshVoices);
   if (els.onlineVoiceToggle) {
@@ -1036,7 +1064,7 @@ function bindUI() {
   });
   els.parentBtn.addEventListener("click", showSettings);
   els.parentBtn.addEventListener("pointerleave", cancelLongPress);
-  els.homeBtn.addEventListener("click", goHome);
+  onTap(els.homeBtn, goHome);
   els.closeSettings.addEventListener("click", hideSettings);
 
   els.choiceCount.addEventListener("change", (e) => {
@@ -1147,7 +1175,7 @@ function bindUI() {
   }
 
   els.modeButtons.forEach((btn) => {
-    btn.addEventListener("click", () => {
+    onTap(btn, () => {
       if (
         state.currentTrack === "vocab" ||
         state.currentTrack === "hiragana" ||
@@ -1163,7 +1191,7 @@ function bindUI() {
   });
 
   els.tileButtons.forEach((btn) => {
-    btn.addEventListener("click", () => {
+    onTap(btn, () => {
       const track = btn.dataset.track;
       if (track === "kanji") {
         alert("Kanji coming soon");
@@ -1188,10 +1216,10 @@ function bindUI() {
     });
   });
 
-  if (els.alphabetPrev) els.alphabetPrev.addEventListener("click", () => advanceAlphabet(-1));
-  if (els.alphabetNext) els.alphabetNext.addEventListener("click", () => advanceAlphabet(1));
+  onTap(els.alphabetPrev, () => advanceAlphabet(-1));
+  onTap(els.alphabetNext, () => advanceAlphabet(1));
   if (els.alphabetSpeak) {
-    els.alphabetSpeak.addEventListener("click", () => {
+    onTap(els.alphabetSpeak, () => {
       const set = getAlphabetSet();
       if (!set) return;
       const idx = state.alphabetIndex[state.currentTrack] || 0;
@@ -1212,13 +1240,13 @@ function bindUI() {
   }
 
   if (els.quizSpeak) {
-    els.quizSpeak.addEventListener("click", () => {
+    onTap(els.quizSpeak, () => {
       const set = getAlphabetSet();
       if (!set) return;
       speakAlphabetChar(set[state.alphabetIndex[state.currentTrack] || 0]);
     });
   }
-  if (els.quizSkip) els.quizSkip.addEventListener("click", () => advanceQuizAuto());
+  onTap(els.quizSkip, () => advanceQuizAuto());
 
   buildFindCountBar();
   setupInstallPrompt();
@@ -1234,7 +1262,7 @@ function buildFindCountBar() {
     btn.textContent = String(n);
     btn.dataset.count = String(n);
     if (n === state.findCount) btn.classList.add("active");
-    btn.addEventListener("click", () => {
+    onTap(btn, () => {
       state.findCount = n;
       updateFindCountButtons();
       startRound();
@@ -2033,7 +2061,7 @@ function buildAlphabetQuizRound() {
     btn.textContent = ch.exampleEmoji;
     btn.dataset.id = ch.id;
     btn.setAttribute("aria-label", ch.exampleEn || ch.kana);
-    btn.addEventListener("click", () => handleQuizChoice(ch, target, btn));
+    onTap(btn, () => handleQuizChoice(ch, target, btn));
     els.quizChoices.appendChild(btn);
   });
 
@@ -2088,7 +2116,7 @@ function renderCards(items) {
     label.textContent = state.romaji ? item.jaRomaji : item.en;
     card.appendChild(label);
 
-    card.addEventListener("click", () => handleTap(item, card));
+    onTap(card, () => handleTap(item, card));
     els.cards.appendChild(card);
   });
 }
@@ -2110,7 +2138,7 @@ function renderKanaCards(items) {
     label.textContent = state.romaji ? item.romaji : "";
     card.appendChild(label);
 
-    card.addEventListener("click", () => handleKanaTap(item, card));
+    onTap(card, () => handleKanaTap(item, card));
     els.cards.appendChild(card);
   });
 }

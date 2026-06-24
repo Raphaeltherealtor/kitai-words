@@ -25,6 +25,10 @@ const state = {
   ttsApiKey: "",
   currentTarget: null,
   currentChoices: [],
+  // Taps are ignored until this timestamp. Prevents a baby's rapid extra taps
+  // (mashing after a correct answer) from carrying over and auto-answering the
+  // next round before they've even seen it.
+  lockUntil: 0,
   kanaChars: [],
   kanaWords: [],
   kataChars: [],
@@ -443,8 +447,10 @@ function wordToItem(w) {
 }
 
 function applyWordManifestToState() {
-  const base = state.builtinItems || [];
   const m = state.wordManifest || emptyManifest();
+  // Honor deletions for built-in words too (not just custom ones), so a parent
+  // can remove any word from the games. The tombstone syncs across devices.
+  const base = (state.builtinItems || []).filter((it) => !m.deleted[it.id]);
   state.items = base.concat(Object.values(m.items).map(wordToItem));
 }
 
@@ -628,11 +634,11 @@ function addCustomItemFromForm() {
 }
 
 function removeCustomItem(id) {
-  const removed = state.items.find((i) => i.id === id && i.custom);
+  const removed = state.items.find((i) => i.id === id);
   if (!removed) return;
-  if (!confirm(`Remove the word "${removed.en}"?`)) return;
+  if (!confirm(`Remove the word "${removed.en}" from the games?`)) return;
   if (!state.wordManifest) state.wordManifest = emptyManifest();
-  delete state.wordManifest.items[id];
+  delete state.wordManifest.items[id]; // no-op for built-in words
   state.wordManifest.deleted[id] = Date.now();
   saveWordManifest(state.wordManifest);
   // Drop any photos that were attached to this custom word.
@@ -1442,18 +1448,16 @@ function renderImageList() {
     }
     card.appendChild(sub);
 
-    if (item.custom) {
-      const del = document.createElement("button");
-      del.className = "word-delete";
-      del.textContent = "✕";
-      del.setAttribute("aria-label", `Remove word ${item.en}`);
-      del.title = "Remove word";
-      del.addEventListener("click", (e) => {
-        e.stopPropagation();
-        removeCustomItem(item.id);
-      });
-      card.appendChild(del);
-    }
+    const del = document.createElement("button");
+    del.className = "word-delete";
+    del.textContent = "✕";
+    del.setAttribute("aria-label", `Remove word ${item.en}`);
+    del.title = "Remove word from games";
+    del.addEventListener("click", (e) => {
+      e.stopPropagation();
+      removeCustomItem(item.id);
+    });
+    card.appendChild(del);
 
     card.addEventListener("click", () => openImageModal(item));
     els.imageList.appendChild(card);
@@ -1683,6 +1687,13 @@ function startRound() {
     return;
   }
   if (state.currentTrack === "vocab") {
+    if (!pickPool().length) {
+      // Parent removed every word in this category — don't crash, just guide.
+      els.feedback.textContent = "No words here yet. Add or restore some in Parent Settings.";
+      if (els.cards) els.cards.innerHTML = "";
+      if (els.promptWord) els.promptWord.textContent = "—";
+      return;
+    }
     chooseRoundItems();
   } else if (state.currentTrack === "hiragana" || state.currentTrack === "katakana") {
     chooseKanaRound();
@@ -2069,17 +2080,21 @@ function buildAlphabetQuizRound() {
 }
 
 function handleQuizChoice(chosen, target, btn) {
+  if (tapsLocked()) return;
   if (chosen.id === target.id) {
+    state.lockUntil = Date.now() + 1100 + ROUND_DEAD_MS;
     btn.classList.add("correct");
     els.quizFeedback.textContent = `${target.exampleWord || target.kana} — ${target.exampleEn || ""}`.trim();
     playCorrect();
     showCorrectOverlay();
     setTimeout(() => advanceQuizAuto(), 1100);
   } else {
+    state.lockUntil = Date.now() + WRONG_DEAD_MS;
     btn.classList.add("wrong");
     setTimeout(() => btn.classList.remove("wrong"), 500);
     buzz();
     showWrongOverlay();
+    setTimeout(() => speakAlphabetChar(target), REPEAT_MS); // hear the sound again
   }
 }
 
@@ -2143,20 +2158,44 @@ function renderKanaCards(items) {
   });
 }
 
+// Timings for answer handling. CORRECT_ADVANCE_MS = pause on a right answer
+// before the next word; ROUND_DEAD_MS = extra dead time after the new word
+// appears so buffered taps can't auto-answer it; WRONG_DEAD_MS = brief lockout
+// after a wrong answer so mashing doesn't spam the buzzer/repeat; REPEAT_MS =
+// delay before re-speaking the word after a mistake.
+const CORRECT_ADVANCE_MS = 800;
+const ROUND_DEAD_MS = 450;
+const WRONG_DEAD_MS = 650;
+const REPEAT_MS = 500;
+
+function tapsLocked() {
+  return Date.now() < state.lockUntil;
+}
+
+// Lock taps through the advance pause AND a dead window after the next word
+// renders, so a flurry of taps can't bleed into the new round.
+function lockForCorrectAdvance() {
+  state.lockUntil = Date.now() + CORRECT_ADVANCE_MS + ROUND_DEAD_MS;
+}
+
 function handleTap(item, cardEl) {
+  if (tapsLocked()) return;
   if (item.id === state.currentTarget.id) {
+    lockForCorrectAdvance();
     cardEl.classList.add("correct");
     els.feedback.textContent = "Great!";
     if (state.currentGameType === "find") state.findRepsDone++;
     playCorrect();
     showCorrectOverlay();
-    setTimeout(() => startRound(), 800);
+    setTimeout(() => startRound(), CORRECT_ADVANCE_MS);
   } else {
+    state.lockUntil = Date.now() + WRONG_DEAD_MS;
     cardEl.classList.add("wrong");
     els.feedback.textContent = "Try again!";
     buzz();
     showWrongOverlay();
     setTimeout(() => cardEl.classList.remove("wrong"), 400);
+    setTimeout(() => speakCurrent(), REPEAT_MS); // hear the word again after the buzzer
   }
 }
 
@@ -2262,22 +2301,27 @@ function handleCompleteChoice(opt, missingChar, target) {
     els.feedback.textContent = "Try again!";
     buzz();
     showWrongOverlay();
+    setTimeout(() => speakCurrent(), REPEAT_MS); // hear the word again after the buzzer
   }
 }
 
 function handleKanaTap(item, cardEl) {
+  if (tapsLocked()) return;
   if (item.id === state.currentTarget.id) {
+    lockForCorrectAdvance();
     cardEl.classList.add("correct");
     els.feedback.textContent = "Great!";
     playCorrect();
     showCorrectOverlay();
-    setTimeout(() => startRound(), 800);
+    setTimeout(() => startRound(), CORRECT_ADVANCE_MS);
   } else {
+    state.lockUntil = Date.now() + WRONG_DEAD_MS;
     cardEl.classList.add("wrong");
     els.feedback.textContent = "Try again!";
     buzz();
     showWrongOverlay();
     setTimeout(() => cardEl.classList.remove("wrong"), 400);
+    setTimeout(() => speakCurrent(), REPEAT_MS); // hear the sound again after the buzzer
   }
 }
 
@@ -2293,6 +2337,7 @@ function handleKanaCompleteChoice(opt, missingChar) {
     els.feedback.textContent = "Try again!";
     buzz();
     showWrongOverlay();
+    setTimeout(() => speakCurrent(), REPEAT_MS); // hear the word again after the buzzer
   }
 }
 
@@ -2388,6 +2433,7 @@ function handleDropOnBlank(slotEl, missingChar, target, chosenOverride = null) {
     els.feedback.textContent = "Try again!";
     buzz();
     showWrongOverlay();
+    setTimeout(() => speakCurrent(), REPEAT_MS); // hear the word again after the buzzer
   }
 }
 
@@ -2405,6 +2451,7 @@ function onDropZonePointerUp() {
     els.dropzone.textContent = "Try again!";
     buzz();
     showWrongOverlay();
+    setTimeout(() => speakCurrent(), REPEAT_MS); // hear the word again after the buzzer
     setTimeout(() => {
       dragData.el.classList.remove("wrong");
       els.dropzone.textContent = "Drop here";

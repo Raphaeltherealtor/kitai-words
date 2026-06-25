@@ -1120,3 +1120,128 @@ main {
     transition: 0.1s;
   }
 }
+
+/* ---- First-run onboarding ---- */
+#onboarding {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: var(--bg);
+  background-attachment: fixed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow-y: auto;
+  touch-action: pan-y;
+}
+
+.onboarding-card {
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+  padding: 24px 20px;
+  width: min(440px, 100%);
+  text-align: center;
+}
+
+.onboarding-logo {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+.onboarding-sub {
+  margin: 6px 0 16px;
+  font-weight: 600;
+  color: #5a5564;
+}
+
+.onboarding-langs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.onboarding-lang {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 8px;
+  border: 3px solid transparent;
+  border-radius: 16px;
+  background: #f4f4f8;
+  box-shadow: var(--shadow);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.onboarding-lang .ob-flag {
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.onboarding-lang .ob-name {
+  font-size: 0.85rem;
+}
+
+.onboarding-lang.active {
+  border-color: var(--accent-2);
+  background: #fff;
+}
+
+.onboarding-account {
+  margin: 16px 0 0;
+  text-align: left;
+}
+
+.onboarding-account summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--accent-3);
+  padding: 6px 0;
+}
+
+.onboarding-hint {
+  font-size: 0.85rem;
+  color: #5a5564;
+  margin: 6px 0 10px;
+}
+
+.onboarding-account label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.onboarding-account input {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  font-size: 1.1rem;
+}
+
+.onboarding-start {
+  margin-top: 18px;
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 14px;
+  background: var(--accent-2);
+  color: #fff;
+  font-size: 1.2rem;
+  font-weight: 800;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+}
+
+.onboarding-status {
+  min-height: 20px;
+  margin-top: 10px;
+  font-weight: 600;
+  color: #d62828;
+}

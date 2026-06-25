@@ -107,6 +107,12 @@ const els = {
   soundToggle: document.getElementById("sound-toggle"),
   themeSelect: document.getElementById("theme-select"),
   langSelect: document.getElementById("lang-select"),
+  onboarding: document.getElementById("onboarding"),
+  onboardingLangs: document.getElementById("onboarding-langs"),
+  onboardingPhone: document.getElementById("onboarding-phone"),
+  onboardingPin: document.getElementById("onboarding-pin"),
+  onboardingStart: document.getElementById("onboarding-start"),
+  onboardingStatus: document.getElementById("onboarding-status"),
   closeSettings: document.getElementById("close-settings"),
   speakBtn: document.getElementById("speak-btn"),
   dropzoneSection: document.getElementById("dropzone-section"),
@@ -197,6 +203,7 @@ async function init() {
   bindUI();
   registerServiceWorker();
   goHome();
+  maybeShowOnboarding();
   ensureStoragePrefix()
     .then(() => {
       syncImagesFromSupabase().catch(() => {});
@@ -300,16 +307,82 @@ function applyLangToUI() {
   });
 }
 
-// Switch language: persist, refresh the voice list for the new language, reset
-// any in-progress round, and return home so the (possibly changed) track list
-// is re-picked cleanly.
-function setLanguage(lang) {
+// Apply a language without navigating (used by onboarding + the settings picker).
+function applyLanguageChoice(lang) {
   if (!LANGS[lang]) return;
   state.lang = lang;
   try { localStorage.setItem(LANG_KEY, lang); } catch (_) {}
   applyLangToUI();
   setupVoiceOptions();
+}
+
+// Switch language from Parent Settings: also reset any in-progress round and
+// return home so the (possibly changed) track list is re-picked cleanly.
+function setLanguage(lang) {
+  if (!LANGS[lang]) return;
+  applyLanguageChoice(lang);
   resetFindSession();
+  goHome();
+}
+
+const ONBOARDED_KEY = "kitai-onboarded";
+let onboardingLang = "ja";
+
+function maybeShowOnboarding() {
+  let done = false;
+  try { done = localStorage.getItem(ONBOARDED_KEY) === "1"; } catch (_) {}
+  if (done) return;
+  if (!els.onboarding) return;
+  onboardingLang = state.lang || "ja";
+  highlightOnboardingLang();
+  // Pre-fill the account fields if a library is already connected.
+  if (els.onboardingPhone) els.onboardingPhone.value = state.libraryConfig.libraryId || "";
+  if (els.onboardingPin) els.onboardingPin.value = state.libraryConfig.pin || "";
+  els.onboarding.classList.remove("hidden");
+}
+
+function highlightOnboardingLang() {
+  if (!els.onboardingLangs) return;
+  els.onboardingLangs.querySelectorAll(".onboarding-lang").forEach((b) => {
+    b.classList.toggle("active", b.dataset.lang === onboardingLang);
+  });
+}
+
+function setupOnboarding() {
+  if (!els.onboarding) return;
+  if (els.onboardingLangs) {
+    els.onboardingLangs.querySelectorAll(".onboarding-lang").forEach((btn) => {
+      onTap(btn, () => {
+        onboardingLang = btn.dataset.lang;
+        highlightOnboardingLang();
+      });
+    });
+  }
+  if (els.onboardingStart) onTap(els.onboardingStart, finishOnboarding);
+}
+
+async function finishOnboarding() {
+  const phone = (els.onboardingPhone?.value || "").replace(/\D/g, "");
+  const pin = (els.onboardingPin?.value || "").trim();
+  // Account is optional, but if they started filling it in, require both halves.
+  if ((phone || pin) && !(phone && /^\d{4}$/.test(pin))) {
+    if (els.onboardingStatus) {
+      els.onboardingStatus.textContent = "Enter a phone number and a 4-digit PIN, or leave both blank to skip.";
+    }
+    return;
+  }
+
+  applyLanguageChoice(onboardingLang);
+  if (phone && pin) {
+    if (els.onboardingStatus) {
+      els.onboardingStatus.style.color = "#2a9d8f";
+      els.onboardingStatus.textContent = "Connecting your account…";
+    }
+    try { await applyLibrarySwitch(phone, pin); } catch (_) {}
+  }
+
+  try { localStorage.setItem(ONBOARDED_KEY, "1"); } catch (_) {}
+  if (els.onboarding) els.onboarding.classList.add("hidden");
   goHome();
 }
 
@@ -1332,6 +1405,7 @@ function bindUI() {
   buildFindCountBar();
   setupInstallPrompt();
   setupLibraryControls();
+  setupOnboarding();
 }
 
 function buildFindCountBar() {

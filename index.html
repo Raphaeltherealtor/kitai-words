@@ -9,6 +9,30 @@
   <title>My First Words</title>
 </head>
 <body>
+  <div id="onboarding" class="hidden">
+    <div class="onboarding-card">
+      <div class="onboarding-logo">My First Words</div>
+      <p class="onboarding-sub">Pick a language to learn</p>
+      <div id="onboarding-langs" class="onboarding-langs">
+        <button class="onboarding-lang" data-lang="ja"><span class="ob-flag">🇯🇵</span><span class="ob-name">日本語<br>Japanese</span></button>
+        <button class="onboarding-lang" data-lang="ko"><span class="ob-flag">🇰🇷</span><span class="ob-name">한국어<br>Korean</span></button>
+        <button class="onboarding-lang" data-lang="en"><span class="ob-flag">🔤</span><span class="ob-name">English</span></button>
+      </div>
+      <details class="onboarding-account">
+        <summary>Save &amp; sync across devices (optional)</summary>
+        <p class="onboarding-hint">Use the same phone number + PIN on each device to share your photos and custom words. Skip to just play on this device.</p>
+        <label>Phone number
+          <input id="onboarding-phone" type="tel" inputmode="numeric" autocomplete="off" placeholder="e.g. 5551234567" />
+        </label>
+        <label>4-digit PIN
+          <input id="onboarding-pin" type="tel" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="1234" />
+        </label>
+      </details>
+      <button id="onboarding-start" class="onboarding-start">Start playing →</button>
+      <div id="onboarding-status" class="onboarding-status" aria-live="polite"></div>
+    </div>
+  </div>
+
   <header>
     <div class="logo">My First Words</div>
     <div class="header-actions">

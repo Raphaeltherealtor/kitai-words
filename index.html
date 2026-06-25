@@ -6,11 +6,11 @@
   <meta name="theme-color" content="#ffce54" />
   <link rel="manifest" href="pwa/manifest.json" />
   <link rel="stylesheet" href="styles.css" />
-  <title>Kitai's Words</title>
+  <title>My First Words</title>
 </head>
 <body>
   <header>
-    <div class="logo">Kitai Words</div>
+    <div class="logo">My First Words</div>
     <div class="header-actions">
       <button id="home-button" aria-label="Go to home">🏠</button>
       <button id="parent-button" aria-label="Parent settings">⚙️</button>
@@ -129,6 +129,14 @@
   <div id="settings-overlay" class="hidden">
     <div id="settings" role="dialog" aria-modal="true">
       <h2>Parent Settings</h2>
+      <label>Language:
+        <select id="lang-select">
+          <option value="ja">日本語 Japanese</option>
+          <option value="ko">한국어 Korean</option>
+          <option value="en">English</option>
+        </select>
+      </label>
+      <div class="theme-hint">Switches the words and the spoken voice. Each language needs its own voice installed (or use the online voice key below).</div>
       <label>Choices:
         <select id="choice-count">
           <option value="2">2</option>

@@ -39,6 +39,7 @@ const state = {
   longPressTimer: null,
   longPressMs: 600,
   soundEnabled: true,
+  lang: "ja", // ja | ko | en — which language the words + voice use
   theme: "ocean",
   imageOverrides: {},
   imageCategoryId: "all",
@@ -47,6 +48,42 @@ const state = {
   libraryConfig: { libraryId: "", pin: "" },
   storagePrefix: null,
 };
+
+// Supported languages. `speech` = BCP-47 tag for SpeechSynthesis, `hl` =
+// VoiceRSS language code, `prefix` = voice-list lang filter, `sample` = the
+// Parent-Settings voice test phrase, `kana` = whether the Japanese-only kana
+// tracks (Hiragana/Katakana) apply.
+const LANGS = {
+  ja: { label: "日本語 Japanese", speech: "ja-JP", hl: "ja-jp", prefix: "ja", sample: "こんにちは。ねこ。", kana: true },
+  ko: { label: "한국어 Korean", speech: "ko-KR", hl: "ko-kr", prefix: "ko", sample: "안녕하세요. 고양이.", kana: false },
+  en: { label: "English", speech: "en-US", hl: "en-us", prefix: "en", sample: "Hello. Cat.", kana: false },
+};
+const LANG_KEY = "kitai-lang";
+function langCfg() {
+  return LANGS[state.lang] || LANGS.ja;
+}
+
+// The word to show/speak for the current language, with graceful fallback.
+function wordText(item) {
+  if (!item) return "";
+  if (state.lang === "en") return item.en || item.jaKana || "";
+  if (state.lang === "ko") return item.ko || item.en || item.jaKana || "";
+  return item.jaKana || item.en || "";
+}
+// The romanization line (under the word) for the current language.
+function wordRomaji(item) {
+  if (!item) return "";
+  if (state.lang === "ko") return item.koRomaji || "";
+  if (state.lang === "en") return "";
+  return item.jaRomaji || "";
+}
+// The secondary label beneath the word: romanization if toggled on, otherwise
+// the English gloss (except in English mode where the word is already English).
+function wordSubLabel(item) {
+  if (!item) return "";
+  if (state.romaji) return wordRomaji(item);
+  return state.lang === "en" ? "" : item.en || "";
+}
 
 const els = {
   homeScreen: document.getElementById("home-screen"),
@@ -69,6 +106,7 @@ const els = {
   vibrationToggle: document.getElementById("vibration-toggle"),
   soundToggle: document.getElementById("sound-toggle"),
   themeSelect: document.getElementById("theme-select"),
+  langSelect: document.getElementById("lang-select"),
   closeSettings: document.getElementById("close-settings"),
   speakBtn: document.getElementById("speak-btn"),
   dropzoneSection: document.getElementById("dropzone-section"),
@@ -145,6 +183,7 @@ document.addEventListener("DOMContentLoaded", init);
 
 async function init() {
   loadThemePref();
+  loadLangPref();
   loadVoicePref();
   loadLibraryConfig();
   await loadData();
@@ -154,6 +193,7 @@ async function init() {
   buildImageManager();
   await setupVoices();
   applyTheme();
+  applyLangToUI();
   bindUI();
   registerServiceWorker();
   goHome();
@@ -241,6 +281,36 @@ function applyTheme() {
   document.documentElement.dataset.theme = state.theme;
   if (els.themeSelect) els.themeSelect.value = state.theme;
   try { localStorage.setItem(THEME_KEY, state.theme); } catch (_) {}
+}
+
+function loadLangPref() {
+  try {
+    const saved = localStorage.getItem(LANG_KEY);
+    if (saved && LANGS[saved]) state.lang = saved;
+  } catch (_) {}
+}
+
+// Reflect the current language in the UI: keep the picker in sync and hide the
+// Japanese-only script tracks (Hiragana/Katakana/Kanji) when not in Japanese.
+function applyLangToUI() {
+  if (els.langSelect) els.langSelect.value = state.lang;
+  const kana = langCfg().kana;
+  document.querySelectorAll('.tile[data-track="hiragana"], .tile[data-track="katakana"], .tile[data-track="kanji"]').forEach((t) => {
+    t.classList.toggle("hidden", !kana);
+  });
+}
+
+// Switch language: persist, refresh the voice list for the new language, reset
+// any in-progress round, and return home so the (possibly changed) track list
+// is re-picked cleanly.
+function setLanguage(lang) {
+  if (!LANGS[lang]) return;
+  state.lang = lang;
+  try { localStorage.setItem(LANG_KEY, lang); } catch (_) {}
+  applyLangToUI();
+  setupVoiceOptions();
+  resetFindSession();
+  goHome();
 }
 
 let imageDb = null;
@@ -927,14 +997,15 @@ async function applyLibrarySwitch(libraryId, pin) {
 
 function setupVoiceOptions() {
   els.voiceSelect.innerHTML = "";
-  const voices = speechSynthesis.getVoices().filter((v) => v.lang && v.lang.toLowerCase().startsWith("ja"));
+  const prefix = langCfg().prefix;
+  const voices = speechSynthesis.getVoices().filter((v) => v.lang && v.lang.toLowerCase().startsWith(prefix));
   state.voices = voices;
 
   if (!voices.length) {
     els.voiceWarning.classList.remove("hidden");
     const opt = document.createElement("option");
     opt.value = "";
-    opt.textContent = "No Japanese voice";
+    opt.textContent = `No ${langCfg().label} voice`;
     els.voiceSelect.appendChild(opt);
     return;
   }
@@ -989,10 +1060,10 @@ function refreshVoices() {
   if (n) {
     const cur = state.voices.find((v) => v.voiceURI === state.voiceId);
     el.style.color = "#2a9d8f";
-    el.textContent = `Found ${n} Japanese voice${n > 1 ? "s" : ""}. Selected: ${cur ? cur.name : "default"}.`;
+    el.textContent = `Found ${n} ${langCfg().label} voice${n > 1 ? "s" : ""}. Selected: ${cur ? cur.name : "default"}.`;
   } else {
     el.style.color = "#d62828";
-    el.textContent = "No Japanese voice found yet. Install Japanese TTS in Android settings, then tap Refresh again.";
+    el.textContent = `No ${langCfg().label} voice found yet. Install that language's TTS in Android settings, then tap Refresh again.`;
   }
 }
 
@@ -1129,6 +1200,10 @@ function bindUI() {
       state.theme = e.target.value;
       applyTheme();
     });
+  }
+
+  if (els.langSelect) {
+    els.langSelect.addEventListener("change", (e) => setLanguage(e.target.value));
   }
 
   els.dropzone.addEventListener("pointerup", onDropZonePointerUp);
@@ -1407,7 +1482,7 @@ function renderImageList() {
     const catOk = state.imageCategoryId === "all" || item.categoryId === state.imageCategoryId;
     if (!catOk) return false;
     if (!term) return true;
-    const haystack = `${item.en} ${item.jaKana} ${item.jaRomaji}`.toLowerCase();
+    const haystack = `${item.en} ${item.jaKana} ${item.jaRomaji} ${item.ko || ""} ${item.koRomaji || ""}`.toLowerCase();
     return haystack.includes(term);
   });
 
@@ -1467,7 +1542,7 @@ function renderImageList() {
 function openImageModal(item) {
   if (!els.imageModal || !els.imageModalTitle) return;
   state.imageModalItemId = item.id;
-  els.imageModalTitle.textContent = `${item.en} (${item.jaKana})`;
+  els.imageModalTitle.textContent = `${item.en} (${item.jaKana}${item.ko ? " · " + item.ko : ""})`;
   renderImageModalContent();
   els.imageModal.classList.remove("hidden");
 }
@@ -1745,7 +1820,7 @@ function renderTapView() {
   showPromptArea(true);
   els.cards.classList.remove("hidden");
   renderCards(state.currentChoices);
-  els.promptWord.textContent = state.currentTarget.jaKana;
+  els.promptWord.textContent = wordText(state.currentTarget);
 }
 
 function renderFindView() {
@@ -1756,7 +1831,7 @@ function renderFindView() {
   updateFindCountButtons();
   els.cards.classList.remove("hidden");
   renderCards(state.currentChoices);
-  els.promptWord.textContent = state.currentTarget.jaKana;
+  els.promptWord.textContent = wordText(state.currentTarget);
 }
 
 function renderDragCompleteView() {
@@ -1835,16 +1910,18 @@ function primeSpeech() {
 
 function pickJaVoice(preferLocal) {
   const voices = speechSynthesis.getVoices();
+  const prefix = langCfg().prefix;
+  const matches = voices.filter((v) => v.lang && v.lang.toLowerCase().startsWith(prefix));
+  // Honor the saved voice only if it belongs to the current language.
   if (state.voiceId) {
-    const saved = voices.find((v) => v.voiceURI === state.voiceId);
+    const saved = matches.find((v) => v.voiceURI === state.voiceId);
     if (saved) return saved;
   }
-  const ja = voices.filter((v) => v.lang && v.lang.toLowerCase().startsWith("ja"));
   if (preferLocal) {
-    const local = ja.find((v) => v.localService);
+    const local = matches.find((v) => v.localService);
     if (local) return local;
   }
-  return ja[0] || null;
+  return matches[0] || null;
 }
 
 // Online voice via VoiceRSS (https://www.voicerss.org) — a real TTS service
@@ -1855,7 +1932,7 @@ function onlineTtsUrls(text) {
   if (!key) return [];
   const params = new URLSearchParams({
     key,
-    hl: "ja-jp",
+    hl: langCfg().hl,
     c: "MP3",
     f: "44khz_16bit_mono",
     r: "0",
@@ -1906,7 +1983,7 @@ function deviceSpeak(phrase, handlers) {
   const run = () => {
     attempt++;
     const utter = new SpeechSynthesisUtterance(phrase);
-    utter.lang = "ja-JP";
+    utter.lang = langCfg().speech;
     utter.rate = 0.9;
     if (attempt === 1) {
       const v = pickJaVoice(true);
@@ -1977,7 +2054,7 @@ async function testVoice() {
   if (key) {
     el.style.color = "#5a5564";
     el.textContent = "🔊 Testing online voice…";
-    const url = onlineTtsUrls("こんにちは。ねこ。")[0];
+    const url = onlineTtsUrls(langCfg().sample)[0];
     try {
       const res = await fetch(url, { cache: "no-store" });
       const ct = (res.headers.get("content-type") || "").toLowerCase();
@@ -1992,7 +2069,7 @@ async function testVoice() {
       }
     } catch (_) {
       // A CORS/network error blocked the diagnostic; just try to play it.
-      playOnlineTts("こんにちは。ねこ。", {
+      playOnlineTts(langCfg().sample, {
         onStart: () => { el.style.color = "#2a9d8f"; el.textContent = "✓ Online voice working!"; },
         onFail: () => { el.style.color = "#d62828"; el.textContent = "⚠ Couldn't reach the online voice. Check your internet and the key."; },
       });
@@ -2001,15 +2078,16 @@ async function testVoice() {
   }
 
   const voices = ("speechSynthesis" in window) ? speechSynthesis.getVoices() : [];
-  const ja = voices.filter((v) => v.lang && v.lang.toLowerCase().startsWith("ja"));
+  const prefix = langCfg().prefix;
+  const matches = voices.filter((v) => v.lang && v.lang.toLowerCase().startsWith(prefix));
   const chosen = ("speechSynthesis" in window) ? pickJaVoice(true) : null;
   const desc = chosen
     ? `${chosen.name} (${chosen.lang}, ${chosen.localService ? "offline" : "network"})`
-    : "no device Japanese voice";
-  const info = `Device voice: ${desc} · ${ja.length} JA / ${voices.length} total.`;
+    : `no device ${langCfg().label} voice`;
+  const info = `Device voice: ${desc} · ${matches.length} ${prefix.toUpperCase()} / ${voices.length} total.`;
   el.style.color = "#5a5564";
   el.textContent = `${info} 🔊 Speaking…`;
-  synthesize("こんにちは。ねこ。", {
+  synthesize(langCfg().sample, {
     showErrors: true,
     onStatus: (s, kind) => {
       if (s === "start") {
@@ -2123,12 +2201,12 @@ function renderCards(items) {
 
     const ja = document.createElement("div");
     ja.className = "label-ja";
-    ja.textContent = item.jaKana;
+    ja.textContent = wordText(item);
     card.appendChild(ja);
 
     const label = document.createElement("div");
     label.className = "label-en";
-    label.textContent = state.romaji ? item.jaRomaji : item.en;
+    label.textContent = wordSubLabel(item);
     card.appendChild(label);
 
     onTap(card, () => handleTap(item, card));
@@ -2222,14 +2300,14 @@ function renderSplitWordDisplay(chars, missingIndex, missingChar) {
 }
 
 function buildDragCompleteRound(target) {
-  const chars = Array.from(target.jaKana);
+  const chars = Array.from(wordText(target));
   const missingIndex = Math.floor(Math.random() * chars.length);
   const missingChar = chars[missingIndex];
   state.currentKanaMissing = missingChar;
   renderSplitWordDisplay(chars, missingIndex, missingChar);
-  els.promptWord.textContent = target.en;
+  els.promptWord.textContent = state.lang === "en" ? "Spell it!" : target.en;
 
-  const poolChars = Array.from(new Set(pickPool().flatMap((i) => Array.from(i.jaKana))));
+  const poolChars = Array.from(new Set(pickPool().flatMap((i) => Array.from(wordText(i)))));
   const distractors = shuffle(poolChars.filter((c) => c !== missingChar)).slice(0, 3);
   let options = shuffle([missingChar, ...distractors]).slice(0, 3);
   if (!options.includes(missingChar)) {
@@ -2465,7 +2543,7 @@ function speakCurrent() {
   const phrase =
     state.currentTrack === "hiragana" || state.currentTrack === "katakana"
       ? state.currentTarget.kana || state.currentTarget.romaji
-      : state.currentTarget.jaKana;
+      : wordText(state.currentTarget);
 
   synthesize(phrase, { showErrors: true });
 }

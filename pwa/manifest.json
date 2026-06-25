@@ -1,7 +1,7 @@
 {
-  "name": "Kitai Words",
-  "short_name": "Kitai",
-  "description": "Learn Japanese vocabulary, hiragana, and katakana with playful flashcards.",
+  "name": "My First Words",
+  "short_name": "First Words",
+  "description": "Learn first words in Japanese, Korean, or English with playful flashcards.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

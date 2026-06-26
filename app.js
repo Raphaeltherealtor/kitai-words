@@ -1797,13 +1797,42 @@ async function searchStockPhotos(query) {
   }
 }
 
+// Download a cross-origin image as a Blob. Primary path is a direct CORS
+// fetch; if that's blocked/empty, fall back to drawing it onto a canvas via a
+// crossOrigin <img> and reading the pixels back out.
+async function fetchImageBlob(url) {
+  try {
+    const res = await fetch(url, { mode: "cors", cache: "no-store" });
+    if (res && res.ok) {
+      const blob = await res.blob();
+      if (blob && blob.size > 0 && (blob.type || "").startsWith("image/")) return blob;
+    }
+  } catch (_) {}
+  return await new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        canvas.getContext("2d").drawImage(img, 0, 0);
+        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob failed"))), "image/jpeg", 0.9);
+      } catch (e) {
+        reject(e);
+      }
+    };
+    img.onerror = () => reject(new Error("image load failed"));
+    img.src = url;
+  });
+}
+
 async function pickStockPhoto(url, btnEl) {
   const itemId = state.imageModalItemId;
   if (!itemId) return;
   if (btnEl) btnEl.classList.add("picking");
   try {
-    const res = await fetch(url);
-    const blob = await res.blob();
+    const blob = await fetchImageBlob(url);
     const ext = ((blob.type.split("/")[1] || "jpg").replace(/[^a-z0-9]/gi, "")) || "jpg";
     const file = new File([blob], `stock-${itemId}-${Date.now()}.${ext}`, { type: blob.type || "image/jpeg" });
     await saveImageOverride(itemId, file); // stores offline + syncs to the library

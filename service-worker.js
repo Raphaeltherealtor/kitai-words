@@ -1,4 +1,4 @@
-const CACHE_NAME = "kitai-cache-v43";
+const CACHE_NAME = "kitai-cache-v44";
 const CORE_ASSETS = [
   "./",
   "./index.html",
@@ -29,6 +29,12 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
   const url = new URL(request.url);
   const sameOrigin = url.origin === self.location.origin;
+
+  // Never touch cross-origin requests (Wikimedia photos, Supabase images,
+  // online TTS). Caching an <img> load stores an OPAQUE response, which then
+  // breaks a later fetch().blob() of the same URL (e.g. the "Find Photos"
+  // picker). Let the browser handle these normally.
+  if (!sameOrigin) return;
 
   // Network-first for the app shell (HTML/CSS/JS) and data files so updates
   // land as soon as the device is online. Falls back to cache when offline.

@@ -1258,3 +1258,65 @@ main {
   margin: 0 auto 4px;
   display: block;
 }
+
+/* ---- Stock photo search (in the image manager) ---- */
+.image-modal-stock {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.stock-search-bar {
+  display: flex;
+  gap: 8px;
+}
+.stock-search-bar input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  font-size: 1rem;
+}
+.stock-search-bar button {
+  border: none;
+  background: var(--accent-2);
+  color: #fff;
+  font-weight: 700;
+  border-radius: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+}
+.stock-search-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 8px;
+  max-height: 46vh;
+  overflow-y: auto;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+}
+.stock-result {
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f3f3f3;
+  cursor: pointer;
+  aspect-ratio: 1 / 1;
+}
+.stock-result img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.stock-result.picking {
+  opacity: 0.5;
+  border-color: var(--accent-2);
+}
+.stock-status {
+  grid-column: 1 / -1;
+  padding: 14px;
+  text-align: center;
+  color: #5a5564;
+  font-weight: 600;
+}

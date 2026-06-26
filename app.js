@@ -147,6 +147,11 @@ const els = {
   imageModalClose: document.getElementById("image-modal-close"),
   imageModalUpload: document.getElementById("image-modal-upload"),
   imageModalCamera: document.getElementById("image-modal-camera"),
+  imageModalFind: document.getElementById("image-modal-find"),
+  imageModalStock: document.getElementById("image-modal-stock"),
+  stockSearchInput: document.getElementById("stock-search-input"),
+  stockSearchGo: document.getElementById("stock-search-go"),
+  stockSearchResults: document.getElementById("stock-search-results"),
   imageModalReset: document.getElementById("image-modal-reset"),
   imageModalFile: document.getElementById("image-modal-file"),
   imageModalCameraInput: document.getElementById("image-modal-camera-input"),
@@ -1352,6 +1357,17 @@ function bindUI() {
       els.imageModalCameraInput.click();
     });
   }
+  if (els.imageModalFind) {
+    els.imageModalFind.addEventListener("click", toggleStockSearch);
+  }
+  if (els.stockSearchGo) {
+    els.stockSearchGo.addEventListener("click", () => searchStockPhotos(els.stockSearchInput?.value));
+  }
+  if (els.stockSearchInput) {
+    els.stockSearchInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); searchStockPhotos(els.stockSearchInput.value); }
+    });
+  }
   if (els.imageModalReset) {
     els.imageModalReset.addEventListener("click", () => {
       if (state.imageModalItemId) removeAllImagesForItem(state.imageModalItemId);
@@ -1664,6 +1680,7 @@ function openImageModal(item) {
   if (!els.imageModal || !els.imageModalTitle) return;
   state.imageModalItemId = item.id;
   els.imageModalTitle.textContent = `${item.en} (${item.jaKana}${item.ko ? " · " + item.ko : ""})`;
+  hideStockSearch();
   renderImageModalContent();
   els.imageModal.classList.remove("hidden");
 }
@@ -1719,6 +1736,82 @@ function renderImageModalContent() {
 function closeImageModal() {
   state.imageModalItemId = null;
   if (els.imageModal) els.imageModal.classList.add("hidden");
+  hideStockSearch();
+}
+
+// --- Stock photo search (Wikimedia Commons: free, no API key, CORS-friendly) ---
+
+function hideStockSearch() {
+  if (els.imageModalStock) els.imageModalStock.classList.add("hidden");
+  if (els.stockSearchResults) els.stockSearchResults.innerHTML = "";
+}
+
+function toggleStockSearch() {
+  if (!els.imageModalStock) return;
+  const opening = els.imageModalStock.classList.contains("hidden");
+  els.imageModalStock.classList.toggle("hidden", !opening);
+  if (opening) {
+    const item = state.items.find((i) => i.id === state.imageModalItemId);
+    const q = item ? item.en : "";
+    if (els.stockSearchInput) els.stockSearchInput.value = q;
+    searchStockPhotos(q);
+  }
+}
+
+async function searchStockPhotos(query) {
+  const grid = els.stockSearchResults;
+  if (!grid) return;
+  const q = (query || "").trim();
+  if (!q) { grid.innerHTML = ""; return; }
+  grid.innerHTML = '<div class="stock-status">Searching…</div>';
+  try {
+    const url =
+      "https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*" +
+      "&generator=search&gsrnamespace=6&gsrlimit=24&prop=imageinfo&iiprop=url|mime" +
+      "&iiurlwidth=400&gsrsearch=" + encodeURIComponent(q + " -icon -logo -map -diagram");
+    const res = await fetch(url);
+    const data = await res.json();
+    const pages = data.query && data.query.pages ? Object.values(data.query.pages) : [];
+    const photos = pages
+      .map((p) => p.imageinfo && p.imageinfo[0])
+      .filter((ii) => ii && ii.thumburl && /image\/(jpeg|png|webp)/.test(ii.mime || ""))
+      .slice(0, 18);
+    grid.innerHTML = "";
+    if (!photos.length) {
+      grid.innerHTML = '<div class="stock-status">No photos found. Try a different word.</div>';
+      return;
+    }
+    photos.forEach((ii) => {
+      const btn = document.createElement("button");
+      btn.className = "stock-result";
+      const img = document.createElement("img");
+      img.src = ii.thumburl;
+      img.loading = "lazy";
+      img.alt = "";
+      btn.appendChild(img);
+      onTap(btn, () => pickStockPhoto(ii.thumburl, btn));
+      grid.appendChild(btn);
+    });
+  } catch (_) {
+    grid.innerHTML = '<div class="stock-status">Search failed. Check your connection.</div>';
+  }
+}
+
+async function pickStockPhoto(url, btnEl) {
+  const itemId = state.imageModalItemId;
+  if (!itemId) return;
+  if (btnEl) btnEl.classList.add("picking");
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const ext = ((blob.type.split("/")[1] || "jpg").replace(/[^a-z0-9]/gi, "")) || "jpg";
+    const file = new File([blob], `stock-${itemId}-${Date.now()}.${ext}`, { type: blob.type || "image/jpeg" });
+    await saveImageOverride(itemId, file); // stores offline + syncs to the library
+    hideStockSearch();
+  } catch (_) {
+    if (btnEl) btnEl.classList.remove("picking");
+    alert("Couldn't add that photo. Try another one.");
+  }
 }
 
 function setActiveModeButton(type) {

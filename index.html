@@ -271,7 +271,16 @@
       <div class="image-modal-actions">
         <button id="image-modal-upload">+ Add Photo</button>
         <button id="image-modal-camera">📷 Camera</button>
+        <button id="image-modal-find">🔍 Find Photos</button>
         <button id="image-modal-reset" class="reset">Reset</button>
+      </div>
+      <div id="image-modal-stock" class="image-modal-stock hidden">
+        <div class="stock-search-bar">
+          <input type="search" id="stock-search-input" placeholder="Search photos…" />
+          <button id="stock-search-go">Search</button>
+        </div>
+        <div id="stock-search-results" class="stock-search-results"></div>
+        <div class="image-modal-help">Free photos from Wikimedia Commons. Tap one to add it to this word.</div>
       </div>
       <input type="file" id="image-modal-file" accept="image/*" class="hidden" />
       <input type="file" id="image-modal-camera-input" accept="image/*" capture="environment" class="hidden" />

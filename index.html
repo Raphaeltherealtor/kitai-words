@@ -11,7 +11,8 @@
 <body>
   <div id="onboarding" class="hidden">
     <div class="onboarding-card">
-      <div class="onboarding-logo">My First Words</div>
+      <img id="onboarding-logo" class="onboarding-logo-img hidden" alt="My First Words" />
+      <div class="onboarding-logo" id="onboarding-logo-text">My First Words</div>
       <p class="onboarding-sub">Pick a language to learn</p>
       <div id="onboarding-langs" class="onboarding-langs">
         <button class="onboarding-lang" data-lang="ja"><span class="ob-flag">🇯🇵</span><span class="ob-name">日本語<br>Japanese</span></button>
@@ -34,7 +35,10 @@
   </div>
 
   <header>
-    <div class="logo">My First Words</div>
+    <div class="logo">
+      <img id="app-logo" class="hidden" alt="My First Words" />
+      <span id="app-logo-text">My First Words</span>
+    </div>
     <div class="header-actions">
       <button id="home-button" aria-label="Go to home">🏠</button>
       <button id="parent-button" aria-label="Parent settings">⚙️</button>
@@ -161,6 +165,10 @@
         </select>
       </label>
       <div class="theme-hint">Switches the words and the spoken voice. Each language needs its own voice installed (or use the online voice key below).</div>
+      <label>
+        <input type="checkbox" id="ko-alt-toggle" />
+        Korean: use a boy's words for siblings (형 / 누나 instead of 오빠 / 언니)
+      </label>
       <label>Choices:
         <select id="choice-count">
           <option value="2">2</option>

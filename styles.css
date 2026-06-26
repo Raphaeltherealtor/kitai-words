@@ -1245,3 +1245,16 @@ main {
   font-weight: 600;
   color: #d62828;
 }
+
+/* Brand logo images (loaded from Supabase; fall back to text title) */
+#app-logo {
+  height: 34px;
+  width: auto;
+  display: block;
+}
+.onboarding-logo-img {
+  max-height: 110px;
+  width: auto;
+  margin: 0 auto 4px;
+  display: block;
+}

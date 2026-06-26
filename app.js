@@ -40,6 +40,7 @@ const state = {
   longPressMs: 600,
   soundEnabled: true,
   lang: "ja", // ja | ko | en — which language the words + voice use
+  koAltReading: false, // Korean siblings: false = 오빠/언니 (girl's view), true = 형/누나 (boy's view)
   theme: "ocean",
   imageOverrides: {},
   imageCategoryId: "all",
@@ -67,13 +68,19 @@ function langCfg() {
 function wordText(item) {
   if (!item) return "";
   if (state.lang === "en") return item.en || item.jaKana || "";
-  if (state.lang === "ko") return item.ko || item.en || item.jaKana || "";
+  if (state.lang === "ko") {
+    if (state.koAltReading && item.koAlt) return item.koAlt;
+    return item.ko || item.en || item.jaKana || "";
+  }
   return item.jaKana || item.en || "";
 }
 // The romanization line (under the word) for the current language.
 function wordRomaji(item) {
   if (!item) return "";
-  if (state.lang === "ko") return item.koRomaji || "";
+  if (state.lang === "ko") {
+    if (state.koAltReading && item.koAltRomaji) return item.koAltRomaji;
+    return item.koRomaji || "";
+  }
   if (state.lang === "en") return "";
   return item.jaRomaji || "";
 }
@@ -107,7 +114,12 @@ const els = {
   soundToggle: document.getElementById("sound-toggle"),
   themeSelect: document.getElementById("theme-select"),
   langSelect: document.getElementById("lang-select"),
+  koAltToggle: document.getElementById("ko-alt-toggle"),
+  appLogo: document.getElementById("app-logo"),
+  appLogoText: document.getElementById("app-logo-text"),
   onboarding: document.getElementById("onboarding"),
+  onboardingLogo: document.getElementById("onboarding-logo"),
+  onboardingLogoText: document.getElementById("onboarding-logo-text"),
   onboardingLangs: document.getElementById("onboarding-langs"),
   onboardingPhone: document.getElementById("onboarding-phone"),
   onboardingPin: document.getElementById("onboarding-pin"),
@@ -294,6 +306,7 @@ function loadLangPref() {
   try {
     const saved = localStorage.getItem(LANG_KEY);
     if (saved && LANGS[saved]) state.lang = saved;
+    state.koAltReading = localStorage.getItem("kitai-ko-alt") === "1";
   } catch (_) {}
 }
 
@@ -301,6 +314,7 @@ function loadLangPref() {
 // Japanese-only script tracks (Hiragana/Katakana/Kanji) when not in Japanese.
 function applyLangToUI() {
   if (els.langSelect) els.langSelect.value = state.lang;
+  if (els.koAltToggle) els.koAltToggle.checked = state.koAltReading;
   const kana = langCfg().kana;
   document.querySelectorAll('.tile[data-track="hiragana"], .tile[data-track="katakana"], .tile[data-track="kanji"]').forEach((t) => {
     t.classList.toggle("hidden", !kana);
@@ -920,6 +934,30 @@ function writePathMap(map) {
   try { localStorage.setItem("kitai-image-paths", JSON.stringify(map)); } catch (_) {}
 }
 
+// The "My First Words" logo lives in Supabase Storage so it can be swapped
+// without a code change. Each <img> falls back to the text title if the file
+// isn't uploaded yet (or fails to load offline before it's been cached).
+const BRAND_LOGO_PATH = "branding/my-first-words-logo.png";
+function brandLogoUrl() {
+  return supabasePublicUrl(BRAND_LOGO_PATH);
+}
+function wireLogo(img, textEl) {
+  if (!img) return;
+  img.addEventListener("load", () => {
+    img.classList.remove("hidden");
+    if (textEl) textEl.classList.add("hidden");
+  });
+  img.addEventListener("error", () => {
+    img.classList.add("hidden");
+    if (textEl) textEl.classList.remove("hidden");
+  });
+  img.src = brandLogoUrl();
+}
+function setupBranding() {
+  wireLogo(els.appLogo, els.appLogoText);
+  wireLogo(els.onboardingLogo, els.onboardingLogoText);
+}
+
 function supabasePublicUrl(path) {
   return `${SUPABASE_URL}/storage/v1/object/public/${SUPABASE_BUCKET}/${path}`;
 }
@@ -1279,6 +1317,14 @@ function bindUI() {
     els.langSelect.addEventListener("change", (e) => setLanguage(e.target.value));
   }
 
+  if (els.koAltToggle) {
+    els.koAltToggle.addEventListener("change", (e) => {
+      state.koAltReading = e.target.checked;
+      try { localStorage.setItem("kitai-ko-alt", state.koAltReading ? "1" : "0"); } catch (_) {}
+      if (state.currentTrack === "vocab" && state.currentSection === "game") renderCurrentView();
+    });
+  }
+
   els.dropzone.addEventListener("pointerup", onDropZonePointerUp);
 
   if (els.imageSearch) {
@@ -1406,6 +1452,7 @@ function bindUI() {
   setupInstallPrompt();
   setupLibraryControls();
   setupOnboarding();
+  setupBranding();
 }
 
 function buildFindCountBar() {

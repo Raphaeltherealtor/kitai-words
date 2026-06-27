@@ -662,14 +662,17 @@ async function fetchCloudWordManifest() {
 
 async function pushCloudWordManifest(m) {
   const prefix = await ensureStoragePrefix();
-  const body = new Blob([JSON.stringify(m)], { type: "application/json" });
+  // The kitai-images bucket only accepts image MIME types, so the manifest
+  // (JSON) is stored under an image content-type. The bytes are still JSON and
+  // fetch's res.json() parses them back fine regardless of content-type.
+  const body = new Blob([JSON.stringify(m)], { type: "image/svg+xml" });
   const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${SUPABASE_BUCKET}/${wordsCloudPath(prefix)}`, {
     method: "POST",
     headers: {
       apikey: SUPABASE_KEY,
       Authorization: `Bearer ${SUPABASE_KEY}`,
       "x-upsert": "true",
-      "Content-Type": "application/json",
+      "Content-Type": "image/svg+xml",
     },
     body,
   });
@@ -983,7 +986,9 @@ async function uploadImageToSupabase(itemId, imageId, file) {
       apikey: SUPABASE_KEY,
       Authorization: `Bearer ${SUPABASE_KEY}`,
       "x-upsert": "true",
-      "Content-Type": file.type || "application/octet-stream",
+      // The bucket only accepts image MIME types; default to one if the file
+      // somehow has no type (otherwise the upload is rejected with 415).
+      "Content-Type": (file.type && file.type.startsWith("image/")) ? file.type : "image/jpeg",
     },
     body: file,
   });

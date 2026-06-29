@@ -280,9 +280,12 @@
           <button id="stock-search-go">Search</button>
         </div>
         <div id="stock-search-results" class="stock-search-results"></div>
-        <div class="image-modal-help">Free photos from Wikimedia Commons. Tap one to add it to this word.</div>
+        <div class="stock-add-bar">
+          <button id="stock-add" disabled>Add selected</button>
+        </div>
+        <div class="image-modal-help">Free photos from Wikimedia Commons. Tap to select several, then Add.</div>
       </div>
-      <input type="file" id="image-modal-file" accept="image/*" class="hidden" />
+      <input type="file" id="image-modal-file" accept="image/*" multiple class="hidden" />
       <input type="file" id="image-modal-camera-input" accept="image/*" capture="environment" class="hidden" />
     </div>
   </div>

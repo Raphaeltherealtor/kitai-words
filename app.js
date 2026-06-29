@@ -152,6 +152,7 @@ const els = {
   stockSearchInput: document.getElementById("stock-search-input"),
   stockSearchGo: document.getElementById("stock-search-go"),
   stockSearchResults: document.getElementById("stock-search-results"),
+  stockAdd: document.getElementById("stock-add"),
   imageModalReset: document.getElementById("image-modal-reset"),
   imageModalFile: document.getElementById("image-modal-file"),
   imageModalCameraInput: document.getElementById("image-modal-camera-input"),
@@ -848,6 +849,14 @@ async function saveImageOverride(itemId, file) {
   uploadImageToSupabase(itemId, imageId, file).catch(() => {});
 }
 
+// Save several photos to one word at once (gallery multi-select / batch stock
+// pick). saveImageOverride already caps the word at MAX_PHOTOS_PER_ITEM.
+async function saveImageOverridesBatch(itemId, files) {
+  for (const file of files) {
+    if (file) await saveImageOverride(itemId, file);
+  }
+}
+
 async function removeImageFromIdbAndCloud(imageId) {
   try {
     const db = await getImageDb();
@@ -1373,17 +1382,20 @@ function bindUI() {
       if (e.key === "Enter") { e.preventDefault(); searchStockPhotos(els.stockSearchInput.value); }
     });
   }
+  if (els.stockAdd) {
+    els.stockAdd.addEventListener("click", addSelectedStockPhotos);
+  }
   if (els.imageModalReset) {
     els.imageModalReset.addEventListener("click", () => {
       if (state.imageModalItemId) removeAllImagesForItem(state.imageModalItemId);
     });
   }
   if (els.imageModalFile) {
-    els.imageModalFile.addEventListener("change", () => {
+    els.imageModalFile.addEventListener("change", async () => {
       const id = els.imageModalFile.dataset.itemId;
-      const file = els.imageModalFile.files?.[0];
-      if (id && file) saveImageOverride(id, file);
+      const files = Array.from(els.imageModalFile.files || []);
       els.imageModalFile.value = "";
+      if (id && files.length) await saveImageOverridesBatch(id, files);
     });
   }
   if (els.imageModalCameraInput) {
@@ -1746,9 +1758,20 @@ function closeImageModal() {
 
 // --- Stock photo search (Wikimedia Commons: free, no API key, CORS-friendly) ---
 
+const stockSelected = new Set(); // thumbnail URLs the parent has tapped to add
+
+function updateStockAddButton() {
+  if (!els.stockAdd) return;
+  const n = stockSelected.size;
+  els.stockAdd.disabled = n === 0;
+  els.stockAdd.textContent = n ? `Add ${n} photo${n > 1 ? "s" : ""}` : "Add selected";
+}
+
 function hideStockSearch() {
   if (els.imageModalStock) els.imageModalStock.classList.add("hidden");
   if (els.stockSearchResults) els.stockSearchResults.innerHTML = "";
+  stockSelected.clear();
+  updateStockAddButton();
 }
 
 function toggleStockSearch() {
@@ -1767,6 +1790,8 @@ async function searchStockPhotos(query) {
   const grid = els.stockSearchResults;
   if (!grid) return;
   const q = (query || "").trim();
+  stockSelected.clear();
+  updateStockAddButton();
   if (!q) { grid.innerHTML = ""; return; }
   grid.innerHTML = '<div class="stock-status">Searching…</div>';
   try {
@@ -1794,7 +1819,16 @@ async function searchStockPhotos(query) {
       img.loading = "lazy";
       img.alt = "";
       btn.appendChild(img);
-      onTap(btn, () => pickStockPhoto(ii.thumburl, btn));
+      onTap(btn, () => {
+        if (stockSelected.has(ii.thumburl)) {
+          stockSelected.delete(ii.thumburl);
+          btn.classList.remove("selected");
+        } else {
+          stockSelected.add(ii.thumburl);
+          btn.classList.add("selected");
+        }
+        updateStockAddButton();
+      });
       grid.appendChild(btn);
     });
   } catch (_) {
@@ -1832,20 +1866,24 @@ async function fetchImageBlob(url) {
   });
 }
 
-async function pickStockPhoto(url, btnEl) {
+async function downloadStockPhoto(url, itemId) {
+  const blob = await fetchImageBlob(url);
+  const ext = ((blob.type.split("/")[1] || "jpg").replace(/[^a-z0-9]/gi, "")) || "jpg";
+  const file = new File([blob], `stock-${itemId}-${Date.now()}.${ext}`, { type: blob.type || "image/jpeg" });
+  await saveImageOverride(itemId, file); // stores offline + syncs to the library
+}
+
+async function addSelectedStockPhotos() {
   const itemId = state.imageModalItemId;
-  if (!itemId) return;
-  if (btnEl) btnEl.classList.add("picking");
-  try {
-    const blob = await fetchImageBlob(url);
-    const ext = ((blob.type.split("/")[1] || "jpg").replace(/[^a-z0-9]/gi, "")) || "jpg";
-    const file = new File([blob], `stock-${itemId}-${Date.now()}.${ext}`, { type: blob.type || "image/jpeg" });
-    await saveImageOverride(itemId, file); // stores offline + syncs to the library
-    hideStockSearch();
-  } catch (_) {
-    if (btnEl) btnEl.classList.remove("picking");
-    alert("Couldn't add that photo. Try another one.");
+  if (!itemId || stockSelected.size === 0) return;
+  const urls = Array.from(stockSelected);
+  if (els.stockAdd) { els.stockAdd.disabled = true; els.stockAdd.textContent = "Adding…"; }
+  let failed = 0;
+  for (const url of urls) {
+    try { await downloadStockPhoto(url, itemId); } catch (_) { failed++; }
   }
+  hideStockSearch();
+  if (failed) alert(`Added ${urls.length - failed} photo(s); ${failed} couldn't be added.`);
 }
 
 function setActiveModeButton(type) {

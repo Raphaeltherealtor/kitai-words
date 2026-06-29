@@ -1359,3 +1359,53 @@ main {
 #stock-add:disabled {
   opacity: 0.5;
 }
+
+/* ---- Tabbed Parent Settings ---- */
+.settings-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  position: sticky;
+  top: 0;
+  background: #fff;
+  padding-bottom: 6px;
+  z-index: 1;
+}
+.settings-tab {
+  flex: 1;
+  min-width: 72px;
+  border: none;
+  background: #f1f1f5;
+  border-radius: 12px;
+  padding: 10px 8px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+.settings-tab.active {
+  background: var(--accent-2);
+  color: #fff;
+}
+.settings-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.word-add-toggle {
+  border: none;
+  background: var(--accent-3);
+  color: #fff;
+  font-weight: 800;
+  border-radius: 12px;
+  padding: 12px;
+  cursor: pointer;
+}
+.add-word-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #f7f7fb;
+  border-radius: 14px;
+  padding: 12px;
+}

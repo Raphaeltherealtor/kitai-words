@@ -157,105 +157,128 @@
   <div id="settings-overlay" class="hidden">
     <div id="settings" role="dialog" aria-modal="true">
       <h2>Parent Settings</h2>
-      <label>Language:
-        <select id="lang-select">
-          <option value="ja">日本語 Japanese</option>
-          <option value="ko">한국어 Korean</option>
-          <option value="en">English</option>
-        </select>
-      </label>
-      <div class="theme-hint">Switches the words and the spoken voice. Each language needs its own voice installed (or use the online voice key below).</div>
-      <label>
-        <input type="checkbox" id="ko-alt-toggle" />
-        Korean: use a boy's words for siblings (형 / 누나 instead of 오빠 / 언니)
-      </label>
-      <label>Choices:
-        <select id="choice-count">
-          <option value="2">2</option>
-          <option value="3" selected>3</option>
-          <option value="4">4</option>
-        </select>
-      </label>
-      <label>Category:
-        <select id="category-select"></select>
-      </label>
-      <label>Voice:
-        <select id="voice-select"></select>
-      </label>
-      <div class="library-actions">
-        <button id="voice-test-btn">🔊 Test voice</button>
-        <button id="voice-refresh-btn" class="reset">↻ Refresh voices</button>
-      </div>
-      <div class="theme-hint">After installing a Japanese voice in Android settings, tap Refresh. Offline voices are preferred automatically.</div>
-      <label>
-        <input type="checkbox" id="online-voice-toggle" />
-        Prefer online voice (needs internet; use if device voice won't play)
-      </label>
-      <label>Online voice key:
-        <input type="text" id="tts-api-key" autocomplete="off" placeholder="VoiceRSS API key" />
-      </label>
-      <div class="theme-hint">Get a free key at voicerss.org (sign up → copy the API key). Paste it here for reliable Japanese audio that works regardless of your phone's voice settings.</div>
-      <div id="voice-test-status" class="library-status"></div>
-      <label>
-        <input type="checkbox" id="romaji-toggle" />
-        Show romaji (off by default)
-      </label>
-      <label>
-        <input type="checkbox" id="vibration-toggle" checked />
-        Vibrate on wrong (if supported)
-      </label>
-      <label>
-        <input type="checkbox" id="sound-toggle" checked />
-        Enable sounds (chime/buzz)
-      </label>
-      <label>Theme:
-        <select id="theme-select">
-          <option value="ocean">🌊 Ocean</option>
-          <option value="galaxy">🪐 Galaxy</option>
-          <option value="sky">☁️ Sky</option>
-          <option value="sunshine">☀️ Sunshine</option>
-        </select>
-      </label>
-      <div class="theme-hint">Pick a color vibe for the app. Your choice is saved on this device.</div>
-      <div class="settings-subheader">Shared Library</div>
-      <div class="library-help">Use the same Library ID + PIN across phones to share custom photos. The cloud bucket is public — please don't use private photos.</div>
-      <label>Library ID:
-        <input type="text" id="library-id" autocomplete="off" placeholder="e.g. phone number" inputmode="text" />
-      </label>
-      <label>PIN (4 digits):
-        <input type="text" id="library-pin" autocomplete="off" placeholder="****" inputmode="numeric" maxlength="4" pattern="[0-9]*" />
-      </label>
-      <div class="library-actions">
-        <button id="library-save">Save & Switch</button>
-        <button id="library-reset" class="reset">Reset to Device</button>
-      </div>
-      <div id="library-status" class="library-status"></div>
 
-      <div class="settings-subheader">Add a word</div>
-      <div id="word-sync-indicator" class="sync-indicator"></div>
-      <div class="library-help">Add your own word to any category. It's saved on this device and shows up in the games right away. Add a photo URL now, or add photos after from the list below.</div>
-      <label>Category:
-        <select id="new-word-category"></select>
-      </label>
-      <label>English:
-        <input type="text" id="new-word-en" autocomplete="off" placeholder="e.g. Penguin" />
-      </label>
-      <label>Japanese (kana):
-        <input type="text" id="new-word-kana" autocomplete="off" lang="ja" placeholder="e.g. ペンギン" />
-      </label>
-      <label>Romaji (optional):
-        <input type="text" id="new-word-romaji" autocomplete="off" placeholder="e.g. pengin" />
-      </label>
-      <label>Photo URL (optional):
-        <input type="url" id="new-word-photo" autocomplete="off" inputmode="url" placeholder="https://…" />
-      </label>
-      <button id="new-word-add">+ Add Word</button>
-      <div id="new-word-status" class="library-status"></div>
+      <div class="settings-tabs" id="settings-tabs">
+        <button class="settings-tab active" data-tab="words">📚 Words</button>
+        <button class="settings-tab" data-tab="language">🌐 Language</button>
+        <button class="settings-tab" data-tab="game">🎮 Game</button>
+        <button class="settings-tab" data-tab="account">☁️ Account</button>
+      </div>
 
-      <div class="settings-subheader">Custom images</div>
-      <input type="search" id="image-search" placeholder="Search words" aria-label="Search vocabulary" />
-      <div id="image-category-pills" class="pill-row"></div>
-      <div id="image-list" class="image-list"></div>
+      <!-- WORDS & PHOTOS -->
+      <div class="settings-panel" data-panel="words">
+        <div id="word-sync-indicator" class="sync-indicator"></div>
+        <input type="search" id="image-search" placeholder="Search words" aria-label="Search vocabulary" />
+        <div id="image-category-pills" class="pill-row"></div>
+        <button id="word-add-toggle" class="word-add-toggle">＋ Add a word</button>
+        <div id="add-word-form" class="add-word-form hidden">
+          <div class="library-help">Adds to the selected category. Saved on this device (and your library), and shows in the games right away.</div>
+          <label>Category:
+            <select id="new-word-category"></select>
+          </label>
+          <label>English:
+            <input type="text" id="new-word-en" autocomplete="off" placeholder="e.g. Penguin" />
+          </label>
+          <label>Word (kana / Hangul):
+            <input type="text" id="new-word-kana" autocomplete="off" placeholder="e.g. ペンギン / 펭귄" />
+          </label>
+          <label>Romaji (optional):
+            <input type="text" id="new-word-romaji" autocomplete="off" placeholder="e.g. pengin" />
+          </label>
+          <label>Photo URL (optional):
+            <input type="url" id="new-word-photo" autocomplete="off" inputmode="url" placeholder="https://…" />
+          </label>
+          <button id="new-word-add">+ Add Word</button>
+          <div id="new-word-status" class="library-status"></div>
+        </div>
+        <div id="image-list" class="image-list"></div>
+      </div>
+
+      <!-- LANGUAGE & VOICE -->
+      <div class="settings-panel hidden" data-panel="language">
+        <label>Language:
+          <select id="lang-select">
+            <option value="ja">日本語 Japanese</option>
+            <option value="ko">한국어 Korean</option>
+            <option value="en">English</option>
+          </select>
+        </label>
+        <div class="theme-hint">Switches the words and the spoken voice. Each language needs its own voice installed (or use the online voice key below).</div>
+        <label>
+          <input type="checkbox" id="ko-alt-toggle" />
+          Korean: use a boy's words for siblings (형 / 누나 instead of 오빠 / 언니)
+        </label>
+        <label>
+          <input type="checkbox" id="romaji-toggle" />
+          Show romaji / romanization (off by default)
+        </label>
+        <label>Voice:
+          <select id="voice-select"></select>
+        </label>
+        <div class="library-actions">
+          <button id="voice-test-btn">🔊 Test voice</button>
+          <button id="voice-refresh-btn" class="reset">↻ Refresh voices</button>
+        </div>
+        <div class="theme-hint">After installing a voice in your phone's settings, tap Refresh. Offline voices are preferred automatically.</div>
+        <label>
+          <input type="checkbox" id="online-voice-toggle" />
+          Prefer online voice (needs internet; use if device voice won't play)
+        </label>
+        <label>Online voice key:
+          <input type="text" id="tts-api-key" autocomplete="off" placeholder="VoiceRSS API key" />
+        </label>
+        <div class="theme-hint">Get a free key at voicerss.org (sign up → copy the API key). Paste it here for reliable audio that works regardless of your phone's voice settings.</div>
+        <div id="voice-test-status" class="library-status"></div>
+      </div>
+
+      <!-- GAME -->
+      <div class="settings-panel hidden" data-panel="game">
+        <label>Choices:
+          <select id="choice-count">
+            <option value="2">2</option>
+            <option value="3" selected>3</option>
+            <option value="4">4</option>
+          </select>
+        </label>
+        <label>Category:
+          <select id="category-select"></select>
+        </label>
+        <label>
+          <input type="checkbox" id="vibration-toggle" checked />
+          Vibrate on wrong (if supported)
+        </label>
+        <label>
+          <input type="checkbox" id="sound-toggle" checked />
+          Enable sounds (chime/buzz)
+        </label>
+        <label>Theme:
+          <select id="theme-select">
+            <option value="ocean">🌊 Ocean</option>
+            <option value="galaxy">🪐 Galaxy</option>
+            <option value="sky">☁️ Sky</option>
+            <option value="sunshine">☀️ Sunshine</option>
+          </select>
+        </label>
+        <div class="theme-hint">Pick a color vibe for the app. Your choice is saved on this device.</div>
+      </div>
+
+      <!-- ACCOUNT -->
+      <div class="settings-panel hidden" data-panel="account">
+        <div class="settings-subheader">Shared Library</div>
+        <div class="library-help">Use the same Library ID + PIN (your phone number + PIN) across phones to share custom photos and words. The cloud bucket is public — please don't use private photos.</div>
+        <label>Library ID:
+          <input type="text" id="library-id" autocomplete="off" placeholder="e.g. phone number" inputmode="text" />
+        </label>
+        <label>PIN (4 digits):
+          <input type="text" id="library-pin" autocomplete="off" placeholder="****" inputmode="numeric" maxlength="4" pattern="[0-9]*" />
+        </label>
+        <div class="library-actions">
+          <button id="library-save">Save & Switch</button>
+          <button id="library-reset" class="reset">Reset to Device</button>
+        </div>
+        <div id="library-status" class="library-status"></div>
+      </div>
+
       <button id="close-settings">Done</button>
     </div>
   </div>

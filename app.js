@@ -126,6 +126,9 @@ const els = {
   onboardingStart: document.getElementById("onboarding-start"),
   onboardingStatus: document.getElementById("onboarding-status"),
   closeSettings: document.getElementById("close-settings"),
+  settingsTabs: document.getElementById("settings-tabs"),
+  wordAddToggle: document.getElementById("word-add-toggle"),
+  addWordForm: document.getElementById("add-word-form"),
   speakBtn: document.getElementById("speak-btn"),
   dropzoneSection: document.getElementById("dropzone-section"),
   dropzone: document.getElementById("dropzone"),
@@ -587,10 +590,12 @@ function serializeWord(item, ts) {
     id: item.id,
     categoryId: item.categoryId,
     en: item.en,
-    jaKana: item.jaKana,
+    jaKana: item.jaKana || "",
     jaRomaji: item.jaRomaji || "",
     updatedAt: ts || item.updatedAt || Date.now(),
   };
+  if (item.ko) w.ko = item.ko;
+  if (item.koRomaji) w.koRomaji = item.koRomaji;
   if (item.photoUrl) w.photoUrl = item.photoUrl;
   return w;
 }
@@ -602,8 +607,10 @@ function wordToItem(w) {
     id: w.id,
     categoryId: w.categoryId,
     en: w.en,
-    jaKana: w.jaKana,
+    jaKana: w.jaKana || "",
     jaRomaji: w.jaRomaji || "",
+    ko: w.ko || "",
+    koRomaji: w.koRomaji || "",
     imagePath: placeholderImage(cat ? cat.emoji : "⭐"),
     aliases: [],
     custom: true,
@@ -760,6 +767,30 @@ function setNewWordStatus(msg, isError) {
   els.newWordStatus.style.color = isError ? "#d62828" : "#2a9d8f";
 }
 
+// Tabbed Parent Settings: show one panel at a time.
+function setupSettingsTabs() {
+  if (!els.settingsTabs) return;
+  const tabs = Array.from(els.settingsTabs.querySelectorAll(".settings-tab"));
+  const panels = Array.from(document.querySelectorAll("#settings .settings-panel"));
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      tabs.forEach((t) => t.classList.toggle("active", t === tab));
+      panels.forEach((p) => p.classList.toggle("hidden", p.dataset.panel !== tab.dataset.tab));
+    });
+  });
+}
+
+// "Add a word" shown right inside the Words tab; pre-fills the category the
+// parent is currently viewing (e.g. browsing People → new word defaults to People).
+function toggleAddWordForm() {
+  if (!els.addWordForm) return;
+  const opening = els.addWordForm.classList.contains("hidden");
+  els.addWordForm.classList.toggle("hidden", !opening);
+  if (opening && els.newWordCategory && state.imageCategoryId && state.imageCategoryId !== "all") {
+    els.newWordCategory.value = state.imageCategoryId;
+  }
+}
+
 function addCustomItemFromForm() {
   const categoryId = els.newWordCategory ? els.newWordCategory.value : "";
   const en = (els.newWordEn?.value || "").trim();
@@ -771,8 +802,12 @@ function addCustomItemFromForm() {
     setNewWordStatus("Please pick a category.", true);
     return;
   }
-  if (!en || !kana) {
-    setNewWordStatus("Please enter both English and Japanese (kana).", true);
+  if (!en) {
+    setNewWordStatus("Please enter the English name.", true);
+    return;
+  }
+  if (!kana && state.lang !== "en") {
+    setNewWordStatus("Please enter the word in the selected language.", true);
     return;
   }
   if (photo && !/^https?:\/\//i.test(photo)) {
@@ -783,7 +818,15 @@ function addCustomItemFromForm() {
   const cat = state.categories.find((c) => c.id === categoryId);
   const now = Date.now();
   const id = `custom-${now}-${Math.random().toString(36).slice(2, 7)}`;
-  const word = { id, categoryId, en, jaKana: kana, jaRomaji: romaji, updatedAt: now };
+  // Store the typed word into whichever language is active so it shows there.
+  const word = { id, categoryId, en, updatedAt: now };
+  if (state.lang === "ko") {
+    word.ko = kana;
+    word.koRomaji = romaji;
+  } else if (kana) {
+    word.jaKana = kana;
+    word.jaRomaji = romaji;
+  }
   if (photo) word.photoUrl = photo;
 
   if (!state.wordManifest) state.wordManifest = emptyManifest();
@@ -1357,6 +1400,10 @@ function bindUI() {
   if (els.newWordAdd) {
     els.newWordAdd.addEventListener("click", addCustomItemFromForm);
   }
+  setupSettingsTabs();
+  if (els.wordAddToggle) {
+    els.wordAddToggle.addEventListener("click", toggleAddWordForm);
+  }
 
   if (els.imageModalClose) {
     els.imageModalClose.addEventListener("click", closeImageModal);
@@ -1700,7 +1747,8 @@ function renderImageList() {
 function openImageModal(item) {
   if (!els.imageModal || !els.imageModalTitle) return;
   state.imageModalItemId = item.id;
-  els.imageModalTitle.textContent = `${item.en} (${item.jaKana}${item.ko ? " · " + item.ko : ""})`;
+  const native = [item.jaKana, item.ko].filter(Boolean).join(" · ");
+  els.imageModalTitle.textContent = native ? `${item.en} (${native})` : item.en;
   hideStockSearch();
   renderImageModalContent();
   els.imageModal.classList.remove("hidden");

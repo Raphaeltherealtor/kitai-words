@@ -6,7 +6,9 @@
     { "id": "people", "label_en": "People", "label_ja": "ひと", "label_ko": "사람", "emoji": "🧑" },
     { "id": "places", "label_en": "Places", "label_ja": "ばしょ", "label_ko": "장소", "emoji": "🏠" },
     { "id": "food", "label_en": "Food Items", "label_ja": "たべもの", "label_ko": "음식", "emoji": "🍚" },
-    { "id": "colors", "label_en": "Colors", "label_ja": "いろ", "label_ko": "색깔", "emoji": "🎨" }
+    { "id": "colors", "label_en": "Colors", "label_ja": "いろ", "label_ko": "색깔", "emoji": "🎨" },
+    { "id": "numbers", "label_en": "Numbers", "label_ja": "すうじ", "label_ko": "숫자", "emoji": "🔢" },
+    { "id": "body", "label_en": "Body", "label_ja": "からだ", "label_ko": "몸", "emoji": "🧍" }
   ],
   "items": [
     { "id": "cat", "categoryId": "animals", "en": "Cat", "jaKana": "ねこ", "jaRomaji": "neko", "ko": "고양이", "koRomaji": "goyangi", "imagePath": "assets/images/animal-cat.svg", "photoUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/Cat%20August%202010-4.jpg?width=400", "aliases": ["kitty", "neko"] },
@@ -90,6 +92,26 @@
     { "id": "color-pink", "categoryId": "colors", "en": "Pink", "jaKana": "ピンク", "jaRomaji": "pinku", "ko": "분홍", "koRomaji": "bunhong", "imagePath": "assets/images/color-pink.svg", "aliases": ["pinku"] },
     { "id": "color-orange", "categoryId": "colors", "en": "Orange", "jaKana": "オレンジ", "jaRomaji": "orenji", "ko": "주황", "koRomaji": "juhwang", "imagePath": "assets/images/color-orange.svg", "aliases": ["orenji"] },
     { "id": "color-purple", "categoryId": "colors", "en": "Purple", "jaKana": "むらさき", "jaRomaji": "murasaki", "ko": "보라", "koRomaji": "bora", "imagePath": "assets/images/color-purple.svg", "aliases": ["murasaki"] },
-    { "id": "color-brown", "categoryId": "colors", "en": "Brown", "jaKana": "ちゃいろ", "jaRomaji": "chairo", "ko": "갈색", "koRomaji": "galsaek", "imagePath": "assets/images/color-brown.svg", "aliases": ["chairo"] }
+    { "id": "color-brown", "categoryId": "colors", "en": "Brown", "jaKana": "ちゃいろ", "jaRomaji": "chairo", "ko": "갈색", "koRomaji": "galsaek", "imagePath": "assets/images/color-brown.svg", "aliases": ["chairo"] },
+
+    { "id": "num-1", "categoryId": "numbers", "en": "One", "jaKana": "いち", "jaRomaji": "ichi", "ko": "하나", "koRomaji": "hana", "emoji": "1", "aliases": [] },
+    { "id": "num-2", "categoryId": "numbers", "en": "Two", "jaKana": "に", "jaRomaji": "ni", "ko": "둘", "koRomaji": "dul", "emoji": "2", "aliases": [] },
+    { "id": "num-3", "categoryId": "numbers", "en": "Three", "jaKana": "さん", "jaRomaji": "san", "ko": "셋", "koRomaji": "set", "emoji": "3", "aliases": [] },
+    { "id": "num-4", "categoryId": "numbers", "en": "Four", "jaKana": "よん", "jaRomaji": "yon", "ko": "넷", "koRomaji": "net", "emoji": "4", "aliases": [] },
+    { "id": "num-5", "categoryId": "numbers", "en": "Five", "jaKana": "ご", "jaRomaji": "go", "ko": "다섯", "koRomaji": "daseot", "emoji": "5", "aliases": [] },
+    { "id": "num-6", "categoryId": "numbers", "en": "Six", "jaKana": "ろく", "jaRomaji": "roku", "ko": "여섯", "koRomaji": "yeoseot", "emoji": "6", "aliases": [] },
+    { "id": "num-7", "categoryId": "numbers", "en": "Seven", "jaKana": "なな", "jaRomaji": "nana", "ko": "일곱", "koRomaji": "ilgop", "emoji": "7", "aliases": [] },
+    { "id": "num-8", "categoryId": "numbers", "en": "Eight", "jaKana": "はち", "jaRomaji": "hachi", "ko": "여덟", "koRomaji": "yeodeol", "emoji": "8", "aliases": [] },
+    { "id": "num-9", "categoryId": "numbers", "en": "Nine", "jaKana": "きゅう", "jaRomaji": "kyuu", "ko": "아홉", "koRomaji": "ahop", "emoji": "9", "aliases": [] },
+    { "id": "num-10", "categoryId": "numbers", "en": "Ten", "jaKana": "じゅう", "jaRomaji": "juu", "ko": "열", "koRomaji": "yeol", "emoji": "10", "aliases": [] },
+
+    { "id": "body-head", "categoryId": "body", "en": "Head", "jaKana": "あたま", "jaRomaji": "atama", "ko": "머리", "koRomaji": "meori", "emoji": "🙂", "aliases": [] },
+    { "id": "body-hair", "categoryId": "body", "en": "Hair", "jaKana": "かみ", "jaRomaji": "kami", "ko": "머리카락", "koRomaji": "meorikarak", "emoji": "💇", "aliases": [] },
+    { "id": "body-eyes", "categoryId": "body", "en": "Eyes", "jaKana": "め", "jaRomaji": "me", "ko": "눈", "koRomaji": "nun", "emoji": "👀", "aliases": [] },
+    { "id": "body-ears", "categoryId": "body", "en": "Ears", "jaKana": "みみ", "jaRomaji": "mimi", "ko": "귀", "koRomaji": "gwi", "emoji": "👂", "aliases": [] },
+    { "id": "body-nose", "categoryId": "body", "en": "Nose", "jaKana": "はな", "jaRomaji": "hana", "ko": "코", "koRomaji": "ko", "emoji": "👃", "aliases": [] },
+    { "id": "body-mouth", "categoryId": "body", "en": "Mouth", "jaKana": "くち", "jaRomaji": "kuchi", "ko": "입", "koRomaji": "ip", "emoji": "👄", "aliases": [] },
+    { "id": "body-hands", "categoryId": "body", "en": "Hands", "jaKana": "て", "jaRomaji": "te", "ko": "손", "koRomaji": "son", "emoji": "✋", "aliases": [] },
+    { "id": "body-feet", "categoryId": "body", "en": "Feet", "jaKana": "あし", "jaRomaji": "ashi", "ko": "발", "koRomaji": "bal", "emoji": "🦶", "aliases": [] }
   ]
 }

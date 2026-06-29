@@ -234,7 +234,11 @@ async function loadData() {
   const res = await fetch("data/vocab.json");
   state.data = await res.json();
   state.categories = state.data.categories;
-  state.builtinItems = state.data.items;
+  // Items with no image file but an `emoji`/glyph (e.g. numbers) get a
+  // generated picture so they render like any other word.
+  state.builtinItems = state.data.items.map((it) =>
+    !it.imagePath && !it.photoUrl && it.emoji ? { ...it, imagePath: placeholderImage(it.emoji) } : it
+  );
   state.wordManifest = loadWordManifest();
   applyWordManifestToState();
   updateWordSyncIndicator();

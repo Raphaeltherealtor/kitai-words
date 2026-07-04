@@ -296,6 +296,11 @@
         <div class="reading-editor-help">Fix the reading if it's shown or spoken wrong. This is what the app displays and says.</div>
         <input type="text" id="reading-input" autocomplete="off" placeholder="e.g. ねこ" />
         <input type="text" id="reading-romaji" autocomplete="off" placeholder="romaji (optional)" />
+        <div id="reading-speech-row" class="reading-speech-row hidden">
+          <label class="reading-speech-label" for="reading-speech">🔊 Say it as (fixes accent)</label>
+          <input type="text" id="reading-speech" autocomplete="off" placeholder="e.g. 箸 or 橋 — kanji" />
+          <div class="reading-editor-help">Same kana can have different pitch (箸 chopsticks vs 橋 bridge). Enter the kanji so the voice says it right — the tile still shows the kana above. Leave blank to speak the kana.</div>
+        </div>
         <div class="reading-editor-actions">
           <button type="button" id="reading-suggest" class="suggest-btn">✨ Suggest</button>
           <button type="button" id="reading-save">Save word</button>

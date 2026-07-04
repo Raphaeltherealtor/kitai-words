@@ -1446,6 +1446,20 @@ main {
   border-radius: 10px;
   font-size: 1.1rem;
 }
+.reading-speech-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border: 1px dashed #cfc9db;
+  border-radius: 10px;
+  background: #fff;
+}
+.reading-speech-label {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #2b2540;
+}
 .reading-editor-actions {
   display: flex;
   gap: 8px;

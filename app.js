@@ -74,6 +74,15 @@ function wordText(item) {
   }
   return item.jaKana || item.en || "";
 }
+// What the *voice* should say (may differ from what's displayed). For Japanese a
+// word can carry an optional `jaSpeech` — usually the kanji — so the engine's
+// dictionary applies the correct pitch accent (e.g. 箸 HA‑shi vs 橋 ha‑SHI) even
+// though the tile still shows the ambiguous kana. Falls back to the shown word.
+function speechText(item) {
+  if (!item) return "";
+  if (state.lang === "ja") return item.jaSpeech || item.jaKana || item.en || "";
+  return wordText(item);
+}
 // The romanization line (under the word) for the current language.
 function wordRomaji(item) {
   if (!item) return "";
@@ -200,6 +209,8 @@ const els = {
   readingEditor: document.getElementById("reading-editor"),
   readingInput: document.getElementById("reading-input"),
   readingRomaji: document.getElementById("reading-romaji"),
+  readingSpeechRow: document.getElementById("reading-speech-row"),
+  readingSpeech: document.getElementById("reading-speech"),
   readingSuggest: document.getElementById("reading-suggest"),
   readingSave: document.getElementById("reading-save"),
   readingSuggestions: document.getElementById("reading-suggestions"),
@@ -606,6 +617,7 @@ function serializeWord(item, ts) {
   };
   if (item.ko) w.ko = item.ko;
   if (item.koRomaji) w.koRomaji = item.koRomaji;
+  if (item.jaSpeech) w.jaSpeech = item.jaSpeech;
   if (item.photoUrl) w.photoUrl = item.photoUrl;
   return w;
 }
@@ -619,6 +631,7 @@ function wordToItem(w) {
     en: w.en,
     jaKana: w.jaKana || "",
     jaRomaji: w.jaRomaji || "",
+    jaSpeech: w.jaSpeech || "",
     ko: w.ko || "",
     koRomaji: w.koRomaji || "",
     imagePath: placeholderImage(cat ? cat.emoji : "⭐"),
@@ -636,6 +649,7 @@ function applyWordOverride(item, w) {
   if (w.en) item.en = w.en;
   if (w.jaKana) item.jaKana = w.jaKana;
   if ("jaRomaji" in w) item.jaRomaji = w.jaRomaji;
+  if ("jaSpeech" in w) item.jaSpeech = w.jaSpeech;
   if (w.ko) item.ko = w.ko;
   if ("koRomaji" in w) item.koRomaji = w.koRomaji;
   if (w.photoUrl) item.photoUrl = w.photoUrl;
@@ -936,18 +950,23 @@ async function fetchWordSuggestions(english, lang) {
     const v = (value || "").trim();
     if (v && !seen.has(v)) { seen.add(v); candidates.push({ value: v, tag }); }
   };
+  // The kanji form (when there is one) is the best thing to *speak*: it lets the
+  // voice's dictionary apply the right pitch accent even if the parent chooses to
+  // *display* the plain kana. Only meaningful when kanji is present.
+  let speech = "";
   if (lang === "ja") {
     let hira = "";
     if (isKanaOnly(native)) hira = kataToHira(native);
     else if (romaji) hira = romajiToHiragana(romaji);
     const kata = hira ? hiraToKata(hira) : "";
+    if (/[一-鿿]/.test(native)) speech = native;
     push(native, scriptTag(native));
     push(hira, "Hiragana");
     push(kata, "Katakana");
   } else {
     push(native, scriptTag(native));
   }
-  return { candidates, romaji };
+  return { candidates, romaji, speech };
 }
 
 // Render suggestion chips into `container`; `onPick(value, romaji)` fires on tap.
@@ -960,7 +979,7 @@ async function renderWordSuggestions(container, english, lang, onPick, statusEl)
   }
   container.innerHTML = '<div class="suggest-status">Thinking…</div>';
   try {
-    const { candidates, romaji } = await fetchWordSuggestions(q, lang);
+    const { candidates, romaji, speech } = await fetchWordSuggestions(q, lang);
     container.innerHTML = "";
     if (!candidates.length) {
       container.innerHTML = '<div class="suggest-status">No suggestion — type it in below.</div>';
@@ -987,7 +1006,7 @@ async function renderWordSuggestions(container, english, lang, onPick, statusEl)
       onTap(chip, () => {
         container.querySelectorAll(".suggest-chip").forEach((el) => el.classList.remove("selected"));
         chip.classList.add("selected");
-        onPick(c.value, romaji);
+        onPick(c.value, romaji, speech);
       });
       container.appendChild(chip);
     });
@@ -1049,6 +1068,10 @@ function addCustomItemFromForm() {
   } else if (kana) {
     word.jaKana = kana;
     word.jaRomaji = romaji;
+    // Kanji spoken form captured from a suggestion — kept only when it differs
+    // from the displayed kana, so the voice can apply the correct pitch accent.
+    const speech = els.addWordForm ? els.addWordForm.dataset.speech || "" : "";
+    if (speech && speech !== kana) word.jaSpeech = speech;
   }
   if (photo) word.photoUrl = photo;
 
@@ -1063,6 +1086,7 @@ function addCustomItemFromForm() {
   els.newWordRomaji.value = "";
   els.newWordPhoto.value = "";
   if (els.newWordSuggestions) els.newWordSuggestions.innerHTML = "";
+  if (els.addWordForm) delete els.addWordForm.dataset.speech;
   setNewWordStatus(`Added "${en}" to ${cat ? cat.label_en : categoryId}. ✓`);
 
   renderImageList();
@@ -1642,9 +1666,12 @@ function bindUI() {
         els.newWordSuggestions,
         els.newWordEn?.value,
         suggestLang(),
-        (value, romaji) => {
+        (value, romaji, speech) => {
           if (els.newWordKana) els.newWordKana.value = value;
           if (els.newWordRomaji && romaji) els.newWordRomaji.value = romaji;
+          // Stash the kanji form so the new word speaks with the right accent
+          // even if the parent chose a kana chip to display.
+          if (els.addWordForm) els.addWordForm.dataset.speech = speech || "";
         }
       );
     });
@@ -1685,9 +1712,10 @@ function bindUI() {
         els.readingSuggestions,
         item.en,
         suggestLang(),
-        (value, romaji) => {
+        (value, romaji, speech) => {
           if (els.readingInput) els.readingInput.value = value;
           if (els.readingRomaji && romaji) els.readingRomaji.value = romaji;
+          if (els.readingSpeech && speech && state.lang !== "ko") els.readingSpeech.value = speech;
         }
       );
     });
@@ -2050,6 +2078,9 @@ function toggleReadingEditor() {
   const isKo = state.lang === "ko";
   if (els.readingInput) els.readingInput.value = isKo ? item.ko || "" : item.jaKana || "";
   if (els.readingRomaji) els.readingRomaji.value = isKo ? item.koRomaji || "" : item.jaRomaji || "";
+  // The "say it as" (accent) field is Japanese-only.
+  if (els.readingSpeechRow) els.readingSpeechRow.classList.toggle("hidden", isKo);
+  if (els.readingSpeech) els.readingSpeech.value = isKo ? "" : item.jaSpeech || "";
   if (els.readingSuggestions) els.readingSuggestions.innerHTML = "";
   if (els.readingStatus) els.readingStatus.textContent = "";
   els.readingEditor.classList.remove("hidden");
@@ -2062,6 +2093,7 @@ function saveWordReading() {
   if (!item) return;
   const kana = (els.readingInput?.value || "").trim();
   const romaji = (els.readingRomaji?.value || "").trim();
+  const speech = (els.readingSpeech?.value || "").trim();
   if (!kana) {
     if (els.readingStatus) {
       els.readingStatus.textContent = "Please enter the word.";
@@ -2090,6 +2122,8 @@ function saveWordReading() {
   } else {
     rec.jaKana = kana;
     rec.jaRomaji = romaji;
+    // Blank clears it (falls back to speaking the kana); non-blank overrides.
+    rec.jaSpeech = speech && speech !== kana ? speech : "";
   }
   rec.updatedAt = Date.now();
   state.wordManifest.items[itemId] = rec;
@@ -3236,7 +3270,7 @@ function speakCurrent() {
   const phrase =
     state.currentTrack === "hiragana" || state.currentTrack === "katakana"
       ? state.currentTarget.kana || state.currentTarget.romaji
-      : wordText(state.currentTarget);
+      : speechText(state.currentTarget);
 
   synthesize(phrase, { showErrors: true });
 }

@@ -194,6 +194,16 @@ const els = {
   newWordPhoto: document.getElementById("new-word-photo"),
   newWordAdd: document.getElementById("new-word-add"),
   newWordStatus: document.getElementById("new-word-status"),
+  newWordSuggest: document.getElementById("new-word-suggest"),
+  newWordSuggestions: document.getElementById("new-word-suggestions"),
+  imageModalEdit: document.getElementById("image-modal-edit"),
+  readingEditor: document.getElementById("reading-editor"),
+  readingInput: document.getElementById("reading-input"),
+  readingRomaji: document.getElementById("reading-romaji"),
+  readingSuggest: document.getElementById("reading-suggest"),
+  readingSave: document.getElementById("reading-save"),
+  readingSuggestions: document.getElementById("reading-suggestions"),
+  readingStatus: document.getElementById("reading-status"),
   wordSyncIndicator: document.getElementById("word-sync-indicator"),
   voiceTestBtn: document.getElementById("voice-test-btn"),
   voiceRefreshBtn: document.getElementById("voice-refresh-btn"),
@@ -620,12 +630,37 @@ function wordToItem(w) {
   return item;
 }
 
+// Patch an existing (built-in) item in place with a manifest record's reading
+// fields — used when a parent fixes a built-in word's pronunciation.
+function applyWordOverride(item, w) {
+  if (w.en) item.en = w.en;
+  if (w.jaKana) item.jaKana = w.jaKana;
+  if ("jaRomaji" in w) item.jaRomaji = w.jaRomaji;
+  if (w.ko) item.ko = w.ko;
+  if ("koRomaji" in w) item.koRomaji = w.koRomaji;
+  if (w.photoUrl) item.photoUrl = w.photoUrl;
+}
+
 function applyWordManifestToState() {
   const m = state.wordManifest || emptyManifest();
   // Honor deletions for built-in words too (not just custom ones), so a parent
   // can remove any word from the games. The tombstone syncs across devices.
-  const base = (state.builtinItems || []).filter((it) => !m.deleted[it.id]);
-  state.items = base.concat(Object.values(m.items).map(wordToItem));
+  // Clone built-ins so reading overrides never mutate the originals (keeps
+  // re-applying idempotent — we always start from the pristine built-in list).
+  const builtinIds = new Set((state.builtinItems || []).map((it) => it.id));
+  const base = (state.builtinItems || []).filter((it) => !m.deleted[it.id]).map((it) => ({ ...it }));
+  const byId = new Map(base.map((it) => [it.id, it]));
+  const extras = [];
+  Object.values(m.items).forEach((w) => {
+    if (builtinIds.has(w.id)) {
+      // A record keyed by a built-in id is a reading override, not a new word.
+      const it = byId.get(w.id);
+      if (it) applyWordOverride(it, w);
+    } else {
+      extras.push(wordToItem(w));
+    }
+  });
+  state.items = base.concat(extras);
 }
 
 function mergeManifests(a, b) {
@@ -780,6 +815,194 @@ function setupSettingsTabs() {
   });
 }
 
+// --- English → Japanese/Korean word suggestions --------------------------
+//
+// The parent can type just the English word and let the app propose the native
+// spelling(s) to pick from. We translate with a free, no-key, CORS-friendly
+// endpoint (same philosophy as the Wikimedia photo search), then offer the
+// native form plus hiragana/katakana variants. Everything is a *suggestion* the
+// parent taps to accept and can still edit, so an imperfect reading is fine —
+// the "Edit word" reading editor exists precisely to fix it.
+
+// Hepburn-ish romaji → hiragana. Deterministic and compact; covers the kana a
+// toddler word list needs. Longer keys are matched first by the tokenizer.
+const ROMAJI_TO_HIRAGANA = {
+  a: "あ", i: "い", u: "う", e: "え", o: "お",
+  ka: "か", ki: "き", ku: "く", ke: "け", ko: "こ",
+  ga: "が", gi: "ぎ", gu: "ぐ", ge: "げ", go: "ご",
+  sa: "さ", shi: "し", si: "し", su: "す", se: "せ", so: "そ",
+  za: "ざ", ji: "じ", zi: "じ", zu: "ず", ze: "ぜ", zo: "ぞ",
+  ta: "た", chi: "ち", ti: "ち", tsu: "つ", tu: "つ", te: "て", to: "と",
+  da: "だ", di: "ぢ", du: "づ", de: "で", do: "ど",
+  na: "な", ni: "に", nu: "ぬ", ne: "ね", no: "の",
+  ha: "は", hi: "ひ", fu: "ふ", hu: "ふ", he: "へ", ho: "ほ",
+  ba: "ば", bi: "び", bu: "ぶ", be: "べ", bo: "ぼ",
+  pa: "ぱ", pi: "ぴ", pu: "ぷ", pe: "ぺ", po: "ぽ",
+  ma: "ま", mi: "み", mu: "む", me: "め", mo: "も",
+  ya: "や", yu: "ゆ", yo: "よ",
+  ra: "ら", ri: "り", ru: "る", re: "れ", ro: "ろ",
+  wa: "わ", wo: "を", wi: "うぃ", we: "うぇ",
+  va: "ゔぁ", vi: "ゔぃ", vu: "ゔ", ve: "ゔぇ", vo: "ゔぉ",
+  fa: "ふぁ", fi: "ふぃ", fe: "ふぇ", fo: "ふぉ",
+  kya: "きゃ", kyu: "きゅ", kyo: "きょ",
+  gya: "ぎゃ", gyu: "ぎゅ", gyo: "ぎょ",
+  sha: "しゃ", shu: "しゅ", sho: "しょ", sya: "しゃ", syu: "しゅ", syo: "しょ",
+  ja: "じゃ", ju: "じゅ", jo: "じょ", jya: "じゃ", jyu: "じゅ", jyo: "じょ",
+  cha: "ちゃ", chu: "ちゅ", cho: "ちょ", cya: "ちゃ",
+  nya: "にゃ", nyu: "にゅ", nyo: "にょ",
+  hya: "ひゃ", hyu: "ひゅ", hyo: "ひょ",
+  bya: "びゃ", byu: "びゅ", byo: "びょ",
+  pya: "ぴゃ", pyu: "ぴゅ", pyo: "ぴょ",
+  mya: "みゃ", myu: "みゅ", myo: "みょ",
+  rya: "りゃ", ryu: "りゅ", ryo: "りょ",
+};
+
+function romajiToHiragana(input) {
+  if (!input) return "";
+  let s = String(input).toLowerCase();
+  // Macrons (Hepburn long vowels) → doubled vowels.
+  s = s.replace(/ā/g, "aa").replace(/ī/g, "ii").replace(/ū/g, "uu").replace(/ē/g, "ee").replace(/ō/g, "ou");
+  s = s.replace(/[^a-z']/g, "");
+  let out = "";
+  let i = 0;
+  while (i < s.length) {
+    // Small tsu (っ) from a doubled consonant, incl. the "tch" spelling.
+    if (s.substr(i, 3) === "tch") { out += "っ"; i += 1; continue; }
+    const c = s[i];
+    if (c !== "n" && /[bcdfghjkmpqrstvwyz]/.test(c) && s[i + 1] === c) { out += "っ"; i += 1; continue; }
+    // Syllabic ん before a consonant / end of word.
+    if (c === "n" && (i + 1 >= s.length || !/[aiueoy]/.test(s[i + 1]))) {
+      out += "ん"; i += 1;
+      if (s[i] === "'") i += 1;
+      continue;
+    }
+    let matched = false;
+    for (let len = 3; len >= 1; len--) {
+      const chunk = s.substr(i, len);
+      if (ROMAJI_TO_HIRAGANA[chunk]) { out += ROMAJI_TO_HIRAGANA[chunk]; i += len; matched = true; break; }
+    }
+    if (!matched) i += 1;
+  }
+  return out;
+}
+
+function hiraToKata(s) {
+  return String(s || "").replace(/[ぁ-ゖ]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) + 0x60));
+}
+function kataToHira(s) {
+  return String(s || "").replace(/[ァ-ヶ]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0x60));
+}
+function isKanaOnly(s) {
+  return !!s && /^[぀-ヿーｦ-ﾟ\s]+$/.test(s);
+}
+function scriptTag(s) {
+  if (/[一-鿿]/.test(s)) return "Kanji";
+  if (/[ァ-ヿｦ-ﾟ]/.test(s) && !/[぀-ゟ]/.test(s)) return "Katakana";
+  if (/[぀-ゟ]/.test(s)) return "Hiragana";
+  if (/[가-힣]/.test(s)) return "Hangul";
+  return "Word";
+}
+
+// Translate one English term. `dt=t` gives the native form; `dt=rm` best-effort
+// adds a romaji/romanized reading (may be absent for some words — that's ok).
+async function translateWord(text, lang) {
+  const base = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&dt=t&dt=rm&tl=";
+  const url = base + encodeURIComponent(lang) + "&q=" + encodeURIComponent(text);
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) throw new Error("translate http " + res.status);
+  const data = await res.json();
+  const rows = Array.isArray(data) && Array.isArray(data[0]) ? data[0] : [];
+  let native = "";
+  let romaji = "";
+  rows.forEach((r) => {
+    if (!Array.isArray(r)) return;
+    if (typeof r[0] === "string") native += r[0];
+    // Transliteration rows carry the reading in slot [2] (and sometimes [3]);
+    // a translit row has no r[0]. Take the first latin-looking value we find.
+    if (!r[0]) {
+      const cand = [r[2], r[3]].find((v) => typeof v === "string" && /[a-z]/i.test(v));
+      if (cand) romaji += cand;
+    }
+  });
+  return { native: native.trim(), romaji: romaji.trim() };
+}
+
+// Build the tappable candidates for an English word in the given language.
+async function fetchWordSuggestions(english, lang) {
+  const { native, romaji } = await translateWord(english, lang);
+  const candidates = [];
+  const seen = new Set();
+  const push = (value, tag) => {
+    const v = (value || "").trim();
+    if (v && !seen.has(v)) { seen.add(v); candidates.push({ value: v, tag }); }
+  };
+  if (lang === "ja") {
+    let hira = "";
+    if (isKanaOnly(native)) hira = kataToHira(native);
+    else if (romaji) hira = romajiToHiragana(romaji);
+    const kata = hira ? hiraToKata(hira) : "";
+    push(native, scriptTag(native));
+    push(hira, "Hiragana");
+    push(kata, "Katakana");
+  } else {
+    push(native, scriptTag(native));
+  }
+  return { candidates, romaji };
+}
+
+// Render suggestion chips into `container`; `onPick(value, romaji)` fires on tap.
+async function renderWordSuggestions(container, english, lang, onPick, statusEl) {
+  if (!container) return;
+  const q = (english || "").trim();
+  if (!q) {
+    container.innerHTML = '<div class="suggest-status">Type the English word first.</div>';
+    return;
+  }
+  container.innerHTML = '<div class="suggest-status">Thinking…</div>';
+  try {
+    const { candidates, romaji } = await fetchWordSuggestions(q, lang);
+    container.innerHTML = "";
+    if (!candidates.length) {
+      container.innerHTML = '<div class="suggest-status">No suggestion — type it in below.</div>';
+      return;
+    }
+    if (romaji) {
+      const r = document.createElement("div");
+      r.className = "suggest-romaji";
+      r.textContent = "Reading: " + romaji;
+      container.appendChild(r);
+    }
+    candidates.forEach((c) => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "suggest-chip";
+      const w = document.createElement("span");
+      w.className = "chip-word";
+      w.textContent = c.value;
+      const t = document.createElement("span");
+      t.className = "chip-tag";
+      t.textContent = c.tag;
+      chip.appendChild(w);
+      chip.appendChild(t);
+      onTap(chip, () => {
+        container.querySelectorAll(".suggest-chip").forEach((el) => el.classList.remove("selected"));
+        chip.classList.add("selected");
+        onPick(c.value, romaji);
+      });
+      container.appendChild(chip);
+    });
+  } catch (_) {
+    container.innerHTML =
+      '<div class="suggest-status">Couldn\'t reach the translator (needs internet). Type the word in below.</div>';
+  }
+}
+
+// The language whose native word we generate/edit. English mode has no reading
+// to suggest, so we fall back to Japanese suggestions there.
+function suggestLang() {
+  return state.lang === "ko" ? "ko" : "ja";
+}
+
 // "Add a word" shown right inside the Words tab; pre-fills the category the
 // parent is currently viewing (e.g. browsing People → new word defaults to People).
 function toggleAddWordForm() {
@@ -839,11 +1062,24 @@ function addCustomItemFromForm() {
   els.newWordKana.value = "";
   els.newWordRomaji.value = "";
   els.newWordPhoto.value = "";
+  if (els.newWordSuggestions) els.newWordSuggestions.innerHTML = "";
   setNewWordStatus(`Added "${en}" to ${cat ? cat.label_en : categoryId}. ✓`);
 
   renderImageList();
   if (state.currentTrack === "vocab") renderCurrentView();
   syncWordsWithCloud().catch(() => {});
+
+  // Straight into picking pictures for the new word (unless a photo URL was
+  // already given). Opens the same Wikimedia picker, seeded with the English.
+  if (!photo) promptPhotosForItem(id);
+}
+
+// Open the per-word photo modal and jump right into the "Find Photos" search.
+function promptPhotosForItem(itemId) {
+  const item = state.items.find((i) => i.id === itemId);
+  if (!item) return;
+  openImageModal(item);
+  toggleStockSearch();
 }
 
 function removeCustomItem(id) {
@@ -1400,6 +1636,19 @@ function bindUI() {
   if (els.newWordAdd) {
     els.newWordAdd.addEventListener("click", addCustomItemFromForm);
   }
+  if (els.newWordSuggest) {
+    els.newWordSuggest.addEventListener("click", () => {
+      renderWordSuggestions(
+        els.newWordSuggestions,
+        els.newWordEn?.value,
+        suggestLang(),
+        (value, romaji) => {
+          if (els.newWordKana) els.newWordKana.value = value;
+          if (els.newWordRomaji && romaji) els.newWordRomaji.value = romaji;
+        }
+      );
+    });
+  }
   setupSettingsTabs();
   if (els.wordAddToggle) {
     els.wordAddToggle.addEventListener("click", toggleAddWordForm);
@@ -1424,6 +1673,27 @@ function bindUI() {
   }
   if (els.imageModalFind) {
     els.imageModalFind.addEventListener("click", toggleStockSearch);
+  }
+  if (els.imageModalEdit) {
+    els.imageModalEdit.addEventListener("click", toggleReadingEditor);
+  }
+  if (els.readingSuggest) {
+    els.readingSuggest.addEventListener("click", () => {
+      const item = state.items.find((i) => i.id === state.imageModalItemId);
+      if (!item) return;
+      renderWordSuggestions(
+        els.readingSuggestions,
+        item.en,
+        suggestLang(),
+        (value, romaji) => {
+          if (els.readingInput) els.readingInput.value = value;
+          if (els.readingRomaji && romaji) els.readingRomaji.value = romaji;
+        }
+      );
+    });
+  }
+  if (els.readingSave) {
+    els.readingSave.addEventListener("click", saveWordReading);
   }
   if (els.stockSearchGo) {
     els.stockSearchGo.addEventListener("click", () => searchStockPhotos(els.stockSearchInput?.value));
@@ -1744,14 +2014,98 @@ function renderImageList() {
   });
 }
 
+function setImageModalTitle(item) {
+  if (!els.imageModalTitle) return;
+  const native = [item.jaKana, item.ko].filter(Boolean).join(" · ");
+  els.imageModalTitle.textContent = native ? `${item.en} (${native})` : item.en;
+}
+
 function openImageModal(item) {
   if (!els.imageModal || !els.imageModalTitle) return;
   state.imageModalItemId = item.id;
-  const native = [item.jaKana, item.ko].filter(Boolean).join(" · ");
-  els.imageModalTitle.textContent = native ? `${item.en} (${native})` : item.en;
+  setImageModalTitle(item);
   hideStockSearch();
+  hideReadingEditor();
+  // Editing a reading only makes sense in a spoken language (not English mode).
+  if (els.imageModalEdit) els.imageModalEdit.classList.toggle("hidden", state.lang === "en");
   renderImageModalContent();
   els.imageModal.classList.remove("hidden");
+}
+
+// --- Reading / inflection editor (correct how a word is shown & spoken) ---
+
+function hideReadingEditor() {
+  if (els.readingEditor) els.readingEditor.classList.add("hidden");
+  if (els.readingSuggestions) els.readingSuggestions.innerHTML = "";
+  if (els.readingStatus) els.readingStatus.textContent = "";
+}
+
+function toggleReadingEditor() {
+  if (!els.readingEditor) return;
+  const opening = els.readingEditor.classList.contains("hidden");
+  if (!opening) { hideReadingEditor(); return; }
+  hideStockSearch();
+  const item = state.items.find((i) => i.id === state.imageModalItemId);
+  if (!item) return;
+  const isKo = state.lang === "ko";
+  if (els.readingInput) els.readingInput.value = isKo ? item.ko || "" : item.jaKana || "";
+  if (els.readingRomaji) els.readingRomaji.value = isKo ? item.koRomaji || "" : item.jaRomaji || "";
+  if (els.readingSuggestions) els.readingSuggestions.innerHTML = "";
+  if (els.readingStatus) els.readingStatus.textContent = "";
+  els.readingEditor.classList.remove("hidden");
+  if (els.readingInput) els.readingInput.focus();
+}
+
+function saveWordReading() {
+  const itemId = state.imageModalItemId;
+  const item = state.items.find((i) => i.id === itemId);
+  if (!item) return;
+  const kana = (els.readingInput?.value || "").trim();
+  const romaji = (els.readingRomaji?.value || "").trim();
+  if (!kana) {
+    if (els.readingStatus) {
+      els.readingStatus.textContent = "Please enter the word.";
+      els.readingStatus.style.color = "#d62828";
+    }
+    return;
+  }
+
+  if (!state.wordManifest) state.wordManifest = emptyManifest();
+  const existing = state.wordManifest.items[itemId];
+  const rec = existing
+    ? { ...existing }
+    : {
+        id: item.id,
+        categoryId: item.categoryId,
+        en: item.en,
+        jaKana: item.jaKana || "",
+        jaRomaji: item.jaRomaji || "",
+        ko: item.ko || "",
+        koRomaji: item.koRomaji || "",
+      };
+  if (item.photoUrl && !rec.photoUrl) rec.photoUrl = item.photoUrl;
+  if (state.lang === "ko") {
+    rec.ko = kana;
+    rec.koRomaji = romaji;
+  } else {
+    rec.jaKana = kana;
+    rec.jaRomaji = romaji;
+  }
+  rec.updatedAt = Date.now();
+  state.wordManifest.items[itemId] = rec;
+  delete state.wordManifest.deleted[itemId];
+  saveWordManifest(state.wordManifest);
+  applyWordManifestToState();
+
+  if (els.readingStatus) {
+    els.readingStatus.textContent = "Saved. ✓";
+    els.readingStatus.style.color = "#2a9d8f";
+  }
+  const fresh = state.items.find((i) => i.id === itemId);
+  if (fresh) setImageModalTitle(fresh);
+  renderImageList();
+  if (state.currentTrack === "vocab") renderCurrentView();
+  syncWordsWithCloud().catch(() => {});
 }
 
 function renderImageModalContent() {
@@ -1806,6 +2160,7 @@ function closeImageModal() {
   state.imageModalItemId = null;
   if (els.imageModal) els.imageModal.classList.add("hidden");
   hideStockSearch();
+  hideReadingEditor();
 }
 
 // --- Stock photo search (Wikimedia Commons: free, no API key, CORS-friendly) ---

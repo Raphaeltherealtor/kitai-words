@@ -179,6 +179,8 @@
           <label>English:
             <input type="text" id="new-word-en" autocomplete="off" placeholder="e.g. Penguin" />
           </label>
+          <button type="button" id="new-word-suggest" class="suggest-btn">✨ Suggest from English</button>
+          <div id="new-word-suggestions" class="suggest-chips"></div>
           <label>Word (kana / Hangul):
             <input type="text" id="new-word-kana" autocomplete="off" placeholder="e.g. ペンギン / 펭귄" />
           </label>
@@ -289,12 +291,25 @@
         <div id="image-modal-title"></div>
         <button id="image-modal-close" aria-label="Close">✕</button>
       </div>
+      <div id="reading-editor" class="reading-editor hidden">
+        <div class="reading-editor-title">Word &amp; pronunciation</div>
+        <div class="reading-editor-help">Fix the reading if it's shown or spoken wrong. This is what the app displays and says.</div>
+        <input type="text" id="reading-input" autocomplete="off" placeholder="e.g. ねこ" />
+        <input type="text" id="reading-romaji" autocomplete="off" placeholder="romaji (optional)" />
+        <div class="reading-editor-actions">
+          <button type="button" id="reading-suggest" class="suggest-btn">✨ Suggest</button>
+          <button type="button" id="reading-save">Save word</button>
+        </div>
+        <div id="reading-suggestions" class="suggest-chips"></div>
+        <div id="reading-status" class="library-status"></div>
+      </div>
       <div id="image-modal-photos" class="image-modal-photos"></div>
       <div class="image-modal-help">Up to 10 photos per word. The app will pick a random one each round.</div>
       <div class="image-modal-actions">
         <button id="image-modal-upload">+ Add Photo</button>
         <button id="image-modal-camera">📷 Camera</button>
         <button id="image-modal-find">🔍 Find Photos</button>
+        <button id="image-modal-edit">✏️ Edit word</button>
         <button id="image-modal-reset" class="reset">Reset</button>
       </div>
       <div id="image-modal-stock" class="image-modal-stock hidden">

@@ -8,7 +8,8 @@
     { "id": "food", "label_en": "Food Items", "label_ja": "たべもの", "label_ko": "음식", "emoji": "🍚" },
     { "id": "colors", "label_en": "Colors", "label_ja": "いろ", "label_ko": "색깔", "emoji": "🎨" },
     { "id": "numbers", "label_en": "Numbers", "label_ja": "すうじ", "label_ko": "숫자", "emoji": "🔢" },
-    { "id": "body", "label_en": "Body", "label_ja": "からだ", "label_ko": "몸", "emoji": "🧍" }
+    { "id": "body", "label_en": "Body", "label_ja": "からだ", "label_ko": "몸", "emoji": "🧍" },
+    { "id": "things", "label_en": "Things", "label_ja": "もの", "label_ko": "물건", "emoji": "📦" }
   ],
   "items": [
     { "id": "cat", "categoryId": "animals", "en": "Cat", "jaKana": "ねこ", "jaRomaji": "neko", "ko": "고양이", "koRomaji": "goyangi", "imagePath": "assets/images/animal-cat.svg", "photoUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/Cat%20August%202010-4.jpg?width=400", "aliases": ["kitty", "neko"] },
@@ -112,6 +113,18 @@
     { "id": "body-nose", "categoryId": "body", "en": "Nose", "jaKana": "はな", "jaRomaji": "hana", "ko": "코", "koRomaji": "ko", "emoji": "👃", "aliases": [] },
     { "id": "body-mouth", "categoryId": "body", "en": "Mouth", "jaKana": "くち", "jaRomaji": "kuchi", "ko": "입", "koRomaji": "ip", "emoji": "👄", "aliases": [] },
     { "id": "body-hands", "categoryId": "body", "en": "Hands", "jaKana": "て", "jaRomaji": "te", "ko": "손", "koRomaji": "son", "emoji": "✋", "aliases": [] },
-    { "id": "body-feet", "categoryId": "body", "en": "Feet", "jaKana": "あし", "jaRomaji": "ashi", "ko": "발", "koRomaji": "bal", "emoji": "🦶", "aliases": [] }
+    { "id": "body-feet", "categoryId": "body", "en": "Feet", "jaKana": "あし", "jaRomaji": "ashi", "ko": "발", "koRomaji": "bal", "emoji": "🦶", "aliases": [] },
+    { "id": "thing-ball", "categoryId": "things", "en": "Ball", "jaKana": "ボール", "jaRomaji": "booru", "ko": "공", "koRomaji": "gong", "emoji": "⚽", "aliases": [] },
+    { "id": "thing-book", "categoryId": "things", "en": "Book", "jaKana": "ほん", "jaRomaji": "hon", "ko": "책", "koRomaji": "chaek", "emoji": "📖", "aliases": [] },
+    { "id": "thing-cup", "categoryId": "things", "en": "Cup", "jaKana": "コップ", "jaRomaji": "koppu", "ko": "컵", "koRomaji": "keop", "emoji": "🥤", "aliases": [] },
+    { "id": "thing-spoon", "categoryId": "things", "en": "Spoon", "jaKana": "スプーン", "jaRomaji": "supuun", "ko": "숟가락", "koRomaji": "sutgarak", "emoji": "🥄", "aliases": [] },
+    { "id": "thing-chair", "categoryId": "things", "en": "Chair", "jaKana": "いす", "jaRomaji": "isu", "ko": "의자", "koRomaji": "uija", "emoji": "🪑", "aliases": [] },
+    { "id": "thing-bed", "categoryId": "things", "en": "Bed", "jaKana": "ベッド", "jaRomaji": "beddo", "ko": "침대", "koRomaji": "chimdae", "emoji": "🛏️", "aliases": [] },
+    { "id": "thing-car", "categoryId": "things", "en": "Car", "jaKana": "くるま", "jaRomaji": "kuruma", "ko": "자동차", "koRomaji": "jadongcha", "emoji": "🚗", "aliases": [] },
+    { "id": "thing-clock", "categoryId": "things", "en": "Clock", "jaKana": "とけい", "jaRomaji": "tokei", "ko": "시계", "koRomaji": "sigye", "emoji": "⏰", "aliases": [] },
+    { "id": "thing-key", "categoryId": "things", "en": "Key", "jaKana": "かぎ", "jaRomaji": "kagi", "ko": "열쇠", "koRomaji": "yeolsoe", "emoji": "🔑", "aliases": [] },
+    { "id": "thing-phone", "categoryId": "things", "en": "Phone", "jaKana": "でんわ", "jaRomaji": "denwa", "ko": "전화", "koRomaji": "jeonhwa", "emoji": "📱", "aliases": [] },
+    { "id": "thing-shoes", "categoryId": "things", "en": "Shoes", "jaKana": "くつ", "jaRomaji": "kutsu", "ko": "신발", "koRomaji": "sinbal", "emoji": "👟", "aliases": [] },
+    { "id": "thing-umbrella", "categoryId": "things", "en": "Umbrella", "jaKana": "かさ", "jaRomaji": "kasa", "ko": "우산", "koRomaji": "usan", "emoji": "☂️", "aliases": [] }
   ]
 }

@@ -48,6 +48,24 @@ const state = {
   alphabetIndex: { hiragana: 0, katakana: 0 },
   libraryConfig: { libraryId: "", pin: "" },
   storagePrefix: null,
+  // Flash Cards: a "clear the deck" session over the current category. Each word
+  // shows once; a correct answer removes it, a miss reshuffles it back deeper in
+  // the deck. `wrong` counts misses per word id so we can show weak words at the
+  // end. `firstTryOk` counts words cleared without any miss. `missedThisCard`
+  // tracks whether the current target has been missed yet this appearance.
+  flash: {
+    active: false,
+    deck: [],
+    wrong: {},
+    total: 0,
+    firstTryOk: 0,
+    startTime: 0,
+    missedThisCard: false,
+  },
+  // Child Lock: fullscreen kiosk-ish mode. `locked` = on; `wakeLock` holds the
+  // Screen Wake Lock sentinel so we can release it on unlock.
+  locked: false,
+  wakeLock: null,
 };
 
 // Supported languages. `speech` = BCP-47 tag for SpeechSynthesis, `hl` =
@@ -221,6 +239,21 @@ const els = {
   voiceTestStatus: document.getElementById("voice-test-status"),
   onlineVoiceToggle: document.getElementById("online-voice-toggle"),
   ttsApiKeyInput: document.getElementById("tts-api-key"),
+  quickAddCategory: document.getElementById("quick-add-category"),
+  quickAddInput: document.getElementById("quick-add-input"),
+  quickAddBtn: document.getElementById("quick-add-btn"),
+  quickAddStatus: document.getElementById("quick-add-status"),
+  flashComplete: document.getElementById("flash-complete"),
+  flashStatTotal: document.getElementById("flash-stat-total"),
+  flashStatFirst: document.getElementById("flash-stat-first"),
+  flashStatTime: document.getElementById("flash-stat-time"),
+  flashWeakSection: document.getElementById("flash-weak-section"),
+  flashWeakList: document.getElementById("flash-weak-list"),
+  flashAgain: document.getElementById("flash-again"),
+  flashHome: document.getElementById("flash-home"),
+  lockButton: document.getElementById("lock-button"),
+  lockBadge: document.getElementById("lock-badge"),
+  lockRingFill: document.getElementById("lock-ring-fill"),
 };
 
 const SUPABASE_URL = "https://nfaxncksesfcfqavmlae.supabase.co";
@@ -267,15 +300,16 @@ async function loadData() {
   applyWordManifestToState();
   updateWordSyncIndicator();
 
-  if (els.newWordCategory) {
-    els.newWordCategory.innerHTML = "";
+  [els.newWordCategory, els.quickAddCategory].forEach((sel) => {
+    if (!sel) return;
+    sel.innerHTML = "";
     state.categories.forEach((cat) => {
       const opt = document.createElement("option");
       opt.value = cat.id;
       opt.textContent = `${cat.emoji} ${cat.label_en}`;
-      els.newWordCategory.appendChild(opt);
+      sel.appendChild(opt);
     });
-  }
+  });
 
   els.categorySelect.innerHTML = "";
   const mixedOpt = document.createElement("option");
@@ -1595,7 +1629,8 @@ function bindUI() {
     if (els.categoryQuick && els.categoryQuick.value !== e.target.value) {
       els.categoryQuick.value = e.target.value;
     }
-    startRound();
+    if (state.currentGameType === "flash") startFlashSession();
+    else startRound();
   });
 
   if (els.categoryQuick) {
@@ -1608,7 +1643,8 @@ function bindUI() {
       if (els.categorySelect && els.categorySelect.value !== e.target.value) {
         els.categorySelect.value = e.target.value;
       }
-      startRound();
+      if (state.currentGameType === "flash") startFlashSession();
+      else startRound();
     });
   }
 
@@ -1767,6 +1803,7 @@ function bindUI() {
         btn.classList.add("active");
         state.currentGameType = btn.dataset.gametype;
         if (state.currentGameType === "find") resetFindSession();
+        if (state.currentGameType === "flash") { startFlashSession(); return; }
         startRound();
       }
     });
@@ -1829,6 +1866,29 @@ function bindUI() {
     });
   }
   onTap(els.quizSkip, () => advanceQuizAuto());
+
+  if (els.quickAddBtn) els.quickAddBtn.addEventListener("click", quickAddWord);
+  if (els.quickAddInput) {
+    els.quickAddInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); quickAddWord(); }
+    });
+  }
+
+  if (els.flashAgain) onTap(els.flashAgain, () => startFlashSession());
+  if (els.flashHome) onTap(els.flashHome, () => { hideFlashComplete(); goHome(); });
+
+  if (els.lockButton) onTap(els.lockButton, () => lockApp());
+  if (els.lockBadge) {
+    els.lockBadge.addEventListener("pointerdown", beginUnlockHold);
+    els.lockBadge.addEventListener("pointerup", endUnlockHold);
+    els.lockBadge.addEventListener("pointerleave", endUnlockHold);
+    els.lockBadge.addEventListener("pointercancel", endUnlockHold);
+    els.lockBadge.addEventListener("contextmenu", (e) => e.preventDefault());
+  }
+  // Re-grab the wake lock when the tab becomes visible again (it's dropped on hide).
+  document.addEventListener("visibilitychange", () => {
+    if (state.locked && document.visibilityState === "visible") requestWakeLock();
+  });
 
   buildFindCountBar();
   setupInstallPrompt();
@@ -2227,6 +2287,40 @@ function toggleStockSearch() {
   }
 }
 
+// Openverse aggregates ~700M openly-licensed images (Flickr, museums, Wikimedia,
+// Europeana, …) with an open, CORS-friendly API and no key needed. Its thumbnail
+// URLs are proxied through openverse.org so they download cleanly.
+async function searchOpenverse(q) {
+  try {
+    const url =
+      "https://api.openverse.org/v1/images/?mature=false&page_size=40&q=" + encodeURIComponent(q);
+    const res = await fetch(url, { headers: { Accept: "application/json" } });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.results || []).map((r) => r.thumbnail || r.url).filter(Boolean);
+  } catch (_) {
+    return [];
+  }
+}
+
+async function searchWikimediaPhotos(q) {
+  try {
+    const url =
+      "https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*" +
+      "&generator=search&gsrnamespace=6&gsrlimit=30&prop=imageinfo&iiprop=url|mime" +
+      "&iiurlwidth=400&gsrsearch=" + encodeURIComponent(q + " -icon -logo -map -diagram");
+    const res = await fetch(url);
+    const data = await res.json();
+    const pages = data.query && data.query.pages ? Object.values(data.query.pages) : [];
+    return pages
+      .map((p) => p.imageinfo && p.imageinfo[0])
+      .filter((ii) => ii && ii.thumburl && /image\/(jpeg|png|webp)/.test(ii.mime || ""))
+      .map((ii) => ii.thumburl);
+  } catch (_) {
+    return [];
+  }
+}
+
 async function searchStockPhotos(query) {
   const grid = els.stockSearchResults;
   if (!grid) return;
@@ -2235,46 +2329,44 @@ async function searchStockPhotos(query) {
   updateStockAddButton();
   if (!q) { grid.innerHTML = ""; return; }
   grid.innerHTML = '<div class="stock-status">Searching…</div>';
-  try {
-    const url =
-      "https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*" +
-      "&generator=search&gsrnamespace=6&gsrlimit=24&prop=imageinfo&iiprop=url|mime" +
-      "&iiurlwidth=400&gsrsearch=" + encodeURIComponent(q + " -icon -logo -map -diagram");
-    const res = await fetch(url);
-    const data = await res.json();
-    const pages = data.query && data.query.pages ? Object.values(data.query.pages) : [];
-    const photos = pages
-      .map((p) => p.imageinfo && p.imageinfo[0])
-      .filter((ii) => ii && ii.thumburl && /image\/(jpeg|png|webp)/.test(ii.mime || ""))
-      .slice(0, 18);
-    grid.innerHTML = "";
-    if (!photos.length) {
-      grid.innerHTML = '<div class="stock-status">No photos found. Try a different word.</div>';
-      return;
-    }
-    photos.forEach((ii) => {
-      const btn = document.createElement("button");
-      btn.className = "stock-result";
-      const img = document.createElement("img");
-      img.src = ii.thumburl;
-      img.loading = "lazy";
-      img.alt = "";
-      btn.appendChild(img);
-      onTap(btn, () => {
-        if (stockSelected.has(ii.thumburl)) {
-          stockSelected.delete(ii.thumburl);
-          btn.classList.remove("selected");
-        } else {
-          stockSelected.add(ii.thumburl);
-          btn.classList.add("selected");
-        }
-        updateStockAddButton();
-      });
-      grid.appendChild(btn);
+
+  const [openverse, commons] = await Promise.all([searchOpenverse(q), searchWikimediaPhotos(q)]);
+
+  // Interleave the two sources so the grid mixes results, then dedupe.
+  const seen = new Set();
+  const photos = [];
+  const maxLen = Math.max(openverse.length, commons.length);
+  for (let i = 0; i < maxLen; i++) {
+    [openverse[i], commons[i]].forEach((u) => {
+      if (u && !seen.has(u)) { seen.add(u); photos.push(u); }
     });
-  } catch (_) {
-    grid.innerHTML = '<div class="stock-status">Search failed. Check your connection.</div>';
   }
+
+  grid.innerHTML = "";
+  if (!photos.length) {
+    grid.innerHTML = '<div class="stock-status">No photos found. Try a different word.</div>';
+    return;
+  }
+  photos.slice(0, 48).forEach((url) => {
+    const btn = document.createElement("button");
+    btn.className = "stock-result";
+    const img = document.createElement("img");
+    img.src = url;
+    img.loading = "lazy";
+    img.alt = "";
+    btn.appendChild(img);
+    onTap(btn, () => {
+      if (stockSelected.has(url)) {
+        stockSelected.delete(url);
+        btn.classList.remove("selected");
+      } else {
+        stockSelected.add(url);
+        btn.classList.add("selected");
+      }
+      updateStockAddButton();
+    });
+    grid.appendChild(btn);
+  });
 }
 
 // Download a cross-origin image as a Blob. Primary path is a direct CORS
@@ -2351,7 +2443,12 @@ function updateModeButtonsForTrack(track) {
       btn3.classList.remove("hidden");
       btn3.disabled = false;
     }
-    if (btn4) btn4.classList.add("hidden");
+    if (btn4) {
+      btn4.dataset.gametype = "flash";
+      btn4.textContent = "Flash Cards 🎴";
+      btn4.classList.remove("hidden");
+      btn4.disabled = false;
+    }
     state.currentGameType = "tap";
     setActiveModeButton("tap");
   } else if (track === "hiragana" || track === "katakana") {
@@ -2393,6 +2490,10 @@ function cancelLongPress() {
 }
 
 function showSettings() {
+  if (state.locked) return; // child lock hides the gear, but never open it while locked
+  if (els.quickAddCategory && state.imageCategoryId && state.imageCategoryId !== "all") {
+    els.quickAddCategory.value = state.imageCategoryId;
+  }
   els.overlay.classList.remove("hidden");
   updateWordSyncIndicator();
 }
@@ -2402,9 +2503,140 @@ function hideSettings() {
 }
 
 function goHome() {
+  if (state.locked) return;
+  hideFlashComplete();
   state.currentSection = "home";
   els.homeScreen.classList.remove("hidden");
   els.gameScreen.classList.add("hidden");
+}
+
+// ---- Child Lock ------------------------------------------------------------
+// A kiosk-ish lock: fullscreen + wake lock + hidden nav so a toddler stays put.
+// It can't block the OS home gesture (only Guided Access / Screen Pinning can),
+// but it keeps them inside the activity. Unlock = press-and-hold the badge 3s.
+
+async function lockApp() {
+  state.locked = true;
+  document.body.classList.add("locked");
+  if (els.lockBadge) els.lockBadge.classList.remove("hidden");
+  if (els.lockButton) els.lockButton.textContent = "🔒";
+  cancelLongPress();
+  try {
+    const el = document.documentElement;
+    if (el.requestFullscreen) await el.requestFullscreen();
+    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+  } catch (_) {}
+  requestWakeLock();
+}
+
+function unlockApp() {
+  state.locked = false;
+  document.body.classList.remove("locked");
+  if (els.lockBadge) els.lockBadge.classList.add("hidden");
+  if (els.lockButton) els.lockButton.textContent = "🔓";
+  try {
+    if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen();
+    else if (document.webkitFullscreenElement && document.webkitExitFullscreen) document.webkitExitFullscreen();
+  } catch (_) {}
+  releaseWakeLock();
+}
+
+async function requestWakeLock() {
+  try {
+    if ("wakeLock" in navigator && navigator.wakeLock && navigator.wakeLock.request) {
+      state.wakeLock = await navigator.wakeLock.request("screen");
+    }
+  } catch (_) {}
+}
+
+function releaseWakeLock() {
+  try {
+    if (state.wakeLock) { state.wakeLock.release(); state.wakeLock = null; }
+  } catch (_) {}
+}
+
+let lockHoldRaf = 0;
+let lockHoldStart = 0;
+const LOCK_HOLD_MS = 3000;
+const LOCK_RING_CIRC = 2 * Math.PI * 44;
+
+function beginUnlockHold(e) {
+  if (!state.locked) return;
+  if (e && e.preventDefault) e.preventDefault();
+  lockHoldStart = performance.now();
+  if (els.lockBadge) els.lockBadge.classList.add("holding");
+  const tick = (now) => {
+    const p = Math.min(1, (now - lockHoldStart) / LOCK_HOLD_MS);
+    if (els.lockRingFill) els.lockRingFill.style.strokeDashoffset = String(LOCK_RING_CIRC * (1 - p));
+    if (p >= 1) { endUnlockHold(); unlockApp(); return; }
+    lockHoldRaf = requestAnimationFrame(tick);
+  };
+  lockHoldRaf = requestAnimationFrame(tick);
+}
+
+function endUnlockHold() {
+  cancelAnimationFrame(lockHoldRaf);
+  if (els.lockBadge) els.lockBadge.classList.remove("holding");
+  if (els.lockRingFill) els.lockRingFill.style.strokeDashoffset = String(LOCK_RING_CIRC);
+}
+
+// ---- Quick add -------------------------------------------------------------
+// "Just type the word" — one English field. We auto-translate to the current
+// language, fill the reading/romaji, save it, then jump straight into photos.
+
+function setQuickAddStatus(msg, isError) {
+  if (!els.quickAddStatus) return;
+  els.quickAddStatus.textContent = msg || "";
+  els.quickAddStatus.classList.toggle("error", !!isError);
+}
+
+async function quickAddWord() {
+  const raw = (els.quickAddInput?.value || "").trim();
+  const categoryId = els.quickAddCategory ? els.quickAddCategory.value : "";
+  if (!categoryId) { setQuickAddStatus("Please pick a category.", true); return; }
+  if (!raw) { setQuickAddStatus("Type a word first.", true); return; }
+
+  const cat = state.categories.find((c) => c.id === categoryId);
+  const now = Date.now();
+  const id = `custom-${now}-${Math.random().toString(36).slice(2, 7)}`;
+  const word = { id, categoryId, en: raw, updatedAt: now };
+  let readingNote = "";
+
+  if (state.lang !== "en") {
+    setQuickAddStatus("Finding the reading…");
+    if (els.quickAddBtn) els.quickAddBtn.disabled = true;
+    try {
+      const { candidates, romaji, speech } = await fetchWordSuggestions(raw, suggestLang());
+      const best = candidates[0];
+      if (state.lang === "ko") {
+        word.ko = best ? best.value : raw;
+        if (romaji) word.koRomaji = romaji;
+      } else {
+        word.jaKana = best ? best.value : raw;
+        if (romaji) word.jaRomaji = romaji;
+        if (speech && best && speech !== best.value) word.jaSpeech = speech;
+      }
+      if (!best) readingNote = " (couldn't auto-fill the reading — fix it in the word's card)";
+    } catch (_) {
+      word[state.lang === "ko" ? "ko" : "jaKana"] = raw;
+      readingNote = " (no internet for the reading — fix it later)";
+    } finally {
+      if (els.quickAddBtn) els.quickAddBtn.disabled = false;
+    }
+  }
+
+  if (!state.wordManifest) state.wordManifest = emptyManifest();
+  state.wordManifest.items[id] = word;
+  delete state.wordManifest.deleted[id];
+  saveWordManifest(state.wordManifest);
+  applyWordManifestToState();
+
+  if (els.quickAddInput) els.quickAddInput.value = "";
+  setQuickAddStatus(`Added "${raw}" to ${cat ? cat.label_en : categoryId}. ✓${readingNote}`, !!readingNote);
+  renderImageList();
+  if (state.currentTrack === "vocab") renderCurrentView();
+  syncWordsWithCloud().catch(() => {});
+  promptPhotosForItem(id); // straight into picking pictures
 }
 
 function showGame() {
@@ -2460,6 +2692,174 @@ function resetFindSession() {
   state.findRepsDone = 0;
 }
 
+// ---- Flash Cards -----------------------------------------------------------
+// A "clear the deck" session over the current category. Each word starts in the
+// deck once; a correct tap removes it, a miss marks it weak and reshuffles it
+// deeper so it comes back around. Cleared deck → celebration + stats.
+
+function startFlashSession() {
+  state.currentGameType = "flash";
+  setActiveModeButton("flash");
+  showGame();
+  const pool = pickPool();
+  if (!pool.length) {
+    hideFlashComplete();
+    hideAllGameViews();
+    showPromptArea(true);
+    els.modeLabel.textContent = "Flash Cards";
+    els.feedback.textContent = "No words here yet. Add or restore some in Parent Settings.";
+    if (els.cards) els.cards.innerHTML = "";
+    if (els.promptWord) els.promptWord.textContent = "—";
+    return;
+  }
+  state.flash.deck = shuffle([...pool]);
+  state.flash.wrong = {};
+  state.flash.total = pool.length;
+  state.flash.firstTryOk = 0;
+  state.flash.startTime = Date.now();
+  state.flash.active = true;
+  state.flash.missedThisCard = false;
+  hideFlashComplete();
+  startRound();
+}
+
+function chooseFlashItems() {
+  const pool = pickPool();
+  const target = state.flash.deck[0];
+  state.flash.missedThisCard = false;
+  const others = pool.filter((i) => i.id !== target.id);
+  shuffle(others);
+  const count = state.choiceCount;
+  const distractors = others.slice(0, Math.max(1, count - 1));
+  const choices = shuffle([target, ...distractors]).slice(0, count);
+  state.currentTarget = target;
+  state.currentChoices = choices;
+}
+
+function renderFlashView() {
+  hideFlashComplete();
+  hideAllGameViews();
+  showPromptArea(true);
+  els.cards.classList.remove("hidden");
+  renderCards(state.currentChoices);
+  els.promptWord.textContent = wordText(state.currentTarget);
+  const done = state.flash.total - state.flash.deck.length;
+  els.modeLabel.textContent = `Flash Cards · ${done}/${state.flash.total}`;
+}
+
+function flashOnCorrect() {
+  const target = state.currentTarget;
+  if (!state.flash.wrong[target.id]) state.flash.firstTryOk++;
+  state.flash.deck = state.flash.deck.filter((i) => i.id !== target.id);
+}
+
+function flashOnWrong() {
+  const target = state.currentTarget;
+  state.flash.wrong[target.id] = (state.flash.wrong[target.id] || 0) + 1;
+  state.flash.missedThisCard = true;
+  reshuffleFlashTarget();
+}
+
+// Move the current (front) card to a random deeper spot so it isn't the very
+// next one shown but does come back around before the deck clears.
+function reshuffleFlashTarget() {
+  const deck = state.flash.deck;
+  if (deck.length <= 1) return;
+  const [t] = deck.splice(0, 1);
+  const pos = 1 + Math.floor(Math.random() * deck.length);
+  deck.splice(pos, 0, t);
+}
+
+function highlightCorrectFlashCard() {
+  if (!els.cards || !state.currentTarget) return;
+  const sel = `.card[data-id="${CSS.escape(state.currentTarget.id)}"]`;
+  const el = els.cards.querySelector(sel);
+  if (el) el.classList.add("correct");
+}
+
+function formatFlashTime(sec) {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function showFlashComplete() {
+  state.flash.active = false;
+  const elapsed = Math.max(0, Math.round((Date.now() - state.flash.startTime) / 1000));
+  if (els.flashStatTotal) els.flashStatTotal.textContent = String(state.flash.total);
+  if (els.flashStatFirst) els.flashStatFirst.textContent = String(state.flash.firstTryOk);
+  if (els.flashStatTime) els.flashStatTime.textContent = formatFlashTime(elapsed);
+
+  const weakIds = Object.keys(state.flash.wrong).filter((id) => state.flash.wrong[id] > 0);
+  if (els.flashWeakList) {
+    els.flashWeakList.innerHTML = "";
+    weakIds
+      .map((id) => state.items.find((i) => i.id === id))
+      .filter(Boolean)
+      .forEach((item) => {
+        const chip = document.createElement("div");
+        chip.className = "flash-weak-chip";
+        const img = document.createElement("img");
+        applyItemImage(img, item);
+        img.alt = item.en;
+        const label = document.createElement("div");
+        label.className = "flash-weak-word";
+        label.textContent = wordText(item);
+        chip.appendChild(img);
+        chip.appendChild(label);
+        els.flashWeakList.appendChild(chip);
+      });
+  }
+  if (els.flashWeakSection) els.flashWeakSection.classList.toggle("hidden", weakIds.length === 0);
+  if (els.flashComplete) els.flashComplete.classList.remove("hidden");
+  playCorrect();
+  launchFireworks();
+}
+
+function hideFlashComplete() {
+  stopFireworks();
+  if (els.flashComplete) els.flashComplete.classList.add("hidden");
+}
+
+let fireworksTimer = null;
+function launchFireworks() {
+  const stage = els.flashComplete ? els.flashComplete.querySelector(".flash-fireworks") : null;
+  if (!stage) return;
+  stopFireworks();
+  stage.innerHTML = "";
+  const colors = ["#ffce54", "#fc6e51", "#48cfad", "#5d9cec", "#ec87c0", "#a0d468"];
+  let n = 0;
+  const fire = () => {
+    const burst = document.createElement("div");
+    burst.className = "firework";
+    burst.style.left = 10 + Math.random() * 80 + "%";
+    burst.style.top = 12 + Math.random() * 50 + "%";
+    const color = colors[n % colors.length];
+    for (let i = 0; i < 20; i++) {
+      const p = document.createElement("span");
+      p.className = "fw-particle";
+      const ang = (Math.PI * 2 * i) / 20;
+      const dist = 55 + Math.random() * 45;
+      p.style.setProperty("--dx", Math.cos(ang) * dist + "px");
+      p.style.setProperty("--dy", Math.sin(ang) * dist + "px");
+      p.style.background = color;
+      burst.appendChild(p);
+    }
+    stage.appendChild(burst);
+    setTimeout(() => burst.remove(), 1300);
+    n++;
+    fireworksTimer = setTimeout(fire, 380 + Math.random() * 320);
+  };
+  fire();
+}
+
+function stopFireworks() {
+  clearTimeout(fireworksTimer);
+  fireworksTimer = null;
+  const stage = els.flashComplete ? els.flashComplete.querySelector(".flash-fireworks") : null;
+  if (stage) stage.innerHTML = "";
+}
+
 function chooseKanaRound() {
   const set = state.currentTrack === "katakana"
     ? { chars: state.kataChars, words: state.kataWords }
@@ -2496,6 +2896,14 @@ function startRound() {
       if (els.promptWord) els.promptWord.textContent = "—";
       return;
     }
+    if (state.currentGameType === "flash") {
+      if (!state.flash.active) { startFlashSession(); return; }
+      if (!state.flash.deck.length) { showFlashComplete(); return; }
+      chooseFlashItems();
+      renderCurrentView();
+      speakCurrent();
+      return;
+    }
     chooseRoundItems();
   } else if (state.currentTrack === "hiragana" || state.currentTrack === "katakana") {
     chooseKanaRound();
@@ -2511,6 +2919,8 @@ function renderCurrentView() {
       renderTapView();
     } else if (state.currentGameType === "find") {
       renderFindView();
+    } else if (state.currentGameType === "flash") {
+      renderFlashView();
     } else {
       renderDragCompleteView();
     }
@@ -2990,8 +3400,20 @@ function handleTap(item, cardEl) {
     cardEl.classList.add("correct");
     els.feedback.textContent = "Great!";
     if (state.currentGameType === "find") state.findRepsDone++;
+    if (state.currentGameType === "flash") flashOnCorrect();
     playCorrect();
     showCorrectOverlay();
+    setTimeout(() => startRound(), CORRECT_ADVANCE_MS);
+  } else if (state.currentGameType === "flash") {
+    // Flash Cards: a miss doesn't stick the child on one card — it shows the
+    // right picture briefly, reshuffles the word back in, and moves on.
+    lockForCorrectAdvance();
+    flashOnWrong();
+    cardEl.classList.add("wrong");
+    highlightCorrectFlashCard();
+    els.feedback.textContent = "We'll see it again!";
+    buzz();
+    showWrongOverlay();
     setTimeout(() => startRound(), CORRECT_ADVANCE_MS);
   } else {
     state.lockUntil = Date.now() + WRONG_DEAD_MS;

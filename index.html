@@ -40,6 +40,7 @@
       <span id="app-logo-text">My First Words</span>
     </div>
     <div class="header-actions">
+      <button id="lock-button" aria-label="Child lock">🔓</button>
       <button id="home-button" aria-label="Go to home">🏠</button>
       <button id="parent-button" aria-label="Parent settings">⚙️</button>
     </div>
@@ -146,6 +147,35 @@
     </section>
   </main>
 
+  <div id="flash-complete" class="hidden">
+    <div class="flash-fireworks" aria-hidden="true"></div>
+    <div class="flash-complete-card">
+      <div class="flash-complete-emoji">🎉</div>
+      <h2>All done!</h2>
+      <div class="flash-stats">
+        <div class="flash-stat"><span id="flash-stat-total" class="flash-stat-num">0</span><span class="flash-stat-label">words</span></div>
+        <div class="flash-stat"><span id="flash-stat-first" class="flash-stat-num">0</span><span class="flash-stat-label">first try</span></div>
+        <div class="flash-stat"><span id="flash-stat-time" class="flash-stat-num">0:00</span><span class="flash-stat-label">time</span></div>
+      </div>
+      <div id="flash-weak-section" class="flash-weak-section hidden">
+        <div class="flash-weak-title">Words to practice</div>
+        <div id="flash-weak-list" class="flash-weak-list"></div>
+      </div>
+      <div class="flash-complete-actions">
+        <button id="flash-again">🎴 Play again</button>
+        <button id="flash-home" class="reset">🏠 Home</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="lock-badge" class="hidden" role="button" aria-label="Hold to unlock">
+    <div class="lock-badge-inner">
+      <div class="lock-badge-icon">🔒</div>
+      <div class="lock-badge-text">Hold to unlock</div>
+      <div class="lock-badge-ring"><svg viewBox="0 0 100 100"><circle class="lock-ring-bg" cx="50" cy="50" r="44"/><circle id="lock-ring-fill" class="lock-ring-fill" cx="50" cy="50" r="44"/></svg></div>
+    </div>
+  </div>
+
   <div id="install-banner" class="hidden">
     <div id="install-text">Install Kitai Words for offline play!</div>
     <div class="install-actions">
@@ -168,9 +198,21 @@
       <!-- WORDS & PHOTOS -->
       <div class="settings-panel" data-panel="words">
         <div id="word-sync-indicator" class="sync-indicator"></div>
+        <div class="quick-add">
+          <div class="quick-add-title">✨ Quick add a word</div>
+          <div class="quick-add-help">Just type the word in English — we fill in the reading and find photos for you.</div>
+          <label class="quick-add-cat">Category:
+            <select id="quick-add-category"></select>
+          </label>
+          <div class="quick-add-row">
+            <input type="text" id="quick-add-input" autocomplete="off" placeholder="e.g. Penguin" />
+            <button id="quick-add-btn">Add ✨</button>
+          </div>
+          <div id="quick-add-status" class="library-status"></div>
+        </div>
         <input type="search" id="image-search" placeholder="Search words" aria-label="Search vocabulary" />
         <div id="image-category-pills" class="pill-row"></div>
-        <button id="word-add-toggle" class="word-add-toggle">＋ Add a word</button>
+        <button id="word-add-toggle" class="word-add-toggle">＋ Add a word (more options)</button>
         <div id="add-word-form" class="add-word-form hidden">
           <div class="library-help">Adds to the selected category. Saved on this device (and your library), and shows in the games right away.</div>
           <label>Category:
@@ -262,6 +304,9 @@
           </select>
         </label>
         <div class="theme-hint">Pick a color vibe for the app. Your choice is saved on this device.</div>
+        <div class="settings-subheader">Child Lock</div>
+        <div class="library-help">Tap 🔓 in the top corner to lock the app: it goes fullscreen, keeps the screen on, and hides the settings buttons. To unlock, press and <strong>hold</strong> the padlock for 3 seconds.</div>
+        <div class="theme-hint">Tip: to stop your child leaving the app entirely, also turn on <strong>Guided Access</strong> (iPhone/iPad: triple-click the side button) or <strong>Screen Pinning</strong> (Android). A web app can't block the home gesture on its own.</div>
       </div>
 
       <!-- ACCOUNT -->
@@ -326,7 +371,7 @@
         <div class="stock-add-bar">
           <button id="stock-add" disabled>Add selected</button>
         </div>
-        <div class="image-modal-help">Free photos from Wikimedia Commons. Tap to select several, then Add.</div>
+        <div class="image-modal-help">Free photos from Openverse &amp; Wikimedia (millions of images). Tap to select several, then Add.</div>
       </div>
       <input type="file" id="image-modal-file" accept="image/*" multiple class="hidden" />
       <input type="file" id="image-modal-camera-input" accept="image/*" capture="environment" class="hidden" />

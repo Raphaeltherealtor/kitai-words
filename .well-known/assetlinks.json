@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.kitai.firstwords",
+      "sha256_cert_fingerprints": [
+        "D7:83:1D:5D:70:61:E2:7F:0E:19:D0:B9:60:44:7A:D1:E2:5B:B2:D2:E9:E0:99:A2:EA:68:88:AA:5B:56:09:96"
+      ]
+    }
+  }
+]

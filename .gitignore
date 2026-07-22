@@ -1,0 +1,6 @@
+.DS_Store
+
+# Android TWA build project — kept local only (contains the private signing
+# keystore; this repo is public). The APK loads the live site, so the web repo
+# does not need the Android project to deploy content updates.
+android-twa/

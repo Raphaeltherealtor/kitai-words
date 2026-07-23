@@ -2,6 +2,7 @@ const state = {
   data: null,
   items: [],
   builtinItems: [],
+  builtinCategories: [],
   wordManifest: null,
   wordSync: "idle", // idle | syncing | ok | error
   categories: [],
@@ -23,6 +24,9 @@ const state = {
   voiceId: null,
   preferOnlineVoice: false,
   ttsApiKey: "",
+  // Optional Google Programmable Search creds for real Google image results.
+  googleImgKey: "",
+  googleImgCx: "",
   currentTarget: null,
   currentChoices: [],
   // Taps are ignored until this timestamp. Prevents a baby's rapid extra taps
@@ -59,6 +63,8 @@ const state = {
     wrong: {},
     total: 0,
     firstTryOk: 0,
+    answered: 0, // total answer taps (right or wrong)
+    correct: 0, // right taps
     startTime: 0,
     missedThisCard: false,
   },
@@ -244,9 +250,13 @@ const els = {
   quickAddBtn: document.getElementById("quick-add-btn"),
   quickAddStatus: document.getElementById("quick-add-status"),
   flashComplete: document.getElementById("flash-complete"),
-  flashStatTotal: document.getElementById("flash-stat-total"),
+  flashCompleteTitle: document.getElementById("flash-complete-title"),
+  flashCompleteEmoji: document.getElementById("flash-complete-emoji"),
+  flashStatScore: document.getElementById("flash-stat-score"),
   flashStatFirst: document.getElementById("flash-stat-first"),
+  flashStatCleared: document.getElementById("flash-stat-cleared"),
   flashStatTime: document.getElementById("flash-stat-time"),
+  flashBar: document.getElementById("flash-bar"),
   flashWeakSection: document.getElementById("flash-weak-section"),
   flashWeakList: document.getElementById("flash-weak-list"),
   flashAgain: document.getElementById("flash-again"),
@@ -254,6 +264,19 @@ const els = {
   lockButton: document.getElementById("lock-button"),
   lockBadge: document.getElementById("lock-badge"),
   lockRingFill: document.getElementById("lock-ring-fill"),
+  catAddToggle: document.getElementById("cat-add-toggle"),
+  catAddForm: document.getElementById("cat-add-form"),
+  catAddEmoji: document.getElementById("cat-add-emoji"),
+  catAddName: document.getElementById("cat-add-name"),
+  catAddBtn: document.getElementById("cat-add-btn"),
+  catAddStatus: document.getElementById("cat-add-status"),
+  catSuggestList: document.getElementById("cat-suggest-list"),
+  stockUrlInput: document.getElementById("stock-url-input"),
+  stockUrlAdd: document.getElementById("stock-url-add"),
+  flashFinish: document.getElementById("flash-finish"),
+  flashLiveScore: document.getElementById("flash-live-score"),
+  googleImgKey: document.getElementById("google-img-key"),
+  googleImgCx: document.getElementById("google-img-cx"),
 };
 
 const SUPABASE_URL = "https://nfaxncksesfcfqavmlae.supabase.co";
@@ -290,18 +313,25 @@ async function init() {
 async function loadData() {
   const res = await fetch("data/vocab.json");
   state.data = await res.json();
-  state.categories = state.data.categories;
+  state.builtinCategories = state.data.categories;
   // Items with no image file but an `emoji`/glyph (e.g. numbers) get a
   // generated picture so they render like any other word.
   state.builtinItems = state.data.items.map((it) =>
     !it.imagePath && !it.photoUrl && it.emoji ? { ...it, imagePath: placeholderImage(it.emoji) } : it
   );
   state.wordManifest = loadWordManifest();
-  applyWordManifestToState();
+  applyWordManifestToState(); // also builds state.categories (built-in + custom)
   updateWordSyncIndicator();
+  refreshCategoryUI();
+}
 
-  [els.newWordCategory, els.quickAddCategory].forEach((sel) => {
+// (Re)populate every category dropdown + the picture-manager pills from the
+// current state.categories, preserving the user's current selections. Call this
+// after any category add/remove or a cloud sync.
+function refreshCategoryUI() {
+  const fillPlain = (sel) => {
     if (!sel) return;
+    const prev = sel.value;
     sel.innerHTML = "";
     state.categories.forEach((cat) => {
       const opt = document.createElement("option");
@@ -309,27 +339,29 @@ async function loadData() {
       opt.textContent = `${cat.emoji} ${cat.label_en}`;
       sel.appendChild(opt);
     });
+    if (prev && state.categories.some((c) => c.id === prev)) sel.value = prev;
+  };
+  fillPlain(els.newWordCategory);
+  fillPlain(els.quickAddCategory);
+
+  [els.categorySelect, els.categoryQuick].forEach((sel) => {
+    if (!sel) return;
+    const prev = sel.value || state.categoryId;
+    sel.innerHTML = "";
+    const mixedOpt = document.createElement("option");
+    mixedOpt.value = "mixed";
+    mixedOpt.textContent = "Mixed";
+    sel.appendChild(mixedOpt);
+    state.categories.forEach((cat) => {
+      const opt = document.createElement("option");
+      opt.value = cat.id;
+      opt.textContent = `${cat.emoji} ${cat.label_en}`;
+      sel.appendChild(opt);
+    });
+    if (prev && (prev === "mixed" || state.categories.some((c) => c.id === prev))) sel.value = prev;
   });
 
-  els.categorySelect.innerHTML = "";
-  const mixedOpt = document.createElement("option");
-  mixedOpt.value = "mixed";
-  mixedOpt.textContent = "Mixed";
-  els.categorySelect.appendChild(mixedOpt);
-  if (els.categoryQuick) {
-    els.categoryQuick.innerHTML = "";
-    els.categoryQuick.appendChild(mixedOpt.cloneNode(true));
-  }
-
-  state.categories.forEach((cat) => {
-    const opt = document.createElement("option");
-    opt.value = cat.id;
-    opt.textContent = `${cat.emoji} ${cat.label_en}`;
-    els.categorySelect.appendChild(opt);
-    if (els.categoryQuick) {
-      els.categoryQuick.appendChild(opt.cloneNode(true));
-    }
-  });
+  if (state.currentSection !== "home" || els.imageCategoryPills) renderImageList();
 }
 
 async function loadHiragana() {
@@ -470,7 +502,7 @@ async function finishOnboarding() {
 
 let imageDb = null;
 
-const MAX_PHOTOS_PER_ITEM = 10;
+const MAX_PHOTOS_PER_ITEM = 30;
 
 function getImageDb() {
   if (imageDb) return Promise.resolve(imageDb);
@@ -607,7 +639,7 @@ const WORD_MANIFEST_KEY = "kitai-words-manifest";
 const LEGACY_CUSTOM_KEY = "kitai-custom-items";
 
 function emptyManifest() {
-  return { items: {}, deleted: {} };
+  return { items: {}, deleted: {}, categories: {}, deletedCategories: {} };
 }
 
 function loadWordManifest() {
@@ -689,7 +721,30 @@ function applyWordOverride(item, w) {
   if (w.photoUrl) item.photoUrl = w.photoUrl;
 }
 
+// Rebuild state.categories from the built-in list (vocab.json) plus any custom
+// categories in the manifest, honoring category tombstones. Custom categories
+// sort after built-ins by creation time.
+function applyCategoryManifestToState() {
+  const m = state.wordManifest || emptyManifest();
+  const deleted = m.deletedCategories || {};
+  const builtin = (state.builtinCategories || []).filter((c) => !deleted[c.id]);
+  const customIds = new Set(builtin.map((c) => c.id));
+  const custom = Object.values(m.categories || {})
+    .filter((c) => c && c.id && !deleted[c.id] && !customIds.has(c.id))
+    .sort((a, b) => (a.updatedAt || 0) - (b.updatedAt || 0))
+    .map((c) => ({
+      id: c.id,
+      emoji: c.emoji || "📦",
+      label_en: c.label_en || c.id,
+      label_ja: c.label_ja || c.label_en || c.id,
+      label_ko: c.label_ko || c.label_en || c.id,
+      custom: true,
+    }));
+  state.categories = builtin.concat(custom);
+}
+
 function applyWordManifestToState() {
+  applyCategoryManifestToState();
   const m = state.wordManifest || emptyManifest();
   // Honor deletions for built-in words too (not just custom ones), so a parent
   // can remove any word from the games. The tombstone syncs across devices.
@@ -729,6 +784,25 @@ function mergeManifests(a, b) {
       out.deleted[id] = delTs;
     } else if (item) {
       out.items[id] = item;
+    }
+  });
+  // Same last-write-wins merge for custom categories + their tombstones.
+  const catIds = new Set([
+    ...Object.keys(a.categories || {}),
+    ...Object.keys(b.categories || {}),
+    ...Object.keys(a.deletedCategories || {}),
+    ...Object.keys(b.deletedCategories || {}),
+  ]);
+  catIds.forEach((id) => {
+    const ac = (a.categories || {})[id];
+    const bc = (b.categories || {})[id];
+    const cat = ac && bc ? ((ac.updatedAt || 0) >= (bc.updatedAt || 0) ? ac : bc) : ac || bc;
+    const catTs = cat ? cat.updatedAt || 0 : 0;
+    const delTs = Math.max((a.deletedCategories || {})[id] || 0, (b.deletedCategories || {})[id] || 0);
+    if (delTs && delTs >= catTs) {
+      out.deletedCategories[id] = delTs;
+    } else if (cat) {
+      out.categories[id] = cat;
     }
   });
   return out;
@@ -819,7 +893,7 @@ async function syncWordsWithCloud() {
     state.wordManifest = merged;
     saveWordManifest(merged);
     applyWordManifestToState();
-    renderImageList();
+    refreshCategoryUI();
     if (state.currentTrack === "vocab") renderCurrentView();
     await pushCloudWordManifest(merged); // let other devices converge
     state.wordSync = "ok";
@@ -1050,6 +1124,138 @@ async function renderWordSuggestions(container, english, lang, onPick, statusEl)
   }
 }
 
+// Look up multiple Japanese writings for a word/reading via Jotoba (CORS-enabled,
+// no key). For homophones (はし → 橋 / 端 / 箸) this returns each kanji with its
+// reading + English gloss so the parent can hear and pick the right one.
+async function fetchJotobaCandidates(query) {
+  try {
+    const res = await fetch("https://jotoba.de/api/search/words", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query, language: "English", no_english: false }),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const out = [];
+    (data.words || []).forEach((w) => {
+      const r = w.reading || {};
+      const kana = r.kana || "";
+      if (!kana) return;
+      const gloss = (((w.senses || [])[0] || {}).glosses || []).slice(0, 2).join(", ");
+      out.push({ kana, kanji: r.kanji || "", gloss });
+    });
+    return out.slice(0, 8);
+  } catch (_) {
+    return [];
+  }
+}
+
+// A suggestion chip with its own 🔊 (hear it) button + a tappable body (pick it).
+function buildSuggestChip(r, container, onPick) {
+  const chip = document.createElement("div");
+  chip.className = "suggest-chip rich";
+  const play = document.createElement("button");
+  play.type = "button";
+  play.className = "chip-play";
+  play.textContent = "🔊";
+  play.setAttribute("aria-label", "Hear it");
+  play.addEventListener("click", (e) => {
+    e.stopPropagation();
+    synthesize(r.speech || r.display, { showErrors: false });
+  });
+  const body = document.createElement("button");
+  body.type = "button";
+  body.className = "chip-body";
+  const w = document.createElement("span");
+  w.className = "chip-word";
+  w.textContent = r.label;
+  body.appendChild(w);
+  if (r.sub) {
+    const t = document.createElement("span");
+    t.className = "chip-tag";
+    t.textContent = r.sub;
+    body.appendChild(t);
+  }
+  body.addEventListener("click", () => {
+    container.querySelectorAll(".suggest-chip").forEach((el) => el.classList.remove("selected"));
+    chip.classList.add("selected");
+    onPick(r.display, r.romaji || "", r.speech && r.speech !== r.display ? r.speech : "");
+  });
+  chip.appendChild(play);
+  chip.appendChild(body);
+  return chip;
+}
+
+// Richer suggestions: Japanese uses Jotoba (multiple kanji per reading, each
+// playable) + the translator's kana/katakana forms; Korean/English use the
+// translator. `onPick(display, romaji, speech)` fires when a chip is chosen.
+async function renderRichSuggestions(container, english, lang, onPick) {
+  if (!container) return;
+  const q = (english || "").trim();
+  if (!q) {
+    container.innerHTML = '<div class="suggest-status">Type the word first.</div>';
+    return;
+  }
+  container.innerHTML = '<div class="suggest-status">Thinking…</div>';
+
+  if (lang === "ja") {
+    const [jotoba, tr] = await Promise.all([
+      fetchJotobaCandidates(q),
+      fetchWordSuggestions(q, "ja").catch(() => ({ candidates: [], romaji: "", speech: "" })),
+    ]);
+    const rows = [];
+    const seen = new Set();
+    jotoba.forEach((c) => {
+      const key = (c.kanji || c.kana) + "|" + c.kana;
+      if (seen.has(key)) return;
+      seen.add(key);
+      rows.push({
+        display: c.kana,
+        speech: c.kanji || c.kana,
+        label: c.kanji || c.kana,
+        sub: (c.kanji ? c.kana + " · " : "") + (c.gloss || ""),
+      });
+    });
+    (tr.candidates || []).forEach((c) => {
+      const key = c.value + "|" + c.value;
+      if (seen.has(key)) return;
+      seen.add(key);
+      const sp = tr.speech && /[一-鿿]/.test(tr.speech) ? tr.speech : c.value;
+      rows.push({ display: c.value, speech: sp, label: c.value, sub: c.tag });
+    });
+    container.innerHTML = "";
+    if (!rows.length) {
+      container.innerHTML = '<div class="suggest-status">No suggestion — type it in below.</div>';
+      return;
+    }
+    rows.forEach((r) => container.appendChild(buildSuggestChip(r, container, onPick)));
+    return;
+  }
+
+  try {
+    const { candidates, romaji } = await fetchWordSuggestions(q, lang);
+    container.innerHTML = "";
+    if (!candidates.length) {
+      container.innerHTML = '<div class="suggest-status">No suggestion — type it in below.</div>';
+      return;
+    }
+    if (romaji) {
+      const rDiv = document.createElement("div");
+      rDiv.className = "suggest-romaji";
+      rDiv.textContent = "Reading: " + romaji;
+      container.appendChild(rDiv);
+    }
+    candidates.forEach((c) =>
+      container.appendChild(
+        buildSuggestChip({ display: c.value, speech: c.value, label: c.value, sub: c.tag, romaji }, container, onPick)
+      )
+    );
+  } catch (_) {
+    container.innerHTML =
+      '<div class="suggest-status">Couldn\'t reach the dictionary (needs internet). Type the word in below.</div>';
+  }
+}
+
 // The language whose native word we generate/edit. English mode has no reading
 // to suggest, so we fall back to Japanese suggestions there.
 function suggestLang() {
@@ -1130,6 +1336,212 @@ function addCustomItemFromForm() {
   // Straight into picking pictures for the new word (unless a photo URL was
   // already given). Opens the same Wikimedia picker, seeded with the English.
   if (!photo) promptPhotosForItem(id);
+}
+
+// ---- Custom categories -----------------------------------------------------
+
+function setCatAddStatus(msg, isError) {
+  if (!els.catAddStatus) return;
+  els.catAddStatus.textContent = msg || "";
+  els.catAddStatus.classList.toggle("error", !!isError);
+}
+
+function toggleCategoryForm() {
+  if (!els.catAddForm) return;
+  els.catAddForm.classList.toggle("hidden");
+  if (!els.catAddForm.classList.contains("hidden") && els.catAddName) els.catAddName.focus();
+}
+
+async function addCategoryFromForm() {
+  const name = (els.catAddName?.value || "").trim();
+  let emoji = (els.catAddEmoji?.value || "").trim();
+  if (!name) { setCatAddStatus("Type a category name.", true); return; }
+  // Grab the first emoji/character as the icon; default to a box.
+  emoji = Array.from(emoji)[0] || "📦";
+  const now = Date.now();
+  const base = "cat-" + name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+  let id = base || "cat-" + now;
+  const exists = (cid) => state.categories.some((c) => c.id === cid);
+  if (exists(id)) id = `${base}-${Math.random().toString(36).slice(2, 5)}`;
+
+  // Try to localize the label for the spoken languages (nice-to-have; ignore failures).
+  let label_ja = name, label_ko = name;
+  try { const t = await translateWord(name, "ja"); if (t.native) label_ja = t.native; } catch (_) {}
+  try { const t = await translateWord(name, "ko"); if (t.native) label_ko = t.native; } catch (_) {}
+
+  if (!state.wordManifest) state.wordManifest = emptyManifest();
+  state.wordManifest.categories[id] = { id, emoji, label_en: name, label_ja, label_ko, updatedAt: now };
+  delete state.wordManifest.deletedCategories[id];
+  saveWordManifest(state.wordManifest);
+  applyWordManifestToState();
+  refreshCategoryUI();
+
+  if (els.catAddName) els.catAddName.value = "";
+  if (els.catAddEmoji) els.catAddEmoji.value = "";
+  setCatAddStatus(`Added category "${emoji} ${name}". ✓`);
+  // Point the add-word + picture views at the new category and offer word ideas.
+  state.imageCategoryId = id;
+  if (els.newWordCategory) els.newWordCategory.value = id;
+  if (els.quickAddCategory) els.quickAddCategory.value = id;
+  renderImageList();
+  suggestWordsForCategory(name, id);
+  syncWordsWithCloud().catch(() => {});
+}
+
+function removeCustomCategory(id) {
+  const cat = state.categories.find((c) => c.id === id);
+  if (!cat || !cat.custom) return;
+  const n = state.items.filter((i) => i.categoryId === id).length;
+  const msg = n
+    ? `Remove the category "${cat.label_en}" and its ${n} word${n > 1 ? "s" : ""}?`
+    : `Remove the category "${cat.label_en}"?`;
+  if (!confirm(msg)) return;
+  if (!state.wordManifest) state.wordManifest = emptyManifest();
+  const now = Date.now();
+  delete state.wordManifest.categories[id];
+  state.wordManifest.deletedCategories[id] = now;
+  // Tombstone every custom word in it too.
+  state.items.filter((i) => i.categoryId === id && i.custom).forEach((i) => {
+    delete state.wordManifest.items[i.id];
+    state.wordManifest.deleted[i.id] = now;
+  });
+  saveWordManifest(state.wordManifest);
+  if (state.imageCategoryId === id) state.imageCategoryId = "all";
+  if (state.categoryId === id) state.categoryId = "mixed";
+  applyWordManifestToState();
+  refreshCategoryUI();
+  if (state.currentTrack === "vocab") renderCurrentView();
+  syncWordsWithCloud().catch(() => {});
+}
+
+// ---- Word suggestions for a category (keyless) -----------------------------
+// A built-in toddler word bank covers common categories; Datamuse fills in
+// anything else. Tapping a suggestion adds it (auto-translated) to the category.
+
+const WORD_BANK = {
+  animal: ["dog","cat","cow","horse","pig","sheep","goat","chicken","duck","rabbit","mouse","fox","bear","lion","tiger","elephant","monkey","giraffe","zebra","kangaroo","panda","deer","wolf","frog"],
+  fruit: ["apple","banana","orange","grape","strawberry","watermelon","peach","pear","cherry","lemon","pineapple","mango","kiwi","melon","plum","blueberry"],
+  vegetable: ["carrot","potato","tomato","onion","cucumber","corn","pumpkin","broccoli","pepper","lettuce","peas","mushroom","eggplant","spinach"],
+  food: ["rice","bread","egg","milk","cheese","soup","noodles","pizza","sandwich","cookie","cake","apple","banana","fish","meat","yogurt"],
+  drink: ["water","milk","juice","tea","coffee","soda","smoothie"],
+  color: ["red","blue","green","yellow","orange","purple","pink","brown","black","white","gray"],
+  body: ["head","hair","eye","ear","nose","mouth","hand","arm","leg","foot","finger","tooth","tummy","knee"],
+  family: ["mom","dad","baby","sister","brother","grandma","grandpa","aunt","uncle"],
+  vehicle: ["car","bus","truck","train","airplane","boat","bike","motorcycle","helicopter","fire truck","police car","tractor"],
+  clothes: ["shirt","pants","dress","socks","shoes","hat","jacket","gloves","scarf","pajamas"],
+  shape: ["circle","square","triangle","star","heart","rectangle","oval","diamond"],
+  toy: ["ball","blocks","doll","teddy bear","car","puzzle","kite","balloon","drum","train"],
+  nature: ["tree","flower","sun","moon","star","cloud","rain","snow","mountain","river","grass","leaf"],
+  weather: ["sunny","rainy","cloudy","snowy","windy","hot","cold","rainbow"],
+  house: ["door","window","bed","chair","table","sofa","lamp","clock","cup","spoon","fork","plate"],
+  insect: ["ant","bee","butterfly","ladybug","spider","grasshopper","caterpillar","dragonfly"],
+  bird: ["chicken","duck","owl","eagle","penguin","parrot","pigeon","swan","peacock"],
+  sea: ["fish","whale","dolphin","shark","octopus","crab","turtle","starfish","jellyfish","seahorse"],
+  job: ["doctor","teacher","police officer","firefighter","chef","farmer","nurse","pilot","dentist"],
+  sport: ["soccer","baseball","basketball","tennis","swimming","running","skiing","cycling"],
+  instrument: ["piano","guitar","drum","violin","flute","trumpet"],
+  emotion: ["happy","sad","angry","scared","sleepy","surprised","excited"],
+};
+
+function lookupWordBank(label) {
+  const key = label.toLowerCase().trim().replace(/s$/, "");
+  if (WORD_BANK[key]) return WORD_BANK[key].slice();
+  // Loose contains-match (e.g. "farm animals" -> animal, "sea creatures" -> sea).
+  for (const k of Object.keys(WORD_BANK)) {
+    if (key.includes(k) || k.includes(key)) return WORD_BANK[k].slice();
+  }
+  return [];
+}
+
+async function datamuseSuggest(label) {
+  try {
+    const url = "https://api.datamuse.com/words?max=40&md=p&ml=" + encodeURIComponent(label);
+    const res = await fetch(url);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data
+      .filter((w) => (w.tags || []).includes("n")) // nouns only
+      .map((w) => w.word)
+      .filter((w) => /^[a-z][a-z '-]*$/i.test(w) && w.toLowerCase() !== label.toLowerCase());
+  } catch (_) {
+    return [];
+  }
+}
+
+async function suggestWordsForCategory(label, categoryId) {
+  const container = els.catSuggestList;
+  if (!container) return;
+  container.innerHTML = '<div class="suggest-status">Finding ideas…</div>';
+  const seen = new Set();
+  const words = [];
+  const push = (w) => {
+    const v = (w || "").trim();
+    const k = v.toLowerCase();
+    if (v && !seen.has(k)) { seen.add(k); words.push(v.replace(/\b\w/g, (c) => c.toUpperCase())); }
+  };
+  lookupWordBank(label).forEach(push);
+  if (words.length < 12) (await datamuseSuggest(label)).forEach(push);
+
+  // Don't re-suggest words already in the category.
+  const have = new Set(
+    state.items.filter((i) => i.categoryId === categoryId).map((i) => (i.en || "").toLowerCase())
+  );
+  const fresh = words.filter((w) => !have.has(w.toLowerCase())).slice(0, 30);
+
+  container.innerHTML = "";
+  if (!fresh.length) {
+    container.innerHTML = '<div class="suggest-status">No ideas found — add words yourself below.</div>';
+    return;
+  }
+  const hint = document.createElement("div");
+  hint.className = "suggest-status";
+  hint.textContent = "Tap to add (we fill in the reading). Add as many as you like:";
+  container.appendChild(hint);
+  fresh.forEach((w) => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "suggest-chip cat-suggest-chip";
+    chip.textContent = w;
+    onTap(chip, async () => {
+      if (chip.classList.contains("added")) return;
+      chip.disabled = true;
+      chip.textContent = w + " …";
+      const ok = await addSuggestedWord(w, categoryId);
+      chip.classList.add("added");
+      chip.textContent = (ok ? "✓ " : "⚠ ") + w;
+    });
+    container.appendChild(chip);
+  });
+}
+
+// Add one suggested English word to a category, auto-filling the reading.
+async function addSuggestedWord(en, categoryId) {
+  const now = Date.now();
+  const id = `custom-${now}-${Math.random().toString(36).slice(2, 7)}`;
+  const word = { id, categoryId, en, updatedAt: now };
+  if (state.lang !== "en") {
+    try {
+      const { candidates, romaji, speech } = await fetchWordSuggestions(en, suggestLang());
+      const best = candidates[0];
+      if (state.lang === "ko") {
+        word.ko = best ? best.value : en;
+        if (romaji) word.koRomaji = romaji;
+      } else {
+        word.jaKana = best ? best.value : en;
+        if (romaji) word.jaRomaji = romaji;
+        if (speech && best && speech !== best.value) word.jaSpeech = speech;
+      }
+    } catch (_) { /* keep English-only; parent can fix the reading later */ }
+  }
+  if (!state.wordManifest) state.wordManifest = emptyManifest();
+  state.wordManifest.items[id] = word;
+  delete state.wordManifest.deleted[id];
+  saveWordManifest(state.wordManifest);
+  applyWordManifestToState();
+  renderImageList();
+  if (state.currentTrack === "vocab") renderCurrentView();
+  syncWordsWithCloud().catch(() => {});
+  return true;
 }
 
 // Open the per-word photo modal and jump right into the "Find Photos" search.
@@ -1698,7 +2110,7 @@ function bindUI() {
   }
   if (els.newWordSuggest) {
     els.newWordSuggest.addEventListener("click", () => {
-      renderWordSuggestions(
+      renderRichSuggestions(
         els.newWordSuggestions,
         els.newWordEn?.value,
         suggestLang(),
@@ -1744,7 +2156,7 @@ function bindUI() {
     els.readingSuggest.addEventListener("click", () => {
       const item = state.items.find((i) => i.id === state.imageModalItemId);
       if (!item) return;
-      renderWordSuggestions(
+      renderRichSuggestions(
         els.readingSuggestions,
         item.en,
         suggestLang(),
@@ -1876,6 +2288,42 @@ function bindUI() {
 
   if (els.flashAgain) onTap(els.flashAgain, () => startFlashSession());
   if (els.flashHome) onTap(els.flashHome, () => { hideFlashComplete(); goHome(); });
+  if (els.flashFinish) onTap(els.flashFinish, () => endFlashSession());
+
+  if (els.catAddToggle) els.catAddToggle.addEventListener("click", toggleCategoryForm);
+  if (els.catAddBtn) els.catAddBtn.addEventListener("click", addCategoryFromForm);
+  if (els.catAddName) {
+    els.catAddName.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); addCategoryFromForm(); }
+    });
+  }
+
+  if (els.stockUrlAdd) els.stockUrlAdd.addEventListener("click", addStockPhotoByUrl);
+  if (els.stockUrlInput) {
+    els.stockUrlInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); addStockPhotoByUrl(); }
+    });
+  }
+
+  // Google image-search creds (optional) — persisted on this device.
+  try {
+    state.googleImgKey = localStorage.getItem("kitai-gimg-key") || "";
+    state.googleImgCx = localStorage.getItem("kitai-gimg-cx") || "";
+  } catch (_) {}
+  if (els.googleImgKey) {
+    els.googleImgKey.value = state.googleImgKey;
+    els.googleImgKey.addEventListener("change", (e) => {
+      state.googleImgKey = e.target.value.trim();
+      try { localStorage.setItem("kitai-gimg-key", state.googleImgKey); } catch (_) {}
+    });
+  }
+  if (els.googleImgCx) {
+    els.googleImgCx.value = state.googleImgCx;
+    els.googleImgCx.addEventListener("change", (e) => {
+      state.googleImgCx = e.target.value.trim();
+      try { localStorage.setItem("kitai-gimg-cx", state.googleImgCx); } catch (_) {}
+    });
+  }
 
   if (els.lockButton) onTap(els.lockButton, () => lockApp());
   if (els.lockBadge) {
@@ -2024,20 +2472,33 @@ function renderImageList() {
 
   if (els.imageCategoryPills) {
     els.imageCategoryPills.innerHTML = "";
-    const makePill = (id, label) => {
+    const makePill = (id, label, cat) => {
       const btn = document.createElement("button");
       btn.className = "pill-btn";
       if (id === state.imageCategoryId) btn.classList.add("active");
-      btn.textContent = label;
+      btn.textContent = cat ? `${cat.emoji} ${label}` : label;
       btn.addEventListener("click", () => {
         state.imageCategoryId = id;
         renderImageList();
       });
+      // Custom categories get a small ✕ to delete (with confirm).
+      if (cat && cat.custom) {
+        const x = document.createElement("span");
+        x.className = "pill-del";
+        x.textContent = "✕";
+        x.setAttribute("role", "button");
+        x.setAttribute("aria-label", `Delete category ${label}`);
+        x.addEventListener("click", (e) => {
+          e.stopPropagation();
+          removeCustomCategory(id);
+        });
+        btn.appendChild(x);
+      }
       return btn;
     };
     els.imageCategoryPills.appendChild(makePill("all", "All"));
     state.categories.forEach((cat) => {
-      els.imageCategoryPills.appendChild(makePill(cat.id, cat.label_en));
+      els.imageCategoryPills.appendChild(makePill(cat.id, cat.label_en, cat));
     });
   }
 
@@ -2257,9 +2718,14 @@ function closeImageModal() {
   hideReadingEditor();
 }
 
-// --- Stock photo search (Wikimedia Commons: free, no API key, CORS-friendly) ---
+// --- Photo search --------------------------------------------------------
+// Each result is { thumb, full }: `thumb` is a small CORS-friendly image for the
+// grid; `full` is the best-quality download (falls back to thumb if it won't
+// fetch). Sources: Google (real image search, opt-in key) + Openverse (~700M
+// open images) + Wikimedia Commons — all merged for lots of options per word.
 
-const stockSelected = new Set(); // thumbnail URLs the parent has tapped to add
+// key -> { thumb, full } for the results the parent has tapped to add.
+const stockSelected = new Map();
 
 function updateStockAddButton() {
   if (!els.stockAdd) return;
@@ -2287,35 +2753,75 @@ function toggleStockSearch() {
   }
 }
 
-// Openverse aggregates ~700M openly-licensed images (Flickr, museums, Wikimedia,
-// Europeana, …) with an open, CORS-friendly API and no key needed. Its thumbnail
-// URLs are proxied through openverse.org so they download cleanly.
-async function searchOpenverse(q) {
-  try {
-    const url =
-      "https://api.openverse.org/v1/images/?mature=false&page_size=40&q=" + encodeURIComponent(q);
-    const res = await fetch(url, { headers: { Accept: "application/json" } });
-    if (!res.ok) return [];
-    const data = await res.json();
-    return (data.results || []).map((r) => r.thumbnail || r.url).filter(Boolean);
-  } catch (_) {
-    return [];
+function hasGoogleImageSearch() {
+  return !!(state.googleImgKey && state.googleImgCx);
+}
+
+// Real Google image results via the official Programmable Search JSON API
+// (CORS-enabled). Needs a free API key + search-engine id (cx). Paginates to
+// pull many results (10 per page). Returns [{thumb, full}].
+async function searchGoogleImages(q) {
+  if (!hasGoogleImageSearch()) return [];
+  const out = [];
+  for (const start of [1, 11, 21]) {
+    try {
+      const url =
+        "https://www.googleapis.com/customsearch/v1?searchType=image&num=10&safe=active" +
+        "&key=" + encodeURIComponent(state.googleImgKey) +
+        "&cx=" + encodeURIComponent(state.googleImgCx) +
+        "&start=" + start +
+        "&q=" + encodeURIComponent(q);
+      const res = await fetch(url);
+      if (!res.ok) break; // out of quota / bad key — stop early
+      const data = await res.json();
+      (data.items || []).forEach((it) => {
+        const full = it.link;
+        const thumb = (it.image && it.image.thumbnailLink) || full;
+        if (full) out.push({ thumb, full });
+      });
+      if (!data.items || data.items.length < 10) break;
+    } catch (_) {
+      break;
+    }
   }
+  return out;
+}
+
+async function searchOpenverse(q) {
+  const out = [];
+  for (const page of [1, 2]) {
+    try {
+      const url =
+        "https://api.openverse.org/v1/images/?mature=false&page_size=40&page=" + page +
+        "&q=" + encodeURIComponent(q);
+      const res = await fetch(url, { headers: { Accept: "application/json" } });
+      if (!res.ok) break;
+      const data = await res.json();
+      (data.results || []).forEach((r) => {
+        const thumb = r.thumbnail || r.url;
+        if (thumb) out.push({ thumb, full: r.url || thumb });
+      });
+      if (!data.results || data.results.length < 40) break;
+    } catch (_) {
+      break;
+    }
+  }
+  return out;
 }
 
 async function searchWikimediaPhotos(q) {
   try {
     const url =
       "https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*" +
-      "&generator=search&gsrnamespace=6&gsrlimit=30&prop=imageinfo&iiprop=url|mime" +
-      "&iiurlwidth=400&gsrsearch=" + encodeURIComponent(q + " -icon -logo -map -diagram");
+      "&generator=search&gsrnamespace=6&gsrlimit=40&prop=imageinfo&iiprop=url|mime" +
+      "&iiurlwidth=500&gsrsearch=" + encodeURIComponent(q + " -icon -logo -map -diagram");
     const res = await fetch(url);
     const data = await res.json();
     const pages = data.query && data.query.pages ? Object.values(data.query.pages) : [];
     return pages
       .map((p) => p.imageinfo && p.imageinfo[0])
       .filter((ii) => ii && ii.thumburl && /image\/(jpeg|png|webp)/.test(ii.mime || ""))
-      .map((ii) => ii.thumburl);
+      .map((ii) => ({ thumb: ii.thumburl, full: ii.url || ii.thumburl }));
   } catch (_) {
     return [];
   }
@@ -2330,16 +2836,27 @@ async function searchStockPhotos(query) {
   if (!q) { grid.innerHTML = ""; return; }
   grid.innerHTML = '<div class="stock-status">Searching…</div>';
 
-  const [openverse, commons] = await Promise.all([searchOpenverse(q), searchWikimediaPhotos(q)]);
+  const [google, openverse, commons] = await Promise.all([
+    searchGoogleImages(q),
+    searchOpenverse(q),
+    searchWikimediaPhotos(q),
+  ]);
 
-  // Interleave the two sources so the grid mixes results, then dedupe.
+  // Google first (most relevant), then interleave the open sources. Dedupe on
+  // the download URL.
   const seen = new Set();
   const photos = [];
+  const add = (r) => {
+    if (r && r.thumb && !seen.has(r.full || r.thumb)) {
+      seen.add(r.full || r.thumb);
+      photos.push(r);
+    }
+  };
+  google.forEach(add);
   const maxLen = Math.max(openverse.length, commons.length);
   for (let i = 0; i < maxLen; i++) {
-    [openverse[i], commons[i]].forEach((u) => {
-      if (u && !seen.has(u)) { seen.add(u); photos.push(u); }
-    });
+    add(openverse[i]);
+    add(commons[i]);
   }
 
   grid.innerHTML = "";
@@ -2347,20 +2864,21 @@ async function searchStockPhotos(query) {
     grid.innerHTML = '<div class="stock-status">No photos found. Try a different word.</div>';
     return;
   }
-  photos.slice(0, 48).forEach((url) => {
+  photos.slice(0, 90).forEach((r) => {
+    const key = r.full || r.thumb;
     const btn = document.createElement("button");
     btn.className = "stock-result";
     const img = document.createElement("img");
-    img.src = url;
+    img.src = r.thumb;
     img.loading = "lazy";
     img.alt = "";
     btn.appendChild(img);
     onTap(btn, () => {
-      if (stockSelected.has(url)) {
-        stockSelected.delete(url);
+      if (stockSelected.has(key)) {
+        stockSelected.delete(key);
         btn.classList.remove("selected");
       } else {
-        stockSelected.add(url);
+        stockSelected.set(key, r);
         btn.classList.add("selected");
       }
       updateStockAddButton();
@@ -2399,8 +2917,18 @@ async function fetchImageBlob(url) {
   });
 }
 
-async function downloadStockPhoto(url, itemId) {
-  const blob = await fetchImageBlob(url);
+// Try the best-quality URL first; if that's blocked (CORS/canvas taint), fall
+// back to the small thumbnail so the photo still gets added.
+async function downloadStockPhoto(result, itemId) {
+  const primary = typeof result === "string" ? result : result.full || result.thumb;
+  const backup = typeof result === "string" ? null : result.thumb;
+  let blob;
+  try {
+    blob = await fetchImageBlob(primary);
+  } catch (e) {
+    if (backup && backup !== primary) blob = await fetchImageBlob(backup);
+    else throw e;
+  }
   const ext = ((blob.type.split("/")[1] || "jpg").replace(/[^a-z0-9]/gi, "")) || "jpg";
   const file = new File([blob], `stock-${itemId}-${Date.now()}.${ext}`, { type: blob.type || "image/jpeg" });
   await saveImageOverride(itemId, file); // stores offline + syncs to the library
@@ -2409,14 +2937,34 @@ async function downloadStockPhoto(url, itemId) {
 async function addSelectedStockPhotos() {
   const itemId = state.imageModalItemId;
   if (!itemId || stockSelected.size === 0) return;
-  const urls = Array.from(stockSelected);
+  const results = Array.from(stockSelected.values());
   if (els.stockAdd) { els.stockAdd.disabled = true; els.stockAdd.textContent = "Adding…"; }
   let failed = 0;
-  for (const url of urls) {
-    try { await downloadStockPhoto(url, itemId); } catch (_) { failed++; }
+  for (const r of results) {
+    try { await downloadStockPhoto(r, itemId); } catch (_) { failed++; }
   }
   hideStockSearch();
-  if (failed) alert(`Added ${urls.length - failed} photo(s); ${failed} couldn't be added.`);
+  if (failed) alert(`Added ${results.length - failed} photo(s); ${failed} couldn't be added.`);
+}
+
+// Paste any image URL (e.g. copied from a Google Images search in the browser).
+async function addStockPhotoByUrl() {
+  const itemId = state.imageModalItemId;
+  const input = els.stockUrlInput;
+  const url = (input?.value || "").trim();
+  if (!itemId || !url) return;
+  if (!/^https?:\/\//i.test(url)) { alert("Paste a link that starts with http:// or https://"); return; }
+  const btn = els.stockUrlAdd;
+  if (btn) { btn.disabled = true; btn.textContent = "Adding…"; }
+  try {
+    await downloadStockPhoto(url, itemId);
+    if (input) input.value = "";
+    renderImageModalContent();
+  } catch (_) {
+    alert("Couldn't fetch that image. Some sites block downloads — try a different link or save the picture and use + Add Photo.");
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "Add URL"; }
+  }
 }
 
 function setActiveModeButton(type) {
@@ -2716,6 +3264,8 @@ function startFlashSession() {
   state.flash.wrong = {};
   state.flash.total = pool.length;
   state.flash.firstTryOk = 0;
+  state.flash.answered = 0;
+  state.flash.correct = 0;
   state.flash.startTime = Date.now();
   state.flash.active = true;
   state.flash.missedThisCard = false;
@@ -2741,23 +3291,40 @@ function renderFlashView() {
   hideAllGameViews();
   showPromptArea(true);
   els.cards.classList.remove("hidden");
+  if (els.flashBar) els.flashBar.classList.remove("hidden");
   renderCards(state.currentChoices);
   els.promptWord.textContent = wordText(state.currentTarget);
-  const done = state.flash.total - state.flash.deck.length;
-  els.modeLabel.textContent = `Flash Cards · ${done}/${state.flash.total}`;
+  const cleared = state.flash.total - state.flash.deck.length;
+  els.modeLabel.textContent = `Flash Cards · ${cleared}/${state.flash.total} cleared`;
+  updateFlashLiveScore();
+}
+
+function updateFlashLiveScore() {
+  if (!els.flashLiveScore) return;
+  const a = state.flash.answered;
+  els.flashLiveScore.textContent = a ? `${state.flash.correct}/${a} correct` : "Tap the right picture";
 }
 
 function flashOnCorrect() {
   const target = state.currentTarget;
+  state.flash.answered++;
+  state.flash.correct++;
   if (!state.flash.wrong[target.id]) state.flash.firstTryOk++;
   state.flash.deck = state.flash.deck.filter((i) => i.id !== target.id);
 }
 
 function flashOnWrong() {
   const target = state.currentTarget;
+  state.flash.answered++;
   state.flash.wrong[target.id] = (state.flash.wrong[target.id] || 0) + 1;
   state.flash.missedThisCard = true;
   reshuffleFlashTarget();
+}
+
+// Stop the session early and show the score for what was done so far.
+function endFlashSession() {
+  if (!state.flash.active) return;
+  showFlashComplete(true);
 }
 
 // Move the current (front) card to a random deeper spot so it isn't the very
@@ -2783,11 +3350,21 @@ function formatFlashTime(sec) {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-function showFlashComplete() {
+function showFlashComplete(partial) {
   state.flash.active = false;
+  if (els.flashBar) els.flashBar.classList.add("hidden");
   const elapsed = Math.max(0, Math.round((Date.now() - state.flash.startTime) / 1000));
-  if (els.flashStatTotal) els.flashStatTotal.textContent = String(state.flash.total);
+  const cleared = state.flash.total - state.flash.deck.length;
+  const answered = state.flash.answered;
+  if (els.flashCompleteTitle) {
+    els.flashCompleteTitle.textContent = partial && state.flash.deck.length > 0 ? "Nice work!" : "All done!";
+  }
+  if (els.flashCompleteEmoji) {
+    els.flashCompleteEmoji.textContent = partial && state.flash.deck.length > 0 ? "👏" : "🎉";
+  }
+  if (els.flashStatScore) els.flashStatScore.textContent = `${state.flash.correct}/${answered || 0}`;
   if (els.flashStatFirst) els.flashStatFirst.textContent = String(state.flash.firstTryOk);
+  if (els.flashStatCleared) els.flashStatCleared.textContent = `${cleared}/${state.flash.total}`;
   if (els.flashStatTime) els.flashStatTime.textContent = formatFlashTime(elapsed);
 
   const weakIds = Object.keys(state.flash.wrong).filter((id) => state.flash.wrong[id] > 0);
@@ -2949,6 +3526,7 @@ function hideAllGameViews() {
   if (els.findCountBar) els.findCountBar.classList.add("hidden");
   if (els.alphabetSection) els.alphabetSection.classList.add("hidden");
   if (els.alphabetQuizSection) els.alphabetQuizSection.classList.add("hidden");
+  if (els.flashBar) els.flashBar.classList.add("hidden");
 }
 
 function renderTapView() {

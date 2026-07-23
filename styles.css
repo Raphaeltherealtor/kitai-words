@@ -1749,3 +1749,131 @@ body.locked {
   background: #e9ecf4;
   color: var(--text);
 }
+
+/* ---- Custom categories + word suggestions ---- */
+.cat-add { margin-bottom: 10px; }
+.cat-add-form {
+  background: #f4f6fb;
+  border-radius: 14px;
+  padding: 12px;
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cat-add-row { display: flex; gap: 8px; }
+.cat-add-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid #d7dbe6;
+  font-size: 1rem;
+}
+.cat-emoji-input { flex: 0 0 52px; text-align: center; font-size: 1.2rem; }
+#cat-add-btn {
+  border: none;
+  background: var(--accent-3);
+  color: #fff;
+  font-weight: 800;
+  padding: 10px 16px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+.cat-suggest-chip { cursor: pointer; }
+.cat-suggest-chip.added { background: #d8f5e6; border-color: #2a9d8f; color: #1c7a67; }
+
+/* Rich suggestion chips (word + 🔊 + pick) */
+.suggest-chip.rich {
+  display: inline-flex;
+  align-items: stretch;
+  padding: 0;
+  overflow: hidden;
+  gap: 0;
+}
+.suggest-chip.rich .chip-play {
+  border: none;
+  background: rgba(0,0,0,0.06);
+  padding: 6px 10px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+.suggest-chip.rich .chip-body {
+  border: none;
+  background: transparent;
+  padding: 6px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  cursor: pointer;
+  text-align: left;
+}
+.suggest-chip.rich.selected { outline: 2px solid var(--accent-2); }
+.suggest-chip.rich .chip-word { font-weight: 800; }
+.suggest-chip.rich .chip-tag { font-size: 0.72rem; opacity: 0.7; }
+
+/* delete ✕ on a custom category pill */
+.pill-del {
+  margin-left: 6px;
+  font-size: 0.75rem;
+  opacity: 0.6;
+  padding: 0 2px;
+}
+.pill-del:hover { opacity: 1; color: #e63946; }
+
+/* paste-a-URL row in photo search */
+.stock-url-bar { display: flex; gap: 8px; margin-top: 8px; }
+.stock-url-bar input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid #d7dbe6;
+}
+#stock-url-add {
+  border: none;
+  background: var(--accent-2);
+  color: #fff;
+  font-weight: 700;
+  padding: 10px 14px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
+/* Google photo-search setup */
+.photo-search-setup { margin-top: 14px; font-size: 0.9rem; }
+.photo-search-setup summary { font-weight: 700; cursor: pointer; padding: 6px 0; }
+.photo-search-steps { margin: 6px 0 10px; padding-left: 20px; color: #55607a; font-size: 0.85rem; }
+.photo-search-steps li { margin-bottom: 4px; }
+.photo-search-setup label { display: block; margin: 6px 0; font-weight: 600; }
+.photo-search-setup input {
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid #d7dbe6;
+  margin-top: 4px;
+}
+
+/* ---- Flash bar (finish + live score) ---- */
+#flash-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: #fff;
+  border-radius: 12px;
+  padding: 8px 12px;
+  box-shadow: var(--shadow);
+}
+.flash-live-score { font-weight: 800; color: var(--text); }
+.flash-finish {
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 800;
+  padding: 8px 16px;
+  border-radius: 10px;
+}
+.flash-stats { flex-wrap: wrap; }
+.flash-stat { min-width: 70px; }

@@ -91,6 +91,11 @@
         <button data-gametype="kana-alphabet-quiz" class="mode-btn hidden">Quiz</button>
       </div>
 
+      <div id="flash-bar" class="hidden">
+        <span id="flash-live-score" class="flash-live-score">Tap the right picture</span>
+        <button id="flash-finish" class="flash-finish">Finish ✓</button>
+      </div>
+
       <div id="find-count-bar" class="hidden">
         <span class="find-count-label">How many pictures?</span>
         <div id="find-count-options" class="find-count-options"></div>
@@ -150,11 +155,12 @@
   <div id="flash-complete" class="hidden">
     <div class="flash-fireworks" aria-hidden="true"></div>
     <div class="flash-complete-card">
-      <div class="flash-complete-emoji">🎉</div>
-      <h2>All done!</h2>
+      <div id="flash-complete-emoji" class="flash-complete-emoji">🎉</div>
+      <h2 id="flash-complete-title">All done!</h2>
       <div class="flash-stats">
-        <div class="flash-stat"><span id="flash-stat-total" class="flash-stat-num">0</span><span class="flash-stat-label">words</span></div>
+        <div class="flash-stat"><span id="flash-stat-score" class="flash-stat-num">0/0</span><span class="flash-stat-label">correct</span></div>
         <div class="flash-stat"><span id="flash-stat-first" class="flash-stat-num">0</span><span class="flash-stat-label">first try</span></div>
+        <div class="flash-stat"><span id="flash-stat-cleared" class="flash-stat-num">0/0</span><span class="flash-stat-label">cleared</span></div>
         <div class="flash-stat"><span id="flash-stat-time" class="flash-stat-num">0:00</span><span class="flash-stat-label">time</span></div>
       </div>
       <div id="flash-weak-section" class="flash-weak-section hidden">
@@ -212,6 +218,19 @@
         </div>
         <input type="search" id="image-search" placeholder="Search words" aria-label="Search vocabulary" />
         <div id="image-category-pills" class="pill-row"></div>
+        <div class="cat-add">
+          <button id="cat-add-toggle" class="word-add-toggle">＋ New category</button>
+          <div id="cat-add-form" class="cat-add-form hidden">
+            <div class="library-help">Make your own category, then tap words to add — we suggest ideas so you don't have to search.</div>
+            <div class="cat-add-row">
+              <input type="text" id="cat-add-emoji" class="cat-emoji-input" autocomplete="off" placeholder="📦" maxlength="4" aria-label="Category icon (emoji)" />
+              <input type="text" id="cat-add-name" autocomplete="off" placeholder="e.g. Dinosaurs" />
+              <button id="cat-add-btn">Add</button>
+            </div>
+            <div id="cat-add-status" class="library-status"></div>
+            <div id="cat-suggest-list" class="suggest-chips"></div>
+          </div>
+        </div>
         <button id="word-add-toggle" class="word-add-toggle">＋ Add a word (more options)</button>
         <div id="add-word-form" class="add-word-form hidden">
           <div class="library-help">Adds to the selected category. Saved on this device (and your library), and shows in the games right away.</div>
@@ -236,6 +255,21 @@
           <div id="new-word-status" class="library-status"></div>
         </div>
         <div id="image-list" class="image-list"></div>
+        <details class="photo-search-setup">
+          <summary>🔍 Use Google image search (optional)</summary>
+          <div class="library-help">By default, photo search uses free libraries (Openverse + Wikimedia). To search real Google Images, paste a free Google API key and Search-engine ID (cx). Setup takes ~2 minutes:</div>
+          <ol class="photo-search-steps">
+            <li>Create a <a href="https://programmablesearchengine.google.com/controlpanel/create" target="_blank" rel="noopener">Programmable Search Engine</a> → turn on <b>Image search</b> + <b>Search the entire web</b> → copy its <b>Search engine ID</b>.</li>
+            <li>Get an <a href="https://developers.google.com/custom-search/v1/introduction" target="_blank" rel="noopener">API key</a> (click “Get a Key”).</li>
+          </ol>
+          <label>Google API key:
+            <input type="text" id="google-img-key" autocomplete="off" placeholder="AIza…" />
+          </label>
+          <label>Search engine ID (cx):
+            <input type="text" id="google-img-cx" autocomplete="off" placeholder="e.g. 012345…:abcde" />
+          </label>
+          <div class="theme-hint">Free tier: 100 searches/day. Stored only on this device. Leave blank to keep using the free libraries.</div>
+        </details>
       </div>
 
       <!-- LANGUAGE & VOICE -->
@@ -354,7 +388,7 @@
         <div id="reading-status" class="library-status"></div>
       </div>
       <div id="image-modal-photos" class="image-modal-photos"></div>
-      <div class="image-modal-help">Up to 10 photos per word. The app will pick a random one each round.</div>
+      <div class="image-modal-help">Up to 30 photos per word. The app will pick a random one each round.</div>
       <div class="image-modal-actions">
         <button id="image-modal-upload">+ Add Photo</button>
         <button id="image-modal-camera">📷 Camera</button>
@@ -371,7 +405,11 @@
         <div class="stock-add-bar">
           <button id="stock-add" disabled>Add selected</button>
         </div>
-        <div class="image-modal-help">Free photos from Openverse &amp; Wikimedia (millions of images). Tap to select several, then Add.</div>
+        <div class="stock-url-bar">
+          <input type="url" id="stock-url-input" inputmode="url" placeholder="…or paste an image link (https://…)" />
+          <button id="stock-url-add">Add URL</button>
+        </div>
+        <div class="image-modal-help">Photos from Google (if set up), Openverse &amp; Wikimedia — millions of images. Tap to select several, then Add. Or paste any image link.</div>
       </div>
       <input type="file" id="image-modal-file" accept="image/*" multiple class="hidden" />
       <input type="file" id="image-modal-camera-input" accept="image/*" capture="environment" class="hidden" />

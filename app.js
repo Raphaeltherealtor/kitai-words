@@ -188,6 +188,7 @@ const els = {
   stockSearchInput: document.getElementById("stock-search-input"),
   stockSearchGo: document.getElementById("stock-search-go"),
   stockSearchResults: document.getElementById("stock-search-results"),
+  stockSearchDots: document.getElementById("stock-search-dots"),
   stockAdd: document.getElementById("stock-add"),
   imageModalReset: document.getElementById("image-modal-reset"),
   imageModalFile: document.getElementById("image-modal-file"),
@@ -2736,7 +2737,8 @@ function updateStockAddButton() {
 
 function hideStockSearch() {
   if (els.imageModalStock) els.imageModalStock.classList.add("hidden");
-  if (els.stockSearchResults) els.stockSearchResults.innerHTML = "";
+  if (els.stockSearchResults) { els.stockSearchResults.innerHTML = ""; els.stockSearchResults.onscroll = null; }
+  if (els.stockSearchDots) els.stockSearchDots.innerHTML = "";
   stockSelected.clear();
   updateStockAddButton();
 }
@@ -2833,6 +2835,8 @@ async function searchStockPhotos(query) {
   const q = (query || "").trim();
   stockSelected.clear();
   updateStockAddButton();
+  if (els.stockSearchDots) els.stockSearchDots.innerHTML = "";
+  grid.onscroll = null;
   if (!q) { grid.innerHTML = ""; return; }
   grid.innerHTML = '<div class="stock-status">Searching…</div>';
 
@@ -2860,31 +2864,68 @@ async function searchStockPhotos(query) {
   }
 
   grid.innerHTML = "";
+  if (els.stockSearchDots) els.stockSearchDots.innerHTML = "";
   if (!photos.length) {
     grid.innerHTML = '<div class="stock-status">No photos found. Try a different word.</div>';
     return;
   }
-  photos.slice(0, 90).forEach((r) => {
-    const key = r.full || r.thumb;
-    const btn = document.createElement("button");
-    btn.className = "stock-result";
-    const img = document.createElement("img");
-    img.src = r.thumb;
-    img.loading = "lazy";
-    img.alt = "";
-    btn.appendChild(img);
-    onTap(btn, () => {
-      if (stockSelected.has(key)) {
-        stockSelected.delete(key);
-        btn.classList.remove("selected");
-      } else {
-        stockSelected.set(key, r);
-        btn.classList.add("selected");
-      }
-      updateStockAddButton();
+
+  // Show the results as swipeable pages of 6 (2 rows × 3) instead of one long
+  // vertical stack — much easier to skim on a phone. Swipe left/right to reach
+  // the next page.
+  const PER_PAGE = 6;
+  const shown = photos.slice(0, 90);
+  const pageCount = Math.ceil(shown.length / PER_PAGE);
+  for (let p = 0; p < pageCount; p++) {
+    const page = document.createElement("div");
+    page.className = "stock-page";
+    shown.slice(p * PER_PAGE, p * PER_PAGE + PER_PAGE).forEach((r) => {
+      const key = r.full || r.thumb;
+      const btn = document.createElement("button");
+      btn.className = "stock-result";
+      const img = document.createElement("img");
+      img.src = r.thumb;
+      img.loading = "lazy";
+      img.alt = "";
+      btn.appendChild(img);
+      onTap(btn, () => {
+        if (stockSelected.has(key)) {
+          stockSelected.delete(key);
+          btn.classList.remove("selected");
+        } else {
+          stockSelected.set(key, r);
+          btn.classList.add("selected");
+        }
+        updateStockAddButton();
+      });
+      page.appendChild(btn);
     });
-    grid.appendChild(btn);
-  });
+    grid.appendChild(page);
+  }
+
+  // Pagination dots that reflect / drive the current page.
+  if (els.stockSearchDots && pageCount > 1) {
+    const dots = [];
+    for (let p = 0; p < pageCount; p++) {
+      const dot = document.createElement("button");
+      dot.className = "stock-dot" + (p === 0 ? " active" : "");
+      dot.setAttribute("aria-label", `Page ${p + 1}`);
+      onTap(dot, () => {
+        grid.scrollTo({ left: p * grid.clientWidth, behavior: "smooth" });
+      });
+      els.stockSearchDots.appendChild(dot);
+      dots.push(dot);
+    }
+    let raf = 0;
+    grid.onscroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        const idx = Math.round(grid.scrollLeft / grid.clientWidth);
+        dots.forEach((d, i) => d.classList.toggle("active", i === idx));
+      });
+    };
+  }
 }
 
 // Download a cross-origin image as a Blob. Primary path is a direct CORS

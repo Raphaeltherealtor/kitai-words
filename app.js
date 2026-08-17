@@ -3215,6 +3215,7 @@ async function searchStockPhotos(query) {
 // fetch; if that's blocked/empty, fall back to drawing it onto a canvas via a
 // crossOrigin <img> and reading the pixels back out.
 async function fetchImageBlob(url) {
+  const looksGif = /\.gif(\?|#|$)/i.test(url);
   try {
     const res = await fetch(url, { mode: "cors", cache: "no-store" });
     if (res && res.ok) {
@@ -3222,6 +3223,10 @@ async function fetchImageBlob(url) {
       if (blob && blob.size > 0 && (blob.type || "").startsWith("image/")) return blob;
     }
   } catch (_) {}
+  // The canvas fallback re-encodes to a single static JPEG frame — for a GIF
+  // that silently kills the animation. Refuse to flatten it; the caller tells
+  // the user to download the GIF and add it as a file (which keeps the motion).
+  if (looksGif) throw new Error("gif-needs-download");
   return await new Promise((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = "anonymous";
@@ -3284,8 +3289,12 @@ async function addStockPhotoByUrl() {
     await downloadStockPhoto(url, itemId);
     if (input) input.value = "";
     renderImageModalContent();
-  } catch (_) {
-    alert("Couldn't fetch that image. Some sites block downloads — try a different link or save the picture and use + Add Photo.");
+  } catch (e) {
+    if (e && e.message === "gif-needs-download") {
+      alert("That site blocked the GIF from downloading directly. Save the GIF to your device, then use + Add Photo to keep it animated.");
+    } else {
+      alert("Couldn't fetch that image. Some sites block downloads — try a different link or save the picture and use + Add Photo.");
+    }
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = "Add URL"; }
   }

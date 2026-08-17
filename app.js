@@ -43,7 +43,8 @@ const state = {
   longPressTimer: null,
   longPressMs: 600,
   soundEnabled: true,
-  lang: "ja", // ja | ko | en — which language the words + voice use
+  lang: "ja", // ja | ko | en | es | pt — which language the words + voice use (the "output")
+  uiLang: "en", // ja | ko | en | es | pt — the app's own interface language
   koAltReading: false, // Korean siblings: false = 오빠/언니 (girl's view), true = 형/누나 (boy's view)
   theme: "ocean",
   imageOverrides: {},
@@ -68,6 +69,12 @@ const state = {
     startTime: 0,
     missedThisCard: false,
   },
+  // Memory mode reuses the flash deck-session but hides the pictures after a peek:
+  // cards show face-up, the word is read, then they flip face-down and the child
+  // taps where they remember the right card was. `memoryFlipTimer` schedules the
+  // flip; `memoryArmed` gates taps so they only count once the cards are down.
+  memoryFlipTimer: null,
+  memoryArmed: false,
   // Child Lock: fullscreen kiosk-ish mode. `locked` = on; `wakeLock` holds the
   // Screen Wake Lock sentinel so we can release it on unlock.
   locked: false,
@@ -82,21 +89,30 @@ const LANGS = {
   ja: { label: "日本語 Japanese", speech: "ja-JP", hl: "ja-jp", prefix: "ja", sample: "こんにちは。ねこ。", kana: true },
   ko: { label: "한국어 Korean", speech: "ko-KR", hl: "ko-kr", prefix: "ko", sample: "안녕하세요. 고양이.", kana: false },
   en: { label: "English", speech: "en-US", hl: "en-us", prefix: "en", sample: "Hello. Cat.", kana: false },
+  es: { label: "Español Spanish", speech: "es-ES", hl: "es-es", prefix: "es", sample: "Hola. Gato.", kana: false },
+  pt: { label: "Português Portuguese", speech: "pt-BR", hl: "pt-br", prefix: "pt", sample: "Olá. Gato.", kana: false },
 };
 const LANG_KEY = "kitai-lang";
 function langCfg() {
   return LANGS[state.lang] || LANGS.ja;
 }
 
-// The word to show/speak for the current language, with graceful fallback.
+// Which stored field holds the word for a given language. ja shows kana, ko
+// shows Hangul, and every Latin-script language (en, es, pt) has a field named
+// after its code. Falls back to English, then Japanese, so a word missing a
+// translation still shows *something* instead of a blank card.
+function langWordField(item, lang) {
+  if (!item) return "";
+  if (lang === "ja") return item.jaKana || item.en || "";
+  if (lang === "ko") return item.ko || item.en || item.jaKana || "";
+  return item[lang] || item.en || item.jaKana || "";
+}
+
+// The word to show for the current output language, with graceful fallback.
 function wordText(item) {
   if (!item) return "";
-  if (state.lang === "en") return item.en || item.jaKana || "";
-  if (state.lang === "ko") {
-    if (state.koAltReading && item.koAlt) return item.koAlt;
-    return item.ko || item.en || item.jaKana || "";
-  }
-  return item.jaKana || item.en || "";
+  if (state.lang === "ko" && state.koAltReading && item.koAlt) return item.koAlt;
+  return langWordField(item, state.lang);
 }
 // What the *voice* should say (may differ from what's displayed). For Japanese a
 // word can carry an optional `jaSpeech` — usually the kanji — so the engine's
@@ -107,22 +123,257 @@ function speechText(item) {
   if (state.lang === "ja") return item.jaSpeech || item.jaKana || item.en || "";
   return wordText(item);
 }
-// The romanization line (under the word) for the current language.
+// The romanization line (under the word). Only the Japanese and Korean tracks
+// have a romanization; Latin-script languages (en, es, pt) show nothing here.
 function wordRomaji(item) {
   if (!item) return "";
   if (state.lang === "ko") {
     if (state.koAltReading && item.koAltRomaji) return item.koAltRomaji;
     return item.koRomaji || "";
   }
-  if (state.lang === "en") return "";
-  return item.jaRomaji || "";
+  if (state.lang === "ja") return item.jaRomaji || "";
+  return "";
 }
-// The secondary label beneath the word: romanization if toggled on, otherwise
-// the English gloss (except in English mode where the word is already English).
+// The secondary label beneath the word. If romaji is on, show the romanization;
+// otherwise show a gloss in the *app* language so the parent recognizes the word
+// (e.g. output "Gato" with "Cat" underneath). Hidden when the app language and
+// the output language are the same (the gloss would just repeat the word).
 function wordSubLabel(item) {
   if (!item) return "";
   if (state.romaji) return wordRomaji(item);
-  return state.lang === "en" ? "" : item.en || "";
+  if (state.uiLang === state.lang) return "";
+  return langWordField(item, state.uiLang);
+}
+
+// ---- Interface localization (app language) ---------------------------------
+// `state.uiLang` picks the language of the app's own chrome (buttons, menus,
+// feedback) — independent of `state.lang`, which is the language being *taught*.
+// So a Spanish speaker can set the app to Spanish and still teach English. Keys
+// missing for a language fall back to English; UI text with no key at all stays
+// as authored in index.html (used for long power-user help paragraphs).
+const UI_LANG_KEY = "kitai-ui-lang";
+const UI_LANGS = ["en", "es", "pt", "ja", "ko"];
+const UI_LANG_LABELS = {
+  en: "English", es: "Español", pt: "Português", ja: "日本語", ko: "한국어",
+};
+const I18N = {
+  en: {
+    ob_sub: "Pick a language to learn", ob_start: "Start playing →",
+    aria_lock: "Child lock", aria_home: "Go to home", aria_parent: "Parent settings",
+    home_title: "Choose a track",
+    track_vocab: "Vocabulary", track_vocab_sub: "Listen & match pictures",
+    track_hiragana: "Hiragana", track_katakana: "Katakana", track_kana_sub: "Sound & pick, complete",
+    track_kanji: "Kanji", track_kanji_sub: "Coming soon",
+    mode_tap: "Listen & Tap", mode_drag: "Drag to Complete", mode_find: "Find It 🔍",
+    mode_flash: "Flash Cards 🎴", mode_memory: "Memory 🧠",
+    mode_kana_tap: "Sound & Pick", mode_alphabet: "Alphabet", mode_quiz: "Quiz",
+    flash_finish: "Finish ✓", flash_live_default: "Tap the right picture",
+    find_count_q: "How many pictures?", quiz_prompt: "Pick the picture for this sound",
+    fb_great: "Great!", fb_try_again: "Try again!", fb_see_again: "We'll see it again!",
+    fb_no_words: "No words here yet. Add or restore some in Parent Settings.",
+    mem_look_listen: "Look and listen…", mem_where: "Where was it? Tap the card!",
+    mem_remembered: "You remembered! 🎉", mem_was_here: "It was here! We'll see it again.",
+    mem_watch: "Watch closely!",
+    done_all: "All done!", done_nice: "Nice work!",
+    stat_correct: "correct", stat_first: "first try", stat_cleared: "cleared", stat_time: "time",
+    weak_title: "Words to practice", play_again: "🎴 Play again", home_btn: "🏠 Home",
+    lock_hold: "Hold to unlock", install_btn: "Install",
+    settings_title: "Parent Settings",
+    tab_words: "📚 Words", tab_language: "🌐 Language", tab_game: "🎮 Game", tab_account: "☁️ Account",
+    done: "Done", label_category: "Category:",
+    app_language: "App language:", app_language_hint: "Changes the buttons and menus throughout the app.",
+    output_language: "Words / voice language:",
+    label_voice: "Voice:", voice_test: "🔊 Test voice", voice_refresh: "↻ Refresh voices",
+    ko_alt: "Korean: use a boy's words for siblings (형 / 누나 instead of 오빠 / 언니)",
+    romaji_toggle: "Show romaji / romanization (off by default)",
+    online_voice: "Prefer online voice (needs internet; use if device voice won't play)",
+    label_online_key: "Online voice key:",
+    label_choices: "Choices:", vibrate_toggle: "Vibrate on wrong (if supported)",
+    sound_toggle: "Enable sounds (chime/buzz)", label_theme: "Theme:",
+    childlock_header: "Child Lock",
+    library_header: "Shared Library", label_library_id: "Library ID:", label_pin: "PIN (4 digits):",
+    library_save: "Save & Switch", library_reset: "Reset to Device",
+  },
+  es: {
+    ob_sub: "Elige un idioma para aprender", ob_start: "¡A jugar! →",
+    aria_lock: "Bloqueo infantil", aria_home: "Ir al inicio", aria_parent: "Ajustes",
+    home_title: "Elige una pista",
+    track_vocab: "Vocabulario", track_vocab_sub: "Escucha y empareja imágenes",
+    track_hiragana: "Hiragana", track_katakana: "Katakana", track_kana_sub: "Escucha, elige y completa",
+    track_kanji: "Kanji", track_kanji_sub: "Muy pronto",
+    mode_tap: "Escucha y Toca", mode_drag: "Arrastra y Completa", mode_find: "Encuéntralo 🔍",
+    mode_flash: "Tarjetas 🎴", mode_memory: "Memoria 🧠",
+    mode_kana_tap: "Sonido y Elige", mode_alphabet: "Alfabeto", mode_quiz: "Prueba",
+    flash_finish: "Terminar ✓", flash_live_default: "Toca la imagen correcta",
+    find_count_q: "¿Cuántas imágenes?", quiz_prompt: "Elige la imagen de este sonido",
+    fb_great: "¡Muy bien!", fb_try_again: "¡Inténtalo otra vez!", fb_see_again: "¡La veremos de nuevo!",
+    fb_no_words: "Aún no hay palabras aquí. Agrégalas o restáuralas en Ajustes.",
+    mem_look_listen: "Mira y escucha…", mem_where: "¿Dónde estaba? ¡Toca la tarjeta!",
+    mem_remembered: "¡Lo recordaste! 🎉", mem_was_here: "¡Estaba aquí! La veremos de nuevo.",
+    mem_watch: "¡Fíjate bien!",
+    done_all: "¡Terminado!", done_nice: "¡Buen trabajo!",
+    stat_correct: "correctas", stat_first: "al primer intento", stat_cleared: "completadas", stat_time: "tiempo",
+    weak_title: "Palabras para practicar", play_again: "🎴 Jugar otra vez", home_btn: "🏠 Inicio",
+    lock_hold: "Mantén para desbloquear", install_btn: "Instalar",
+    settings_title: "Ajustes para padres",
+    tab_words: "📚 Palabras", tab_language: "🌐 Idioma", tab_game: "🎮 Juego", tab_account: "☁️ Cuenta",
+    done: "Listo", label_category: "Categoría:",
+    app_language: "Idioma de la app:", app_language_hint: "Cambia los botones y menús de toda la app.",
+    output_language: "Idioma de palabras / voz:",
+    label_voice: "Voz:", voice_test: "🔊 Probar voz", voice_refresh: "↻ Actualizar voces",
+    ko_alt: "Coreano: usar las palabras de un niño para hermanos (형 / 누나 en vez de 오빠 / 언니)",
+    romaji_toggle: "Mostrar romaji / romanización (desactivado por defecto)",
+    online_voice: "Preferir voz en línea (necesita internet; úsala si la voz del dispositivo no suena)",
+    label_online_key: "Clave de voz en línea:",
+    label_choices: "Opciones:", vibrate_toggle: "Vibrar al fallar (si es compatible)",
+    sound_toggle: "Activar sonidos (campana/zumbido)", label_theme: "Tema:",
+    childlock_header: "Bloqueo infantil",
+    library_header: "Biblioteca compartida", label_library_id: "ID de biblioteca:", label_pin: "PIN (4 dígitos):",
+    library_save: "Guardar y cambiar", library_reset: "Volver al dispositivo",
+  },
+  pt: {
+    ob_sub: "Escolha um idioma para aprender", ob_start: "Vamos jogar! →",
+    aria_lock: "Bloqueio infantil", aria_home: "Ir para o início", aria_parent: "Configurações",
+    home_title: "Escolha uma trilha",
+    track_vocab: "Vocabulário", track_vocab_sub: "Ouça e combine as imagens",
+    track_hiragana: "Hiragana", track_katakana: "Katakana", track_kana_sub: "Ouça, escolha e complete",
+    track_kanji: "Kanji", track_kanji_sub: "Em breve",
+    mode_tap: "Ouça e Toque", mode_drag: "Arraste e Complete", mode_find: "Encontre 🔍",
+    mode_flash: "Cartões 🎴", mode_memory: "Memória 🧠",
+    mode_kana_tap: "Som e Escolha", mode_alphabet: "Alfabeto", mode_quiz: "Quiz",
+    flash_finish: "Terminar ✓", flash_live_default: "Toque na imagem certa",
+    find_count_q: "Quantas imagens?", quiz_prompt: "Escolha a imagem deste som",
+    fb_great: "Muito bem!", fb_try_again: "Tente de novo!", fb_see_again: "Vamos ver de novo!",
+    fb_no_words: "Ainda não há palavras aqui. Adicione ou restaure nas Configurações.",
+    mem_look_listen: "Olhe e ouça…", mem_where: "Onde estava? Toque no cartão!",
+    mem_remembered: "Você lembrou! 🎉", mem_was_here: "Estava aqui! Vamos ver de novo.",
+    mem_watch: "Preste atenção!",
+    done_all: "Tudo pronto!", done_nice: "Bom trabalho!",
+    stat_correct: "corretas", stat_first: "de primeira", stat_cleared: "concluídas", stat_time: "tempo",
+    weak_title: "Palavras para praticar", play_again: "🎴 Jogar de novo", home_btn: "🏠 Início",
+    lock_hold: "Segure para desbloquear", install_btn: "Instalar",
+    settings_title: "Configurações dos pais",
+    tab_words: "📚 Palavras", tab_language: "🌐 Idioma", tab_game: "🎮 Jogo", tab_account: "☁️ Conta",
+    done: "Pronto", label_category: "Categoria:",
+    app_language: "Idioma do app:", app_language_hint: "Muda os botões e menus em todo o app.",
+    output_language: "Idioma das palavras / voz:",
+    label_voice: "Voz:", voice_test: "🔊 Testar voz", voice_refresh: "↻ Atualizar vozes",
+    ko_alt: "Coreano: usar as palavras de um menino para irmãos (형 / 누나 em vez de 오빠 / 언니)",
+    romaji_toggle: "Mostrar romaji / romanização (desativado por padrão)",
+    online_voice: "Preferir voz online (precisa de internet; use se a voz do aparelho não funcionar)",
+    label_online_key: "Chave de voz online:",
+    label_choices: "Opções:", vibrate_toggle: "Vibrar ao errar (se suportado)",
+    sound_toggle: "Ativar sons (sino/erro)", label_theme: "Tema:",
+    childlock_header: "Bloqueio infantil",
+    library_header: "Biblioteca compartilhada", label_library_id: "ID da biblioteca:", label_pin: "PIN (4 dígitos):",
+    library_save: "Salvar e trocar", library_reset: "Voltar ao aparelho",
+  },
+  ja: {
+    ob_sub: "まなぶ ことばを えらんでね", ob_start: "はじめる →",
+    aria_lock: "チャイルドロック", aria_home: "ホームへ", aria_parent: "ほごしゃせってい",
+    home_title: "コースを えらぼう",
+    track_vocab: "たんご", track_vocab_sub: "きいて えを えらぼう",
+    track_hiragana: "ひらがな", track_katakana: "カタカナ", track_kana_sub: "きいて えらぶ・かんせい",
+    track_kanji: "かんじ", track_kanji_sub: "ちか日 こうかい",
+    mode_tap: "きいて タッチ", mode_drag: "ドラッグで かんせい", mode_find: "さがそう 🔍",
+    mode_flash: "フラッシュカード 🎴", mode_memory: "きおくゲーム 🧠",
+    mode_kana_tap: "おと で えらぶ", mode_alphabet: "あいうえお", mode_quiz: "クイズ",
+    flash_finish: "おわり ✓", flash_live_default: "ただしい えを タッチ",
+    find_count_q: "えは いくつ？", quiz_prompt: "この おとの えを えらんで",
+    fb_great: "せいかい！", fb_try_again: "もう いちど！", fb_see_again: "また でてくるよ！",
+    fb_no_words: "ここには まだ ことばが ありません。せっていで ついか してね。",
+    mem_look_listen: "みて きいてね…", mem_where: "どこ だった？ カードを タッチ！",
+    mem_remembered: "おぼえてたね！ 🎉", mem_was_here: "ここ だったよ！また でてくるよ。",
+    mem_watch: "よく みてね！",
+    done_all: "ぜんぶ できた！", done_nice: "よく できました！",
+    stat_correct: "せいかい", stat_first: "いっぱつ", stat_cleared: "クリア", stat_time: "じかん",
+    weak_title: "れんしゅう する ことば", play_again: "🎴 もう いっかい", home_btn: "🏠 ホーム",
+    lock_hold: "ながおしで かいじょ", install_btn: "インストール",
+    settings_title: "ほごしゃ せってい",
+    tab_words: "📚 ことば", tab_language: "🌐 げんご", tab_game: "🎮 ゲーム", tab_account: "☁️ アカウント",
+    done: "かんりょう", label_category: "カテゴリ:",
+    app_language: "アプリの げんご:", app_language_hint: "アプリぜんたいの ボタンや メニューを かえます。",
+    output_language: "ことば・こえの げんご:",
+    label_voice: "こえ:", voice_test: "🔊 こえを ためす", voice_refresh: "↻ こえを こうしん",
+    ko_alt: "かんこくご: きょうだいの よびかたを だんせいよう にする（오빠 / 언니 の かわりに 형 / 누나）",
+    romaji_toggle: "ローマじを ひょうじ（きほんは オフ）",
+    online_voice: "オンラインの こえを ゆうせん（ネットが ひつよう）",
+    label_online_key: "オンラインこえ キー:",
+    label_choices: "せんたくし:", vibrate_toggle: "まちがえたら しんどう（たいおうき のみ）",
+    sound_toggle: "おとを ゆうこう（チャイム／ブザー）", label_theme: "テーマ:",
+    childlock_header: "チャイルドロック",
+    library_header: "きょうゆう ライブラリ", label_library_id: "ライブラリID:", label_pin: "PIN（4けた）:",
+    library_save: "ほぞんして きりかえ", library_reset: "たんまつに もどす",
+  },
+  ko: {
+    ob_sub: "배울 언어를 골라요", ob_start: "시작하기 →",
+    aria_lock: "어린이 잠금", aria_home: "홈으로", aria_parent: "부모 설정",
+    home_title: "코스를 골라요",
+    track_vocab: "낱말", track_vocab_sub: "듣고 그림 맞추기",
+    track_hiragana: "히라가나", track_katakana: "가타카나", track_kana_sub: "듣고 고르기·완성",
+    track_kanji: "한자", track_kanji_sub: "곧 나와요",
+    mode_tap: "듣고 터치", mode_drag: "끌어서 완성", mode_find: "찾아봐 🔍",
+    mode_flash: "플래시 카드 🎴", mode_memory: "기억 게임 🧠",
+    mode_kana_tap: "소리로 고르기", mode_alphabet: "글자", mode_quiz: "퀴즈",
+    flash_finish: "끝내기 ✓", flash_live_default: "맞는 그림을 터치",
+    find_count_q: "그림은 몇 개?", quiz_prompt: "이 소리의 그림을 골라요",
+    fb_great: "잘했어요!", fb_try_again: "다시 해봐요!", fb_see_again: "또 나올 거예요!",
+    fb_no_words: "아직 낱말이 없어요. 부모 설정에서 추가하세요.",
+    mem_look_listen: "보고 들어요…", mem_where: "어디였을까? 카드를 터치!",
+    mem_remembered: "기억했어요! 🎉", mem_was_here: "여기였어요! 또 나올 거예요.",
+    mem_watch: "잘 보세요!",
+    done_all: "다 했어요!", done_nice: "잘했어요!",
+    stat_correct: "정답", stat_first: "한 번에", stat_cleared: "완료", stat_time: "시간",
+    weak_title: "연습할 낱말", play_again: "🎴 다시 하기", home_btn: "🏠 홈",
+    lock_hold: "길게 눌러 잠금 해제", install_btn: "설치",
+    settings_title: "부모 설정",
+    tab_words: "📚 낱말", tab_language: "🌐 언어", tab_game: "🎮 게임", tab_account: "☁️ 계정",
+    done: "완료", label_category: "분류:",
+    app_language: "앱 언어:", app_language_hint: "앱 전체의 버튼과 메뉴를 바꿔요.",
+    output_language: "낱말 / 음성 언어:",
+    label_voice: "음성:", voice_test: "🔊 음성 테스트", voice_refresh: "↻ 음성 새로고침",
+    ko_alt: "한국어: 남자아이 기준 호칭 사용 (오빠 / 언니 대신 형 / 누나)",
+    romaji_toggle: "로마자 표기 보이기 (기본은 꺼짐)",
+    online_voice: "온라인 음성 우선 (인터넷 필요; 기기 음성이 안 되면 사용)",
+    label_online_key: "온라인 음성 키:",
+    label_choices: "선택지:", vibrate_toggle: "틀리면 진동 (지원 시)",
+    sound_toggle: "소리 켜기 (차임/버저)", label_theme: "테마:",
+    childlock_header: "어린이 잠금",
+    library_header: "공유 라이브러리", label_library_id: "라이브러리 ID:", label_pin: "PIN (4자리):",
+    library_save: "저장 후 전환", library_reset: "기기로 되돌리기",
+  },
+};
+
+// Look up a UI string in the current app language, falling back to English.
+// Returns null when no key exists anywhere, so applyI18n can leave the original
+// (English) DOM text untouched for strings that were never translated.
+function t(key, vars) {
+  const table = I18N[state.uiLang] || I18N.en;
+  let s = table[key] != null ? table[key] : I18N.en[key];
+  if (s == null) return null;
+  if (vars) Object.keys(vars).forEach((k) => { s = s.split("{" + k + "}").join(vars[k]); });
+  return s;
+}
+
+// Push the current app language into the DOM. data-i18n sets textContent,
+// data-i18n-ph sets the placeholder, data-i18n-aria sets aria-label. Elements
+// wrap translatable label text in their own <span data-i18n> so nested <select>
+// / <input> controls are never clobbered.
+function applyI18n(root) {
+  root = root || document;
+  root.querySelectorAll("[data-i18n]").forEach((el) => {
+    const s = t(el.getAttribute("data-i18n"));
+    if (s != null) el.textContent = s;
+  });
+  root.querySelectorAll("[data-i18n-ph]").forEach((el) => {
+    const s = t(el.getAttribute("data-i18n-ph"));
+    if (s != null) el.setAttribute("placeholder", s);
+  });
+  root.querySelectorAll("[data-i18n-aria]").forEach((el) => {
+    const s = t(el.getAttribute("data-i18n-aria"));
+    if (s != null) el.setAttribute("aria-label", s);
+  });
+  document.documentElement.lang = state.uiLang;
 }
 
 const els = {
@@ -147,6 +398,7 @@ const els = {
   soundToggle: document.getElementById("sound-toggle"),
   themeSelect: document.getElementById("theme-select"),
   langSelect: document.getElementById("lang-select"),
+  uiLangSelect: document.getElementById("ui-lang-select"),
   koAltToggle: document.getElementById("ko-alt-toggle"),
   appLogo: document.getElementById("app-logo"),
   appLogoText: document.getElementById("app-logo-text"),
@@ -298,6 +550,7 @@ async function init() {
   buildImageManager();
   await setupVoices();
   applyTheme();
+  applyI18n();
   applyLangToUI();
   bindUI();
   registerServiceWorker();
@@ -407,6 +660,8 @@ function loadLangPref() {
   try {
     const saved = localStorage.getItem(LANG_KEY);
     if (saved && LANGS[saved]) state.lang = saved;
+    const savedUi = localStorage.getItem(UI_LANG_KEY);
+    if (savedUi && I18N[savedUi]) state.uiLang = savedUi;
     state.koAltReading = localStorage.getItem("kitai-ko-alt") === "1";
   } catch (_) {}
 }
@@ -415,11 +670,28 @@ function loadLangPref() {
 // Japanese-only script tracks (Hiragana/Katakana/Kanji) when not in Japanese.
 function applyLangToUI() {
   if (els.langSelect) els.langSelect.value = state.lang;
+  if (els.uiLangSelect) els.uiLangSelect.value = state.uiLang;
   if (els.koAltToggle) els.koAltToggle.checked = state.koAltReading;
   const kana = langCfg().kana;
-  document.querySelectorAll('.tile[data-track="hiragana"], .tile[data-track="katakana"], .tile[data-track="kanji"]').forEach((t) => {
-    t.classList.toggle("hidden", !kana);
+  document.querySelectorAll('.tile[data-track="hiragana"], .tile[data-track="katakana"], .tile[data-track="kanji"]').forEach((tile) => {
+    tile.classList.toggle("hidden", !kana);
   });
+}
+
+// Switch the app's own interface language and re-render all the chrome. Doesn't
+// touch the language being taught (state.lang) — the two are independent.
+function setUiLanguage(uiLang) {
+  if (!I18N[uiLang]) return;
+  state.uiLang = uiLang;
+  try { localStorage.setItem(UI_LANG_KEY, uiLang); } catch (_) {}
+  applyI18n();
+  // Relabel the mode buttons in the new language without dropping the player's
+  // current mode (updateModeButtonsForTrack resets it, so save + restore).
+  const savedType = state.currentGameType;
+  updateModeButtonsForTrack(state.currentTrack);
+  state.currentGameType = savedType;
+  setActiveModeButton(savedType);
+  if (state.currentSection === "game") startRound();
 }
 
 // Apply a language without navigating (used by onboarding + the settings picker).
@@ -1886,6 +2158,7 @@ function setupVoiceOptions() {
   state.voices = voices;
 
   if (!voices.length) {
+    els.voiceWarning.textContent = `No ${langCfg().label} voice found. Playing without speech.`;
     els.voiceWarning.classList.remove("hidden");
     const opt = document.createElement("option");
     opt.value = "";
@@ -2043,6 +2316,7 @@ function bindUI() {
       els.categoryQuick.value = e.target.value;
     }
     if (state.currentGameType === "flash") startFlashSession();
+    else if (state.currentGameType === "memory") startMemorySession();
     else startRound();
   });
 
@@ -2057,6 +2331,7 @@ function bindUI() {
         els.categorySelect.value = e.target.value;
       }
       if (state.currentGameType === "flash") startFlashSession();
+      else if (state.currentGameType === "memory") startMemorySession();
       else startRound();
     });
   }
@@ -2090,6 +2365,10 @@ function bindUI() {
 
   if (els.langSelect) {
     els.langSelect.addEventListener("change", (e) => setLanguage(e.target.value));
+  }
+
+  if (els.uiLangSelect) {
+    els.uiLangSelect.addEventListener("change", (e) => setUiLanguage(e.target.value));
   }
 
   if (els.koAltToggle) {
@@ -2217,6 +2496,7 @@ function bindUI() {
         state.currentGameType = btn.dataset.gametype;
         if (state.currentGameType === "find") resetFindSession();
         if (state.currentGameType === "flash") { startFlashSession(); return; }
+        if (state.currentGameType === "memory") { startMemorySession(); return; }
         startRound();
       }
     });
@@ -2287,7 +2567,10 @@ function bindUI() {
     });
   }
 
-  if (els.flashAgain) onTap(els.flashAgain, () => startFlashSession());
+  if (els.flashAgain) onTap(els.flashAgain, () => {
+    if (state.currentGameType === "memory") startMemorySession();
+    else startFlashSession();
+  });
   if (els.flashHome) onTap(els.flashHome, () => { hideFlashComplete(); goHome(); });
   if (els.flashFinish) onTap(els.flashFinish, () => endFlashSession());
 
@@ -3015,53 +3298,60 @@ function setActiveModeButton(type) {
 }
 
 function updateModeButtonsForTrack(track) {
-  const [btn1, btn2, btn3, btn4] = els.modeButtons;
+  const [btn1, btn2, btn3, btn4, btn5] = els.modeButtons;
   if (track === "vocab") {
     if (els.categoryQuick) els.categoryQuick.parentElement.classList.remove("hidden");
     btn1.dataset.gametype = "tap";
-    btn1.textContent = "Listen & Tap";
+    btn1.textContent = t("mode_tap");
     btn1.classList.remove("hidden");
     btn1.disabled = false;
     btn2.dataset.gametype = "drag-complete";
-    btn2.textContent = "Drag to Complete";
+    btn2.textContent = t("mode_drag");
     btn2.classList.remove("hidden");
     btn2.disabled = false;
     if (btn3) {
       btn3.dataset.gametype = "find";
-      btn3.textContent = "Find It 🔍";
+      btn3.textContent = t("mode_find");
       btn3.classList.remove("hidden");
       btn3.disabled = false;
     }
     if (btn4) {
       btn4.dataset.gametype = "flash";
-      btn4.textContent = "Flash Cards 🎴";
+      btn4.textContent = t("mode_flash");
       btn4.classList.remove("hidden");
       btn4.disabled = false;
+    }
+    if (btn5) {
+      btn5.dataset.gametype = "memory";
+      btn5.textContent = t("mode_memory");
+      btn5.classList.remove("hidden");
+      btn5.disabled = false;
     }
     state.currentGameType = "tap";
     setActiveModeButton("tap");
   } else if (track === "hiragana" || track === "katakana") {
     if (els.categoryQuick) els.categoryQuick.parentElement.classList.add("hidden");
     btn1.dataset.gametype = "kana-tap";
-    btn1.textContent = "Sound & Pick";
+    btn1.textContent = t("mode_kana_tap");
     btn1.classList.remove("hidden");
     btn1.disabled = false;
     btn2.dataset.gametype = "kana-complete";
-    btn2.textContent = "Drag to Complete";
+    btn2.textContent = t("mode_drag");
     btn2.classList.remove("hidden");
     btn2.disabled = false;
     if (btn3) {
       btn3.dataset.gametype = "kana-alphabet";
-      btn3.textContent = "Alphabet";
+      btn3.textContent = t("mode_alphabet");
       btn3.classList.remove("hidden");
       btn3.disabled = false;
     }
     if (btn4) {
       btn4.dataset.gametype = "kana-alphabet-quiz";
-      btn4.textContent = "Quiz";
+      btn4.textContent = t("mode_quiz");
       btn4.classList.remove("hidden");
       btn4.disabled = false;
     }
+    if (btn5) btn5.classList.add("hidden");
     state.currentGameType = "kana-tap";
     setActiveModeButton("kana-tap");
   } else {
@@ -3093,6 +3383,8 @@ function hideSettings() {
 
 function goHome() {
   if (state.locked) return;
+  clearTimeout(state.memoryFlipTimer);
+  state.memoryArmed = false;
   hideFlashComplete();
   state.currentSection = "home";
   els.homeScreen.classList.remove("hidden");
@@ -3281,22 +3573,36 @@ function resetFindSession() {
   state.findRepsDone = 0;
 }
 
-// ---- Flash Cards -----------------------------------------------------------
+// ---- Flash Cards & Memory --------------------------------------------------
 // A "clear the deck" session over the current category. Each word starts in the
 // deck once; a correct tap removes it, a miss marks it weak and reshuffles it
-// deeper so it comes back around. Cleared deck → celebration + stats.
+// deeper so it comes back around. Cleared deck → celebration + stats. Memory
+// mode shares this whole session; it differs only in how a round is presented
+// (peek, then flip the cards face-down before the child guesses the spot).
 
 function startFlashSession() {
   state.currentGameType = "flash";
   setActiveModeButton("flash");
+  runDeckSession(t("mode_flash"));
+}
+
+function startMemorySession() {
+  state.currentGameType = "memory";
+  setActiveModeButton("memory");
+  runDeckSession(t("mode_memory"));
+}
+
+function runDeckSession(emptyLabel) {
+  clearTimeout(state.memoryFlipTimer);
+  state.memoryArmed = false;
   showGame();
   const pool = pickPool();
   if (!pool.length) {
     hideFlashComplete();
     hideAllGameViews();
     showPromptArea(true);
-    els.modeLabel.textContent = "Flash Cards";
-    els.feedback.textContent = "No words here yet. Add or restore some in Parent Settings.";
+    els.modeLabel.textContent = emptyLabel;
+    els.feedback.textContent = t("fb_no_words");
     if (els.cards) els.cards.innerHTML = "";
     if (els.promptWord) els.promptWord.textContent = "—";
     return;
@@ -3336,14 +3642,81 @@ function renderFlashView() {
   renderCards(state.currentChoices);
   els.promptWord.textContent = wordText(state.currentTarget);
   const cleared = state.flash.total - state.flash.deck.length;
-  els.modeLabel.textContent = `Flash Cards · ${cleared}/${state.flash.total} cleared`;
+  els.modeLabel.textContent = `${t("mode_flash")} · ${cleared}/${state.flash.total}`;
   updateFlashLiveScore();
 }
 
 function updateFlashLiveScore() {
   if (!els.flashLiveScore) return;
   const a = state.flash.answered;
-  els.flashLiveScore.textContent = a ? `${state.flash.correct}/${a} correct` : "Tap the right picture";
+  const emptyMsg = state.currentGameType === "memory" ? t("mem_watch") : t("flash_live_default");
+  els.flashLiveScore.textContent = a ? `${state.flash.correct}/${a} correct` : emptyMsg;
+}
+
+// ---- Memory mode -----------------------------------------------------------
+// How long the pictures stay face-up (child sees them + hears the word) before
+// the cards flip face-down and they have to remember where the right one was.
+const MEMORY_PEEK_MS = 1700;
+
+function renderMemoryView() {
+  hideFlashComplete();
+  hideAllGameViews();
+  showPromptArea(true);
+  els.cards.classList.remove("hidden");
+  if (els.flashBar) els.flashBar.classList.remove("hidden");
+  renderCards(state.currentChoices); // renders face-up, each card with a .card-back overlay
+  els.promptWord.textContent = wordText(state.currentTarget);
+  const cleared = state.flash.total - state.flash.deck.length;
+  els.modeLabel.textContent = `${t("mode_memory")} · ${cleared}/${state.flash.total}`;
+  updateFlashLiveScore();
+  els.feedback.textContent = t("mem_look_listen");
+}
+
+// Schedule the face-down flip after the peek window. Taps are ignored until the
+// cards are actually down (memoryArmed), so an eager tap during the peek can't
+// count as a guess.
+function startMemoryPeek() {
+  clearTimeout(state.memoryFlipTimer);
+  state.memoryArmed = false;
+  state.memoryFlipTimer = setTimeout(memoryFlipDown, MEMORY_PEEK_MS);
+}
+
+function memoryFlipDown() {
+  if (state.currentGameType !== "memory" || !state.flash.active) return;
+  if (!els.cards) return;
+  els.cards.querySelectorAll(".card").forEach((c) => c.classList.add("face-down"));
+  state.memoryArmed = true;
+  els.feedback.textContent = t("mem_where");
+}
+
+function handleMemoryTap(item, cardEl) {
+  if (!state.memoryArmed) return; // still peeking or mid-flip — ignore stray taps
+  state.memoryArmed = false;      // one guess per round
+  lockForCorrectAdvance();
+  cardEl.classList.remove("face-down"); // reveal what they picked
+  if (item.id === state.currentTarget.id) {
+    cardEl.classList.add("correct");
+    els.feedback.textContent = t("mem_remembered");
+    flashOnCorrect();
+    playCorrect();
+    showCorrectOverlay();
+    setTimeout(() => startRound(), CORRECT_ADVANCE_MS + 200);
+  } else {
+    cardEl.classList.add("wrong");
+    flashOnWrong();
+    revealCorrectMemoryCard(); // flip the right one up so they learn where it was
+    els.feedback.textContent = t("mem_was_here");
+    buzz();
+    showWrongOverlay();
+    setTimeout(() => startRound(), CORRECT_ADVANCE_MS + 500);
+  }
+}
+
+function revealCorrectMemoryCard() {
+  if (!els.cards || !state.currentTarget) return;
+  const sel = `.card[data-id="${CSS.escape(state.currentTarget.id)}"]`;
+  const el = els.cards.querySelector(sel);
+  if (el) { el.classList.remove("face-down"); el.classList.add("correct"); }
 }
 
 function flashOnCorrect() {
@@ -3393,12 +3766,14 @@ function formatFlashTime(sec) {
 
 function showFlashComplete(partial) {
   state.flash.active = false;
+  clearTimeout(state.memoryFlipTimer);
+  state.memoryArmed = false;
   if (els.flashBar) els.flashBar.classList.add("hidden");
   const elapsed = Math.max(0, Math.round((Date.now() - state.flash.startTime) / 1000));
   const cleared = state.flash.total - state.flash.deck.length;
   const answered = state.flash.answered;
   if (els.flashCompleteTitle) {
-    els.flashCompleteTitle.textContent = partial && state.flash.deck.length > 0 ? "Nice work!" : "All done!";
+    els.flashCompleteTitle.textContent = partial && state.flash.deck.length > 0 ? t("done_nice") : t("done_all");
   }
   if (els.flashCompleteEmoji) {
     els.flashCompleteEmoji.textContent = partial && state.flash.deck.length > 0 ? "👏" : "🎉";
@@ -3509,7 +3884,7 @@ function startRound() {
   if (state.currentTrack === "vocab") {
     if (!pickPool().length) {
       // Parent removed every word in this category — don't crash, just guide.
-      els.feedback.textContent = "No words here yet. Add or restore some in Parent Settings.";
+      els.feedback.textContent = t("fb_no_words");
       if (els.cards) els.cards.innerHTML = "";
       if (els.promptWord) els.promptWord.textContent = "—";
       return;
@@ -3520,6 +3895,15 @@ function startRound() {
       chooseFlashItems();
       renderCurrentView();
       speakCurrent();
+      return;
+    }
+    if (state.currentGameType === "memory") {
+      if (!state.flash.active) { startMemorySession(); return; }
+      if (!state.flash.deck.length) { showFlashComplete(); return; }
+      chooseFlashItems();
+      renderCurrentView();       // cards render face-up
+      speakCurrent();            // read the word…
+      startMemoryPeek();         // …then, after a beat, flip them face-down
       return;
     }
     chooseRoundItems();
@@ -3539,6 +3923,8 @@ function renderCurrentView() {
       renderFindView();
     } else if (state.currentGameType === "flash") {
       renderFlashView();
+    } else if (state.currentGameType === "memory") {
+      renderMemoryView();
     } else {
       renderDragCompleteView();
     }
@@ -3571,7 +3957,7 @@ function hideAllGameViews() {
 }
 
 function renderTapView() {
-  els.modeLabel.textContent = "Listen & Tap";
+  els.modeLabel.textContent = t("mode_tap");
   hideAllGameViews();
   showPromptArea(true);
   els.cards.classList.remove("hidden");
@@ -3580,7 +3966,7 @@ function renderTapView() {
 }
 
 function renderFindView() {
-  els.modeLabel.textContent = "Find It";
+  els.modeLabel.textContent = t("mode_find");
   hideAllGameViews();
   showPromptArea(true);
   if (els.findCountBar) els.findCountBar.classList.remove("hidden");
@@ -3591,7 +3977,7 @@ function renderFindView() {
 }
 
 function renderDragCompleteView() {
-  els.modeLabel.textContent = "Drag to Complete";
+  els.modeLabel.textContent = t("mode_drag");
   hideAllGameViews();
   showPromptArea(true);
   els.completeWordSection.classList.remove("hidden");
@@ -3599,7 +3985,7 @@ function renderDragCompleteView() {
 }
 
 function renderKanaTapView() {
-  els.modeLabel.textContent = "Sound & Pick";
+  els.modeLabel.textContent = t("mode_kana_tap");
   hideAllGameViews();
   showPromptArea(true);
   els.cards.classList.remove("hidden");
@@ -3608,7 +3994,7 @@ function renderKanaTapView() {
 }
 
 function renderKanaCompleteView() {
-  els.modeLabel.textContent = "Drag to Complete";
+  els.modeLabel.textContent = t("mode_drag");
   hideAllGameViews();
   showPromptArea(true);
   els.completeWordSection.classList.remove("hidden");
@@ -3620,7 +4006,7 @@ function getAlphabetSet() {
 }
 
 function renderAlphabetView() {
-  els.modeLabel.textContent = "Alphabet";
+  els.modeLabel.textContent = t("mode_alphabet");
   hideAllGameViews();
   showPromptArea(false);
   if (!els.alphabetSection) return;
@@ -3873,7 +4259,7 @@ function advanceAlphabet(delta) {
 }
 
 function renderAlphabetQuizView() {
-  els.modeLabel.textContent = "Quiz";
+  els.modeLabel.textContent = t("mode_quiz");
   hideAllGameViews();
   showPromptArea(false);
   if (!els.alphabetQuizSection) return;
@@ -3965,6 +4351,15 @@ function renderCards(items) {
     label.textContent = wordSubLabel(item);
     card.appendChild(label);
 
+    // Memory mode: a flip-over back that hides the picture once the cards turn.
+    if (state.currentGameType === "memory") {
+      const back = document.createElement("div");
+      back.className = "card-back";
+      back.textContent = "?";
+      back.setAttribute("aria-hidden", "true");
+      card.appendChild(back);
+    }
+
     onTap(card, () => handleTap(item, card));
     els.cards.appendChild(card);
   });
@@ -4014,10 +4409,11 @@ function lockForCorrectAdvance() {
 
 function handleTap(item, cardEl) {
   if (tapsLocked()) return;
+  if (state.currentGameType === "memory") { handleMemoryTap(item, cardEl); return; }
   if (item.id === state.currentTarget.id) {
     lockForCorrectAdvance();
     cardEl.classList.add("correct");
-    els.feedback.textContent = "Great!";
+    els.feedback.textContent = t("fb_great");
     if (state.currentGameType === "find") state.findRepsDone++;
     if (state.currentGameType === "flash") flashOnCorrect();
     playCorrect();
@@ -4030,14 +4426,14 @@ function handleTap(item, cardEl) {
     flashOnWrong();
     cardEl.classList.add("wrong");
     highlightCorrectFlashCard();
-    els.feedback.textContent = "We'll see it again!";
+    els.feedback.textContent = t("fb_see_again");
     buzz();
     showWrongOverlay();
     setTimeout(() => startRound(), CORRECT_ADVANCE_MS);
   } else {
     state.lockUntil = Date.now() + WRONG_DEAD_MS;
     cardEl.classList.add("wrong");
-    els.feedback.textContent = "Try again!";
+    els.feedback.textContent = t("fb_try_again");
     buzz();
     showWrongOverlay();
     setTimeout(() => cardEl.classList.remove("wrong"), 400);
@@ -4139,12 +4535,12 @@ function handleCompleteChoice(opt, missingChar, target) {
   if (opt === missingChar) {
     const slot = els.completeWordDisplay.querySelector(".blank-slot");
     if (slot) slot.textContent = missingChar;
-    els.feedback.textContent = "Great!";
+    els.feedback.textContent = t("fb_great");
     playCorrect();
     showCorrectOverlay();
     setTimeout(() => startRound(), 900);
   } else {
-    els.feedback.textContent = "Try again!";
+    els.feedback.textContent = t("fb_try_again");
     buzz();
     showWrongOverlay();
     setTimeout(() => speakCurrent(), REPEAT_MS); // hear the word again after the buzzer
@@ -4156,14 +4552,14 @@ function handleKanaTap(item, cardEl) {
   if (item.id === state.currentTarget.id) {
     lockForCorrectAdvance();
     cardEl.classList.add("correct");
-    els.feedback.textContent = "Great!";
+    els.feedback.textContent = t("fb_great");
     playCorrect();
     showCorrectOverlay();
     setTimeout(() => startRound(), CORRECT_ADVANCE_MS);
   } else {
     state.lockUntil = Date.now() + WRONG_DEAD_MS;
     cardEl.classList.add("wrong");
-    els.feedback.textContent = "Try again!";
+    els.feedback.textContent = t("fb_try_again");
     buzz();
     showWrongOverlay();
     setTimeout(() => cardEl.classList.remove("wrong"), 400);
@@ -4175,12 +4571,12 @@ function handleKanaCompleteChoice(opt, missingChar) {
   if (opt === missingChar) {
     const slot = els.completeWordDisplay.querySelector(".blank-slot");
     if (slot) slot.textContent = missingChar;
-    els.feedback.textContent = "Great!";
+    els.feedback.textContent = t("fb_great");
     playCorrect();
     showCorrectOverlay();
     setTimeout(() => startRound(), 900);
   } else {
-    els.feedback.textContent = "Try again!";
+    els.feedback.textContent = t("fb_try_again");
     buzz();
     showWrongOverlay();
     setTimeout(() => speakCurrent(), REPEAT_MS); // hear the word again after the buzzer
@@ -4271,12 +4667,12 @@ function handleDropOnBlank(slotEl, missingChar, target, chosenOverride = null) {
   if (!chosen) return;
   if (chosen === missingChar) {
     slotEl.textContent = missingChar;
-    els.feedback.textContent = "Great!";
+    els.feedback.textContent = t("fb_great");
     playCorrect();
     showCorrectOverlay();
     setTimeout(() => startRound(), 900);
   } else {
-    els.feedback.textContent = "Try again!";
+    els.feedback.textContent = t("fb_try_again");
     buzz();
     showWrongOverlay();
     setTimeout(() => speakCurrent(), REPEAT_MS); // hear the word again after the buzzer
@@ -4294,7 +4690,7 @@ function onDropZonePointerUp() {
     setTimeout(() => startRound(), 800);
   } else {
     dragData.el.classList.add("wrong");
-    els.dropzone.textContent = "Try again!";
+    els.dropzone.textContent = t("fb_try_again");
     buzz();
     showWrongOverlay();
     setTimeout(() => speakCurrent(), REPEAT_MS); // hear the word again after the buzzer

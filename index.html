@@ -13,11 +13,13 @@
     <div class="onboarding-card">
       <img id="onboarding-logo" class="onboarding-logo-img hidden" alt="My First Words" />
       <div class="onboarding-logo" id="onboarding-logo-text">My First Words</div>
-      <p class="onboarding-sub">Pick a language to learn</p>
+      <p class="onboarding-sub" data-i18n="ob_sub">Pick a language to learn</p>
       <div id="onboarding-langs" class="onboarding-langs">
         <button class="onboarding-lang" data-lang="ja"><span class="ob-flag">🇯🇵</span><span class="ob-name">日本語<br>Japanese</span></button>
         <button class="onboarding-lang" data-lang="ko"><span class="ob-flag">🇰🇷</span><span class="ob-name">한국어<br>Korean</span></button>
         <button class="onboarding-lang" data-lang="en"><span class="ob-flag">🔤</span><span class="ob-name">English</span></button>
+        <button class="onboarding-lang" data-lang="es"><span class="ob-flag">🇪🇸</span><span class="ob-name">Español<br>Spanish</span></button>
+        <button class="onboarding-lang" data-lang="pt"><span class="ob-flag">🇧🇷</span><span class="ob-name">Português<br>Portuguese</span></button>
       </div>
       <details class="onboarding-account">
         <summary>Save &amp; sync across devices (optional)</summary>
@@ -29,7 +31,7 @@
           <input id="onboarding-pin" type="tel" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="1234" />
         </label>
       </details>
-      <button id="onboarding-start" class="onboarding-start">Start playing →</button>
+      <button id="onboarding-start" class="onboarding-start" data-i18n="ob_start">Start playing →</button>
       <div id="onboarding-status" class="onboarding-status" aria-live="polite"></div>
     </div>
   </div>
@@ -40,35 +42,35 @@
       <span id="app-logo-text">My First Words</span>
     </div>
     <div class="header-actions">
-      <button id="lock-button" aria-label="Child lock">🔓</button>
-      <button id="home-button" aria-label="Go to home">🏠</button>
-      <button id="parent-button" aria-label="Parent settings">⚙️</button>
+      <button id="lock-button" aria-label="Child lock" data-i18n-aria="aria_lock">🔓</button>
+      <button id="home-button" aria-label="Go to home" data-i18n-aria="aria_home">🏠</button>
+      <button id="parent-button" aria-label="Parent settings" data-i18n-aria="aria_parent">⚙️</button>
     </div>
   </header>
 
   <main>
     <section id="home-screen">
-      <h1>Choose a track</h1>
+      <h1 data-i18n="home_title">Choose a track</h1>
       <div class="tile-grid">
         <button class="tile" data-track="vocab">
           <div class="tile-emoji">🧸</div>
-          <div class="tile-title">Vocabulary</div>
-          <div class="tile-sub">Listen & match pictures</div>
+          <div class="tile-title" data-i18n="track_vocab">Vocabulary</div>
+          <div class="tile-sub" data-i18n="track_vocab_sub">Listen & match pictures</div>
         </button>
         <button class="tile" data-track="hiragana">
           <div class="tile-emoji">あ</div>
-          <div class="tile-title">Hiragana</div>
-          <div class="tile-sub">Sound & pick, complete</div>
+          <div class="tile-title" data-i18n="track_hiragana">Hiragana</div>
+          <div class="tile-sub" data-i18n="track_kana_sub">Sound & pick, complete</div>
         </button>
         <button class="tile" data-track="katakana">
           <div class="tile-emoji">カ</div>
-          <div class="tile-title">Katakana</div>
-          <div class="tile-sub">Sound & pick, complete</div>
+          <div class="tile-title" data-i18n="track_katakana">Katakana</div>
+          <div class="tile-sub" data-i18n="track_kana_sub">Sound & pick, complete</div>
         </button>
         <button class="tile disabled" data-track="kanji" aria-disabled="true">
           <div class="tile-emoji">漢</div>
-          <div class="tile-title">Kanji</div>
-          <div class="tile-sub">Coming soon</div>
+          <div class="tile-title" data-i18n="track_kanji">Kanji</div>
+          <div class="tile-sub" data-i18n="track_kanji_sub">Coming soon</div>
         </button>
       </div>
     </section>
@@ -79,7 +81,7 @@
         <span id="mode-label">Listen & Tap</span>
         <span id="category-label">Mixed</span>
         <span id="voice-warning" class="hidden">No Japanese voice found. Playing without speech.</span>
-        <label id="category-quick-wrapper" class="hidden">Category:
+        <label id="category-quick-wrapper" class="hidden"><span data-i18n="label_category">Category:</span>
           <select id="category-quick"></select>
         </label>
       </div>
@@ -89,15 +91,16 @@
         <button data-gametype="drag-complete" class="mode-btn">Drag to Complete</button>
         <button data-gametype="kana-alphabet" class="mode-btn hidden">Alphabet</button>
         <button data-gametype="kana-alphabet-quiz" class="mode-btn hidden">Quiz</button>
+        <button data-gametype="memory" class="mode-btn hidden">Memory 🧠</button>
       </div>
 
       <div id="flash-bar" class="hidden">
-        <span id="flash-live-score" class="flash-live-score">Tap the right picture</span>
-        <button id="flash-finish" class="flash-finish">Finish ✓</button>
+        <span id="flash-live-score" class="flash-live-score" data-i18n="flash_live_default">Tap the right picture</span>
+        <button id="flash-finish" class="flash-finish" data-i18n="flash_finish">Finish ✓</button>
       </div>
 
       <div id="find-count-bar" class="hidden">
-        <span class="find-count-label">How many pictures?</span>
+        <span class="find-count-label" data-i18n="find_count_q">How many pictures?</span>
         <div id="find-count-options" class="find-count-options"></div>
       </div>
 
@@ -121,7 +124,7 @@
       <section id="alphabet-quiz-section" class="hidden">
         <div class="alphabet-card quiz-card">
           <div id="quiz-kana" class="alphabet-kana"></div>
-          <div class="quiz-prompt-text">Pick the picture for this sound</div>
+          <div class="quiz-prompt-text" data-i18n="quiz_prompt">Pick the picture for this sound</div>
         </div>
         <div id="quiz-choices" class="quiz-choices"></div>
         <div id="quiz-feedback" class="quiz-feedback" aria-live="polite"></div>
@@ -158,18 +161,18 @@
       <div id="flash-complete-emoji" class="flash-complete-emoji">🎉</div>
       <h2 id="flash-complete-title">All done!</h2>
       <div class="flash-stats">
-        <div class="flash-stat"><span id="flash-stat-score" class="flash-stat-num">0/0</span><span class="flash-stat-label">correct</span></div>
-        <div class="flash-stat"><span id="flash-stat-first" class="flash-stat-num">0</span><span class="flash-stat-label">first try</span></div>
-        <div class="flash-stat"><span id="flash-stat-cleared" class="flash-stat-num">0/0</span><span class="flash-stat-label">cleared</span></div>
-        <div class="flash-stat"><span id="flash-stat-time" class="flash-stat-num">0:00</span><span class="flash-stat-label">time</span></div>
+        <div class="flash-stat"><span id="flash-stat-score" class="flash-stat-num">0/0</span><span class="flash-stat-label" data-i18n="stat_correct">correct</span></div>
+        <div class="flash-stat"><span id="flash-stat-first" class="flash-stat-num">0</span><span class="flash-stat-label" data-i18n="stat_first">first try</span></div>
+        <div class="flash-stat"><span id="flash-stat-cleared" class="flash-stat-num">0/0</span><span class="flash-stat-label" data-i18n="stat_cleared">cleared</span></div>
+        <div class="flash-stat"><span id="flash-stat-time" class="flash-stat-num">0:00</span><span class="flash-stat-label" data-i18n="stat_time">time</span></div>
       </div>
       <div id="flash-weak-section" class="flash-weak-section hidden">
-        <div class="flash-weak-title">Words to practice</div>
+        <div class="flash-weak-title" data-i18n="weak_title">Words to practice</div>
         <div id="flash-weak-list" class="flash-weak-list"></div>
       </div>
       <div class="flash-complete-actions">
-        <button id="flash-again">🎴 Play again</button>
-        <button id="flash-home" class="reset">🏠 Home</button>
+        <button id="flash-again" data-i18n="play_again">🎴 Play again</button>
+        <button id="flash-home" class="reset" data-i18n="home_btn">🏠 Home</button>
       </div>
     </div>
   </div>
@@ -177,7 +180,7 @@
   <div id="lock-badge" class="hidden" role="button" aria-label="Hold to unlock">
     <div class="lock-badge-inner">
       <div class="lock-badge-icon">🔒</div>
-      <div class="lock-badge-text">Hold to unlock</div>
+      <div class="lock-badge-text" data-i18n="lock_hold">Hold to unlock</div>
       <div class="lock-badge-ring"><svg viewBox="0 0 100 100"><circle class="lock-ring-bg" cx="50" cy="50" r="44"/><circle id="lock-ring-fill" class="lock-ring-fill" cx="50" cy="50" r="44"/></svg></div>
     </div>
   </div>
@@ -185,20 +188,20 @@
   <div id="install-banner" class="hidden">
     <div id="install-text">Install Kitai Words for offline play!</div>
     <div class="install-actions">
-      <button id="install-btn">Install</button>
+      <button id="install-btn" data-i18n="install_btn">Install</button>
       <button id="install-dismiss" aria-label="Dismiss">✕</button>
     </div>
   </div>
 
   <div id="settings-overlay" class="hidden">
     <div id="settings" role="dialog" aria-modal="true">
-      <h2>Parent Settings</h2>
+      <h2 data-i18n="settings_title">Parent Settings</h2>
 
       <div class="settings-tabs" id="settings-tabs">
-        <button class="settings-tab active" data-tab="words">📚 Words</button>
-        <button class="settings-tab" data-tab="language">🌐 Language</button>
-        <button class="settings-tab" data-tab="game">🎮 Game</button>
-        <button class="settings-tab" data-tab="account">☁️ Account</button>
+        <button class="settings-tab active" data-tab="words" data-i18n="tab_words">📚 Words</button>
+        <button class="settings-tab" data-tab="language" data-i18n="tab_language">🌐 Language</button>
+        <button class="settings-tab" data-tab="game" data-i18n="tab_game">🎮 Game</button>
+        <button class="settings-tab" data-tab="account" data-i18n="tab_account">☁️ Account</button>
       </div>
 
       <!-- WORDS & PHOTOS -->
@@ -274,35 +277,47 @@
 
       <!-- LANGUAGE & VOICE -->
       <div class="settings-panel hidden" data-panel="language">
-        <label>Language:
+        <label><span data-i18n="app_language">App language:</span>
+          <select id="ui-lang-select">
+            <option value="en">English</option>
+            <option value="es">Español</option>
+            <option value="pt">Português</option>
+            <option value="ja">日本語</option>
+            <option value="ko">한국어</option>
+          </select>
+        </label>
+        <div class="theme-hint" data-i18n="app_language_hint">Changes the buttons and menus throughout the app.</div>
+        <label><span data-i18n="output_language">Words / voice language:</span>
           <select id="lang-select">
             <option value="ja">日本語 Japanese</option>
             <option value="ko">한국어 Korean</option>
             <option value="en">English</option>
+            <option value="es">Español Spanish</option>
+            <option value="pt">Português Portuguese</option>
           </select>
         </label>
         <div class="theme-hint">Switches the words and the spoken voice. Each language needs its own voice installed (or use the online voice key below).</div>
         <label>
           <input type="checkbox" id="ko-alt-toggle" />
-          Korean: use a boy's words for siblings (형 / 누나 instead of 오빠 / 언니)
+          <span data-i18n="ko_alt">Korean: use a boy's words for siblings (형 / 누나 instead of 오빠 / 언니)</span>
         </label>
         <label>
           <input type="checkbox" id="romaji-toggle" />
-          Show romaji / romanization (off by default)
+          <span data-i18n="romaji_toggle">Show romaji / romanization (off by default)</span>
         </label>
-        <label>Voice:
+        <label><span data-i18n="label_voice">Voice:</span>
           <select id="voice-select"></select>
         </label>
         <div class="library-actions">
-          <button id="voice-test-btn">🔊 Test voice</button>
-          <button id="voice-refresh-btn" class="reset">↻ Refresh voices</button>
+          <button id="voice-test-btn" data-i18n="voice_test">🔊 Test voice</button>
+          <button id="voice-refresh-btn" class="reset" data-i18n="voice_refresh">↻ Refresh voices</button>
         </div>
         <div class="theme-hint">After installing a voice in your phone's settings, tap Refresh. Offline voices are preferred automatically.</div>
         <label>
           <input type="checkbox" id="online-voice-toggle" />
-          Prefer online voice (needs internet; use if device voice won't play)
+          <span data-i18n="online_voice">Prefer online voice (needs internet; use if device voice won't play)</span>
         </label>
-        <label>Online voice key:
+        <label><span data-i18n="label_online_key">Online voice key:</span>
           <input type="text" id="tts-api-key" autocomplete="off" placeholder="VoiceRSS API key" />
         </label>
         <div class="theme-hint">Get a free key at voicerss.org (sign up → copy the API key). Paste it here for reliable audio that works regardless of your phone's voice settings.</div>
@@ -311,25 +326,25 @@
 
       <!-- GAME -->
       <div class="settings-panel hidden" data-panel="game">
-        <label>Choices:
+        <label><span data-i18n="label_choices">Choices:</span>
           <select id="choice-count">
             <option value="2">2</option>
             <option value="3" selected>3</option>
             <option value="4">4</option>
           </select>
         </label>
-        <label>Category:
+        <label><span data-i18n="label_category">Category:</span>
           <select id="category-select"></select>
         </label>
         <label>
           <input type="checkbox" id="vibration-toggle" checked />
-          Vibrate on wrong (if supported)
+          <span data-i18n="vibrate_toggle">Vibrate on wrong (if supported)</span>
         </label>
         <label>
           <input type="checkbox" id="sound-toggle" checked />
-          Enable sounds (chime/buzz)
+          <span data-i18n="sound_toggle">Enable sounds (chime/buzz)</span>
         </label>
-        <label>Theme:
+        <label><span data-i18n="label_theme">Theme:</span>
           <select id="theme-select">
             <option value="ocean">🌊 Ocean</option>
             <option value="galaxy">🪐 Galaxy</option>
@@ -338,29 +353,29 @@
           </select>
         </label>
         <div class="theme-hint">Pick a color vibe for the app. Your choice is saved on this device.</div>
-        <div class="settings-subheader">Child Lock</div>
+        <div class="settings-subheader" data-i18n="childlock_header">Child Lock</div>
         <div class="library-help">Tap 🔓 in the top corner to lock the app: it goes fullscreen, keeps the screen on, and hides the settings buttons. To unlock, press and <strong>hold</strong> the padlock for 3 seconds.</div>
         <div class="theme-hint">Tip: to stop your child leaving the app entirely, also turn on <strong>Guided Access</strong> (iPhone/iPad: triple-click the side button) or <strong>Screen Pinning</strong> (Android). A web app can't block the home gesture on its own.</div>
       </div>
 
       <!-- ACCOUNT -->
       <div class="settings-panel hidden" data-panel="account">
-        <div class="settings-subheader">Shared Library</div>
+        <div class="settings-subheader" data-i18n="library_header">Shared Library</div>
         <div class="library-help">Use the same Library ID + PIN (your phone number + PIN) across phones to share custom photos and words. The cloud bucket is public — please don't use private photos.</div>
-        <label>Library ID:
+        <label><span data-i18n="label_library_id">Library ID:</span>
           <input type="text" id="library-id" autocomplete="off" placeholder="e.g. phone number" inputmode="text" />
         </label>
-        <label>PIN (4 digits):
+        <label><span data-i18n="label_pin">PIN (4 digits):</span>
           <input type="text" id="library-pin" autocomplete="off" placeholder="****" inputmode="numeric" maxlength="4" pattern="[0-9]*" />
         </label>
         <div class="library-actions">
-          <button id="library-save">Save & Switch</button>
-          <button id="library-reset" class="reset">Reset to Device</button>
+          <button id="library-save" data-i18n="library_save">Save & Switch</button>
+          <button id="library-reset" class="reset" data-i18n="library_reset">Reset to Device</button>
         </div>
         <div id="library-status" class="library-status"></div>
       </div>
 
-      <button id="close-settings">Done</button>
+      <button id="close-settings" data-i18n="done">Done</button>
     </div>
   </div>
 

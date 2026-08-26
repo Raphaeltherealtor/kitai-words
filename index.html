@@ -322,6 +322,45 @@
         </label>
         <div class="theme-hint">Get a free key at voicerss.org (sign up → copy the API key). Paste it here for reliable audio that works regardless of your phone's voice settings.</div>
         <div id="voice-test-status" class="library-status"></div>
+
+        <!-- Premium voice: the parent's own ElevenLabs account, including a
+             clone of their own voice. Cached per word, so credits are spent
+             once per word and never again. -->
+        <div class="voice-premium">
+          <div class="voice-premium-title">✨ Premium voice (ElevenLabs)</div>
+          <div class="theme-hint">Studio-quality speech instead of the robotic phone voice — and you can read the words in <b>your own cloned voice</b>. Uses your own ElevenLabs account. Each word is saved after the first play, so it only ever costs credits once and works offline afterwards.</div>
+          <label>
+            <input type="checkbox" id="eleven-toggle" />
+            <span>Use ElevenLabs for spoken words</span>
+          </label>
+          <label><span>ElevenLabs API key:</span>
+            <input type="password" id="eleven-key" autocomplete="off" placeholder="sk_…" />
+          </label>
+          <div class="theme-hint">elevenlabs.io → your profile → <b>API Keys</b>. Please create a <b>restricted</b> key (Text to Speech + Voices: read) and set a credit limit on it — this key is stored in the app on your device.</div>
+          <div class="library-actions">
+            <button id="eleven-load-voices" class="reset">↻ Load my voices</button>
+            <button id="eleven-test">🔊 Test</button>
+          </div>
+          <label><span>Voice:</span>
+            <select id="eleven-voice"></select>
+          </label>
+          <label><span>Quality:</span>
+            <select id="eleven-model">
+              <option value="eleven_flash_v2_5">Flash v2.5 — half the credits (recommended)</option>
+              <option value="eleven_multilingual_v2">Multilingual v2 — richest quality</option>
+              <option value="eleven_v3">v3 — most expressive</option>
+            </select>
+          </label>
+          <label>
+            <input type="checkbox" id="eleven-sync-key" />
+            <span>Sync this voice setup to my other logins (needs a Shared Library)</span>
+          </label>
+          <div class="library-actions">
+            <button id="eleven-pregen" class="reset">⤓ Pre-download all words</button>
+            <button id="eleven-clear-cache" class="reset">🗑 Clear voice cache</button>
+          </div>
+          <div id="eleven-status" class="library-status"></div>
+        </div>
       </div>
 
       <!-- GAME -->

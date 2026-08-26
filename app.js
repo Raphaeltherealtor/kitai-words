@@ -24,6 +24,18 @@ const state = {
   voiceId: null,
   preferOnlineVoice: false,
   ttsApiKey: "",
+  // The parent's own ElevenLabs account (optional). `key` is theirs, not ours,
+  // and `voiceId` may be a clone of their own voice. See the premium-voice
+  // section further down for how clips are cached and how this is synced.
+  eleven: {
+    enabled: false,
+    key: "",
+    voiceId: "",
+    voiceName: "",
+    model: "eleven_flash_v2_5",
+    syncKey: false,
+    voices: [],
+  },
   // Optional Google Programmable Search creds for real Google image results.
   googleImgKey: "",
   googleImgCx: "",
@@ -498,6 +510,16 @@ const els = {
   voiceTestStatus: document.getElementById("voice-test-status"),
   onlineVoiceToggle: document.getElementById("online-voice-toggle"),
   ttsApiKeyInput: document.getElementById("tts-api-key"),
+  elevenToggle: document.getElementById("eleven-toggle"),
+  elevenKeyInput: document.getElementById("eleven-key"),
+  elevenLoadVoicesBtn: document.getElementById("eleven-load-voices"),
+  elevenTestBtn: document.getElementById("eleven-test"),
+  elevenVoiceSelect: document.getElementById("eleven-voice"),
+  elevenModelSelect: document.getElementById("eleven-model"),
+  elevenSyncKeyToggle: document.getElementById("eleven-sync-key"),
+  elevenPregenBtn: document.getElementById("eleven-pregen"),
+  elevenClearCacheBtn: document.getElementById("eleven-clear-cache"),
+  elevenStatus: document.getElementById("eleven-status"),
   quickAddCategory: document.getElementById("quick-add-category"),
   quickAddInput: document.getElementById("quick-add-input"),
   quickAddBtn: document.getElementById("quick-add-btn"),
@@ -542,6 +564,7 @@ async function init() {
   loadThemePref();
   loadLangPref();
   loadVoicePref();
+  loadElevenPrefs();
   loadLibraryConfig();
   await loadData();
   await loadHiragana();
@@ -560,6 +583,9 @@ async function init() {
     .then(() => {
       syncImagesFromSupabase().catch(() => {});
       syncWordsWithCloud().catch(() => {});
+      // Only adopt the cloud voice setup on a device that hasn't been set up
+      // locally — otherwise a fresh login would clobber a working local key.
+      if (!state.eleven.key) pullElevenCloudSettings().catch(() => {});
     })
     .catch(() => {});
 }
@@ -2149,6 +2175,10 @@ async function applyLibrarySwitch(libraryId, pin) {
   syncImagesFromSupabase().catch(() => {});
   // Custom words follow the library too (local words merge up into it).
   syncWordsWithCloud().catch(() => {});
+  // ...and so does the premium voice setup, so signing in on a new device or
+  // login lands on the same voice without pasting the key again.
+  if (state.eleven.key) pushElevenCloudSettings().catch(() => {});
+  else pullElevenCloudSettings().catch(() => {});
 }
 
 function setupVoiceOptions() {
@@ -2204,6 +2234,393 @@ function saveVoicePref() {
   try {
     if (state.voiceId) localStorage.setItem(VOICE_KEY, state.voiceId);
   } catch (_) {}
+}
+
+// --- Premium voice settings + cross-login sync ----------------------------
+
+function elevenSay(msg, color) {
+  const el = els.elevenStatus;
+  if (!el) return;
+  el.style.color = color || "#5a5564";
+  el.textContent = msg;
+}
+
+function loadElevenPrefs() {
+  const e = state.eleven;
+  try {
+    e.enabled = localStorage.getItem("kitai-eleven-enabled") === "1";
+    e.key = localStorage.getItem("kitai-eleven-key") || "";
+    e.voiceId = localStorage.getItem("kitai-eleven-voice") || "";
+    e.voiceName = localStorage.getItem("kitai-eleven-voice-name") || "";
+    e.model = localStorage.getItem("kitai-eleven-model") || ELEVEN_DEFAULT_MODEL;
+    e.syncKey = localStorage.getItem("kitai-eleven-sync") === "1";
+  } catch (_) {}
+  applyElevenPrefsToUI();
+}
+
+function applyElevenPrefsToUI() {
+  const e = state.eleven;
+  if (els.elevenToggle) els.elevenToggle.checked = e.enabled;
+  if (els.elevenKeyInput) els.elevenKeyInput.value = e.key;
+  if (els.elevenModelSelect) els.elevenModelSelect.value = e.model || ELEVEN_DEFAULT_MODEL;
+  if (els.elevenSyncKeyToggle) els.elevenSyncKeyToggle.checked = e.syncKey;
+  renderElevenVoiceOptions();
+}
+
+function saveElevenPrefs() {
+  const e = state.eleven;
+  try {
+    localStorage.setItem("kitai-eleven-enabled", e.enabled ? "1" : "0");
+    localStorage.setItem("kitai-eleven-key", e.key || "");
+    localStorage.setItem("kitai-eleven-voice", e.voiceId || "");
+    localStorage.setItem("kitai-eleven-voice-name", e.voiceName || "");
+    localStorage.setItem("kitai-eleven-model", e.model || ELEVEN_DEFAULT_MODEL);
+    localStorage.setItem("kitai-eleven-sync", e.syncKey ? "1" : "0");
+  } catch (_) {}
+  if (e.syncKey) pushElevenCloudSettings().catch(() => {});
+}
+
+// The saved voice may not be in the freshly-loaded list (different account, or
+// the list hasn't been fetched on this device yet) — keep showing it either way
+// so a synced setup isn't silently dropped.
+function renderElevenVoiceOptions() {
+  const sel = els.elevenVoiceSelect;
+  if (!sel) return;
+  const e = state.eleven;
+  sel.innerHTML = "";
+  const list = e.voices.slice();
+  if (e.voiceId && !list.some((v) => v.voice_id === e.voiceId)) {
+    list.unshift({ voice_id: e.voiceId, name: e.voiceName || "Saved voice", category: "saved" });
+  }
+  if (!list.length) {
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = "— paste your key, then tap “Load my voices” —";
+    sel.appendChild(opt);
+    return;
+  }
+  list.forEach((v) => {
+    const opt = document.createElement("option");
+    opt.value = v.voice_id;
+    // Clones are the whole point of this feature — label them so a parent can
+    // spot their own voice among the stock ones.
+    const cloned = v.category === "cloned" || v.category === "professional";
+    opt.textContent = `${cloned ? "👤 " : ""}${v.name}${cloned ? " (your clone)" : ""}`;
+    sel.appendChild(opt);
+  });
+  sel.value = e.voiceId || list[0].voice_id;
+}
+
+async function elevenLoadVoices() {
+  const e = state.eleven;
+  if (!e.key) {
+    elevenSay("⚠ Paste your ElevenLabs API key first.", "#d62828");
+    return;
+  }
+  elevenSay("⟳ Loading your voices…");
+  try {
+    const res = await fetch(`${ELEVEN_API}/voices`, { headers: { "xi-api-key": e.key }, cache: "no-store" });
+    if (!res.ok) {
+      elevenSay(
+        res.status === 401
+          ? "⚠ ElevenLabs rejected that key. Check it, and that it allows “Voices: read”."
+          : `⚠ Couldn't load voices (HTTP ${res.status}).`,
+        "#d62828"
+      );
+      return;
+    }
+    const json = await res.json();
+    e.voices = json.voices || [];
+    if (e.voiceId && !e.voices.some((v) => v.voice_id === e.voiceId)) e.voiceId = "";
+    if (!e.voiceId && e.voices.length) {
+      // Default to the parent's own clone when they have one.
+      const clone = e.voices.find((v) => v.category === "cloned" || v.category === "professional");
+      const pick = clone || e.voices[0];
+      e.voiceId = pick.voice_id;
+      e.voiceName = pick.name;
+    }
+    renderElevenVoiceOptions();
+    saveElevenPrefs();
+    const clones = e.voices.filter((v) => v.category === "cloned" || v.category === "professional").length;
+    elevenSay(
+      `✓ ${e.voices.length} voice${e.voices.length === 1 ? "" : "s"} loaded${clones ? ` — ${clones} of them your own clone${clones === 1 ? "" : "s"}` : ""}.`,
+      "#2a9d8f"
+    );
+    elevenShowQuota();
+  } catch (_) {
+    elevenSay("⚠ Couldn't reach ElevenLabs. Check your internet.", "#d62828");
+  }
+}
+
+// Credits left, appended to whatever the status line already says. Purely
+// informational, so a failure here is silent.
+async function elevenShowQuota() {
+  const e = state.eleven;
+  if (!e.key) return;
+  try {
+    const res = await fetch(`${ELEVEN_API}/user/subscription`, { headers: { "xi-api-key": e.key }, cache: "no-store" });
+    if (!res.ok) return;
+    const s = await res.json();
+    const used = s.character_count || 0;
+    const limit = s.character_limit || 0;
+    if (!limit) return;
+    const left = Math.max(0, limit - used);
+    const el = els.elevenStatus;
+    if (el) el.textContent += ` · ${left.toLocaleString()} of ${limit.toLocaleString()} credits left this month.`;
+  } catch (_) {}
+}
+
+async function elevenTestVoice() {
+  const e = state.eleven;
+  if (!e.key || !e.voiceId) {
+    elevenSay("⚠ Add your key and pick a voice first.", "#d62828");
+    return;
+  }
+  elevenSay("🔊 Generating a sample…");
+  const phrase = langCfg().sample;
+  try {
+    const blob = await elevenGenerate(phrase);
+    putCachedClip(ttsCacheKey(phrase), blob);
+    playClipBlob(blob, {
+      onStart: () => {
+        elevenSay(`✓ Working — “${e.voiceName || "your voice"}” speaking ${langCfg().label}.`, "#2a9d8f");
+        elevenShowQuota();
+      },
+      onFail: () => elevenSay("⚠ Audio generated but wouldn't play. Tap anywhere in the app first, then retry.", "#d62828"),
+    });
+  } catch (err) {
+    elevenSay(`⚠ ${(err && err.message) || "ElevenLabs request failed"}.`, "#d62828");
+  }
+}
+
+// Every word in the current language, generated once and stored. Turns the
+// premium voice into an offline voice and makes the cost a single known
+// up-front number instead of a slow drip.
+async function elevenPregenerate() {
+  const e = state.eleven;
+  if (!e.key || !e.voiceId) {
+    elevenSay("⚠ Add your key and pick a voice first.", "#d62828");
+    return;
+  }
+  const phrases = Array.from(
+    new Set(state.items.map((i) => speechText(i)).filter(Boolean))
+  );
+  const pending = [];
+  for (const p of phrases) {
+    if (!(await getCachedClip(ttsCacheKey(p)))) pending.push(p);
+  }
+  if (!pending.length) {
+    elevenSay(`✓ All ${phrases.length} ${langCfg().label} words are already saved. Nothing to download.`, "#2a9d8f");
+    return;
+  }
+  const chars = pending.reduce((n, p) => n + p.length, 0);
+  const ok = confirm(
+    `Generate ${pending.length} word${pending.length === 1 ? "" : "s"} in ${langCfg().label}?\n\n` +
+      `This costs about ${chars.toLocaleString()} ElevenLabs credits, once. ` +
+      `After that these words play instantly and work offline.`
+  );
+  if (!ok) return;
+
+  let done = 0;
+  let failed = 0;
+  for (const phrase of pending) {
+    elevenSay(`⟳ Downloading voices… ${done + failed} / ${pending.length}`);
+    try {
+      const blob = await elevenGenerate(phrase);
+      await putCachedClip(ttsCacheKey(phrase), blob);
+      done++;
+    } catch (err) {
+      failed++;
+      // Out of credits or a revoked key won't fix itself — stop rather than
+      // hammering the API once per remaining word.
+      if (failed >= 3) {
+        elevenSay(`⚠ Stopped after ${done} saved — ${(err && err.message) || "generation failed"}.`, "#d62828");
+        refreshElevenCacheLine();
+        return;
+      }
+    }
+  }
+  elevenSay(`✓ Saved ${done} word${done === 1 ? "" : "s"}${failed ? ` (${failed} failed)` : ""}. They now play offline.`, "#2a9d8f");
+  elevenShowQuota();
+}
+
+async function refreshElevenCacheLine() {
+  const stats = await ttsCacheStats();
+  if (!stats.count) return;
+  elevenSay(`${stats.count} word${stats.count === 1 ? "" : "s"} saved on this device (${Math.round(stats.bytes / 1024)} KB).`);
+}
+
+// --- Encrypted cross-login sync -------------------------------------------
+//
+// The Shared Library prefix is a hash of phone + PIN, and the bucket is
+// world-readable by path, so a raw API key parked there would be exposed to
+// anyone who guessed the PIN. The key is therefore AES-GCM encrypted with a
+// PBKDF2 key derived from the PIN itself before it ever leaves the device —
+// the cloud copy is useless without the PIN the parent already knows.
+function elevenCloudPath(prefix) {
+  return `${prefix}/__settings__/voice.json`;
+}
+
+async function libraryCryptoKey() {
+  const pin = (state.libraryConfig.pin || "").trim();
+  const id = (state.libraryConfig.libraryId || "").trim();
+  const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pin), "PBKDF2", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey(
+    { name: "PBKDF2", salt: new TextEncoder().encode(`kitai-voice::${id}`), iterations: 250000, hash: "SHA-256" },
+    base,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"]
+  );
+}
+
+function bytesToB64(bytes) {
+  let s = "";
+  bytes.forEach((b) => { s += String.fromCharCode(b); });
+  return btoa(s);
+}
+
+function b64ToBytes(b64) {
+  return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+}
+
+async function encryptForLibrary(text) {
+  const key = await libraryCryptoKey();
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(text));
+  return { iv: bytesToB64(iv), ct: bytesToB64(new Uint8Array(ct)) };
+}
+
+async function decryptForLibrary(payload) {
+  if (!payload || !payload.iv || !payload.ct) return "";
+  const key = await libraryCryptoKey();
+  const pt = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv: b64ToBytes(payload.iv) },
+    key,
+    b64ToBytes(payload.ct)
+  );
+  return new TextDecoder().decode(pt);
+}
+
+async function pushElevenCloudSettings() {
+  if (!isLibraryConfigured() || !state.eleven.syncKey || !crypto.subtle) return;
+  const e = state.eleven;
+  const prefix = await ensureStoragePrefix();
+  const payload = {
+    v: 1,
+    enabled: e.enabled,
+    voiceId: e.voiceId,
+    voiceName: e.voiceName,
+    model: e.model,
+    key: e.key ? await encryptForLibrary(e.key) : null,
+  };
+  // Same image-MIME workaround the word manifest uses — the bucket only
+  // accepts image content types, but the bytes are still JSON.
+  const body = new Blob([JSON.stringify(payload)], { type: "image/svg+xml" });
+  await fetch(`${SUPABASE_URL}/storage/v1/object/${SUPABASE_BUCKET}/${elevenCloudPath(prefix)}`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${SUPABASE_KEY}`,
+      "x-upsert": "true",
+      "Content-Type": "image/svg+xml",
+    },
+    body,
+  });
+}
+
+async function pullElevenCloudSettings() {
+  if (!isLibraryConfigured() || !crypto.subtle) return false;
+  const prefix = await ensureStoragePrefix();
+  try {
+    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${SUPABASE_BUCKET}/${elevenCloudPath(prefix)}`, {
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
+      cache: "no-store",
+    });
+    if (!res.ok) return false;
+    const p = await res.json();
+    const e = state.eleven;
+    e.enabled = !!p.enabled;
+    e.voiceId = p.voiceId || "";
+    e.voiceName = p.voiceName || "";
+    e.model = p.model || ELEVEN_DEFAULT_MODEL;
+    e.syncKey = true;
+    if (p.key) {
+      try {
+        e.key = await decryptForLibrary(p.key);
+      } catch (_) {
+        // Wrong PIN for this blob — leave whatever key this device already has.
+      }
+    }
+    try {
+      localStorage.setItem("kitai-eleven-enabled", e.enabled ? "1" : "0");
+      localStorage.setItem("kitai-eleven-key", e.key || "");
+      localStorage.setItem("kitai-eleven-voice", e.voiceId || "");
+      localStorage.setItem("kitai-eleven-voice-name", e.voiceName || "");
+      localStorage.setItem("kitai-eleven-model", e.model);
+      localStorage.setItem("kitai-eleven-sync", "1");
+    } catch (_) {}
+    applyElevenPrefsToUI();
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+function bindElevenUI() {
+  if (els.elevenToggle) {
+    els.elevenToggle.addEventListener("change", (ev) => {
+      state.eleven.enabled = ev.target.checked;
+      saveElevenPrefs();
+      if (state.eleven.enabled && !state.eleven.voiceId) {
+        elevenSay("⚠ Add your key and tap “Load my voices” to finish setting this up.", "#d62828");
+      }
+    });
+  }
+  if (els.elevenKeyInput) {
+    els.elevenKeyInput.addEventListener("change", (ev) => {
+      state.eleven.key = ev.target.value.trim();
+      saveElevenPrefs();
+      if (state.eleven.key) elevenLoadVoices();
+    });
+  }
+  if (els.elevenVoiceSelect) {
+    els.elevenVoiceSelect.addEventListener("change", (ev) => {
+      const e = state.eleven;
+      e.voiceId = ev.target.value;
+      const found = e.voices.find((v) => v.voice_id === e.voiceId);
+      e.voiceName = found ? found.name : e.voiceName;
+      saveElevenPrefs();
+    });
+  }
+  if (els.elevenModelSelect) {
+    els.elevenModelSelect.addEventListener("change", (ev) => {
+      state.eleven.model = ev.target.value;
+      saveElevenPrefs();
+      elevenSay("Quality changed — words will regenerate once each on their next tap.");
+    });
+  }
+  if (els.elevenSyncKeyToggle) {
+    els.elevenSyncKeyToggle.addEventListener("change", (ev) => {
+      state.eleven.syncKey = ev.target.checked;
+      saveElevenPrefs();
+      if (state.eleven.syncKey && !isLibraryConfigured()) {
+        elevenSay("⚠ Connect a Shared Library (Account tab) first — that's what carries this to your other logins.", "#d62828");
+      } else if (state.eleven.syncKey) {
+        elevenSay("✓ Voice setup synced. Sign in to the same Shared Library elsewhere to pick it up.", "#2a9d8f");
+      }
+    });
+  }
+  if (els.elevenLoadVoicesBtn) els.elevenLoadVoicesBtn.addEventListener("click", elevenLoadVoices);
+  if (els.elevenTestBtn) els.elevenTestBtn.addEventListener("click", elevenTestVoice);
+  if (els.elevenPregenBtn) els.elevenPregenBtn.addEventListener("click", elevenPregenerate);
+  if (els.elevenClearCacheBtn) {
+    els.elevenClearCacheBtn.addEventListener("click", async () => {
+      if (!confirm("Delete the saved voice clips on this device? Words will be generated again (and billed again) on their next tap.")) return;
+      await clearTtsCache();
+      elevenSay("✓ Voice cache cleared.", "#2a9d8f");
+    });
+  }
 }
 
 // Re-query the OS voice list (e.g. after installing Japanese TTS data) and
@@ -2272,6 +2689,7 @@ function bindUI() {
   document.addEventListener("touchend", primeSpeech);
   onTap(els.speakBtn, () => speakCurrent());
   if (els.voiceTestBtn) els.voiceTestBtn.addEventListener("click", testVoice);
+  bindElevenUI();
   if (els.voiceRefreshBtn) els.voiceRefreshBtn.addEventListener("click", refreshVoices);
   if (els.onlineVoiceToggle) {
     els.onlineVoiceToggle.addEventListener("change", (e) => {
@@ -3384,6 +3802,7 @@ function showSettings() {
   }
   els.overlay.classList.remove("hidden");
   updateWordSyncIndicator();
+  refreshElevenCacheLine();
 }
 
 function hideSettings() {
@@ -4075,6 +4494,152 @@ function pickJaVoice(preferLocal) {
   return matches[0] || null;
 }
 
+// --- Premium voice: the parent's own ElevenLabs account -------------------
+//
+// Same bring-your-own-key shape as the VoiceRSS and Google-image creds above:
+// the key lives on the device and the browser calls ElevenLabs directly
+// (api.elevenlabs.io answers preflights with `access-control-allow-origin: *`,
+// so no server of ours sits in the middle).
+//
+// Cloned voices come back from GET /v1/voices exactly like stock ones, so a
+// parent who clones their own voice on elevenlabs.io just picks it here.
+//
+// EVERY clip is cached in IndexedDB keyed by voice+model+language+text. A
+// toddler taps the same word hundreds of times; uncached that would be
+// hundreds of billed generations. Cached, a word costs credits once and then
+// plays instantly and offline forever after.
+const ELEVEN_API = "https://api.elevenlabs.io/v1";
+const ELEVEN_DEFAULT_MODEL = "eleven_flash_v2_5";
+
+let ttsDb = null;
+function getTtsDb() {
+  if (ttsDb) return Promise.resolve(ttsDb);
+  if (!("indexedDB" in window)) return Promise.reject(new Error("no-indexeddb"));
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open("kitai-tts", 1);
+    req.onupgradeneeded = () => {
+      if (!req.result.objectStoreNames.contains("clips")) {
+        req.result.createObjectStore("clips", { keyPath: "id" });
+      }
+    };
+    req.onsuccess = () => { ttsDb = req.result; resolve(ttsDb); };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+// Voice and model are part of the key so switching either re-renders rather
+// than serving the old voice from cache.
+function ttsCacheKey(text) {
+  const e = state.eleven;
+  return `${e.voiceId}|${e.model || ELEVEN_DEFAULT_MODEL}|${state.lang}|${text}`;
+}
+
+async function getCachedClip(id) {
+  try {
+    const db = await getTtsDb();
+    const rec = await requestToPromise(db.transaction("clips", "readonly").objectStore("clips").get(id));
+    return rec ? rec.blob : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+async function putCachedClip(id, blob) {
+  try {
+    const db = await getTtsDb();
+    db.transaction("clips", "readwrite")
+      .objectStore("clips")
+      .put({ id, blob, bytes: blob.size, addedAt: Date.now() });
+  } catch (_) {}
+}
+
+async function ttsCacheStats() {
+  try {
+    const db = await getTtsDb();
+    const all = await requestToPromise(db.transaction("clips", "readonly").objectStore("clips").getAll());
+    return { count: all.length, bytes: all.reduce((n, r) => n + (r.bytes || 0), 0) };
+  } catch (_) {
+    return { count: 0, bytes: 0 };
+  }
+}
+
+async function clearTtsCache() {
+  try {
+    const db = await getTtsDb();
+    await requestToPromise(db.transaction("clips", "readwrite").objectStore("clips").clear());
+  } catch (_) {}
+}
+
+function elevenReady() {
+  const e = state.eleven;
+  return !!(e.enabled && e.key && e.voiceId);
+}
+
+// One generation. Throws with a short reason the settings screen can show.
+async function elevenGenerate(text) {
+  const e = state.eleven;
+  const body = {
+    text,
+    model_id: e.model || ELEVEN_DEFAULT_MODEL,
+  };
+  // Japanese is the one language where ElevenLabs' language-aware normalizer
+  // is supported, and it matters for readings of numbers and counters.
+  if (state.lang === "ja") body.apply_language_text_normalization = true;
+
+  const res = await fetch(
+    `${ELEVEN_API}/text-to-speech/${encodeURIComponent(e.voiceId)}?output_format=mp3_44100_128`,
+    {
+      method: "POST",
+      headers: { "xi-api-key": e.key, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }
+  );
+  if (!res.ok) {
+    let detail = "";
+    try {
+      const j = await res.json();
+      detail = (j && j.detail && (j.detail.message || j.detail.status)) || "";
+    } catch (_) {}
+    throw new Error(detail || `HTTP ${res.status}`);
+  }
+  return await res.blob();
+}
+
+let elevenObjectUrl = null;
+function playClipBlob(blob, handlers) {
+  try {
+    if (elevenObjectUrl) URL.revokeObjectURL(elevenObjectUrl);
+    elevenObjectUrl = URL.createObjectURL(blob);
+    const audio = new Audio();
+    audio.addEventListener("playing", () => handlers.onStart && handlers.onStart(), { once: true });
+    audio.addEventListener("error", () => handlers.onFail && handlers.onFail("playback"), { once: true });
+    audio.src = elevenObjectUrl;
+    const p = audio.play();
+    if (p && p.catch) p.catch(() => handlers.onFail && handlers.onFail("playback"));
+    onlineAudio = audio;
+  } catch (_) {
+    handlers.onFail && handlers.onFail("playback");
+  }
+}
+
+// Cache-first: the first tap of a word generates and stores it, every tap
+// after that is free and instant.
+function elevenSpeak(phrase, handlers) {
+  const id = ttsCacheKey(phrase);
+  getCachedClip(id).then((cached) => {
+    if (cached) {
+      playClipBlob(cached, handlers);
+      return;
+    }
+    elevenGenerate(phrase)
+      .then((blob) => {
+        putCachedClip(id, blob);
+        playClipBlob(blob, handlers);
+      })
+      .catch((err) => handlers.onFail && handlers.onFail((err && err.message) || "eleven-failed"));
+  });
+}
+
 // Online voice via VoiceRSS (https://www.voicerss.org) — a real TTS service
 // that reliably serves Japanese audio with a free API key. Played through an
 // <audio> element so the app speaks even when the device TTS engine is broken.
@@ -4187,11 +4752,19 @@ function synthesize(phrase, opts) {
   const goOnline = (origErr) =>
     playOnlineTts(phrase, { onStart: () => succeed("online"), onFail: () => failFinal(origErr || "online-unavailable") });
 
-  if (state.preferOnlineVoice || !("speechSynthesis" in window)) {
-    goOnline("device-unavailable");
+  const freeVoices = (err) => {
+    if (state.preferOnlineVoice || !("speechSynthesis" in window)) goOnline(err);
+    else deviceSpeak(phrase, { onStart: () => succeed("device"), onFail: (e2) => goOnline(e2) });
+  };
+
+  // Premium voice wins when it's configured, but never at the cost of silence:
+  // an expired key, an empty credit balance or no signal all fall straight
+  // through to the free voices below.
+  if (elevenReady()) {
+    elevenSpeak(phrase, { onStart: () => succeed("eleven"), onFail: (err) => freeVoices(err) });
     return;
   }
-  deviceSpeak(phrase, { onStart: () => succeed("device"), onFail: (err) => goOnline(err) });
+  freeVoices("device-unavailable");
 }
 
 // Parent Settings: speak a sample and report whether the voice works. When an

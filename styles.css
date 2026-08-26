@@ -1019,6 +1019,28 @@ main {
   font-style: italic;
 }
 
+/* Premium (ElevenLabs) voice block — set apart from the free voice settings
+   above it, since it spends the parent's own credits. */
+.voice-premium {
+  margin-top: 18px;
+  padding: 14px;
+  border: 1px solid #e2d9f3;
+  border-radius: 14px;
+  background: #faf7ff;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.voice-premium-title {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.voice-premium .theme-hint {
+  margin: 0;
+}
+
 .image-card .image-preview {
   position: relative;
 }

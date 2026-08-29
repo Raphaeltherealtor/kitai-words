@@ -520,6 +520,7 @@ const els = {
   elevenPregenBtn: document.getElementById("eleven-pregen"),
   elevenClearCacheBtn: document.getElementById("eleven-clear-cache"),
   elevenStatus: document.getElementById("eleven-status"),
+  elevenCacheLine: document.getElementById("eleven-cache-line"),
   quickAddCategory: document.getElementById("quick-add-category"),
   quickAddInput: document.getElementById("quick-add-input"),
   quickAddBtn: document.getElementById("quick-add-btn"),
@@ -565,6 +566,7 @@ async function init() {
   loadLangPref();
   loadVoicePref();
   loadElevenPrefs();
+  ensurePersistentStorage();
   loadLibraryConfig();
   await loadData();
   await loadHiragana();
@@ -2427,7 +2429,7 @@ async function elevenPregenerate() {
     elevenSay(`⟳ Downloading voices… ${done + failed} / ${pending.length}`);
     try {
       const blob = await elevenGenerate(phrase);
-      await putCachedClip(ttsCacheKey(phrase), blob);
+      noteClipSaved(await putCachedClip(ttsCacheKey(phrase), blob));
       done++;
     } catch (err) {
       failed++;
@@ -2441,13 +2443,29 @@ async function elevenPregenerate() {
     }
   }
   elevenSay(`✓ Saved ${done} word${done === 1 ? "" : "s"}${failed ? ` (${failed} failed)` : ""}. They now play offline.`, "#2a9d8f");
+  refreshElevenCacheLine();
   elevenShowQuota();
 }
 
+function formatBytes(n) {
+  return n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.round(n / 1024)} KB`;
+}
+
+// Its own line, not the shared status slot, so the saved-word count survives
+// errors and credit readouts landing on top of it.
 async function refreshElevenCacheLine() {
-  const stats = await ttsCacheStats();
-  if (!stats.count) return;
-  elevenSay(`${stats.count} word${stats.count === 1 ? "" : "s"} saved on this device (${Math.round(stats.bytes / 1024)} KB).`);
+  const el = els.elevenCacheLine;
+  if (!el) return;
+  const [stats, persisted] = await Promise.all([ttsCacheStats(), ensurePersistentStorage()]);
+  const saved = stats.count
+    ? `🔊 ${stats.count} word${stats.count === 1 ? "" : "s"} saved on this device (${formatBytes(stats.bytes)}) — these play offline and cost no credits to repeat.`
+    : "🔊 No words saved yet. Each word costs credits the first time it is spoken, then plays free and offline forever after.";
+  const guard = persisted
+    ? " Storage is protected, so the phone won't clear them."
+    : " ⚠ The phone may clear these if it runs low on space — tap Pre-download after that to restore them.";
+  el.style.color = ttsSaveFailed ? "#d62828" : "#5a5564";
+  el.textContent =
+    saved + guard + (ttsSaveFailed ? " ⚠ Some clips could not be saved (device storage is full), so those words will cost credits again." : "");
 }
 
 // --- Encrypted cross-login sync -------------------------------------------
@@ -2618,7 +2636,9 @@ function bindElevenUI() {
     els.elevenClearCacheBtn.addEventListener("click", async () => {
       if (!confirm("Delete the saved voice clips on this device? Words will be generated again (and billed again) on their next tap.")) return;
       await clearTtsCache();
+      ttsSaveFailed = false;
       elevenSay("✓ Voice cache cleared.", "#2a9d8f");
+      refreshElevenCacheLine();
     });
   }
 }
@@ -4544,13 +4564,51 @@ async function getCachedClip(id) {
   }
 }
 
-async function putCachedClip(id, blob) {
-  try {
-    const db = await getTtsDb();
-    db.transaction("clips", "readwrite")
-      .objectStore("clips")
-      .put({ id, blob, bytes: blob.size, addedAt: Date.now() });
-  } catch (_) {}
+// Chrome on Android keeps site storage "best effort" by default and may evict
+// the whole database when the phone runs low — which would silently re-bill
+// every word she taps afterwards. Asking for persistence makes the saved clips
+// durable. Cheap, idempotent, and a refusal is not an error.
+let persistPromise = null;
+function ensurePersistentStorage() {
+  if (persistPromise) return persistPromise;
+  persistPromise = (async () => {
+    try {
+      if (!navigator.storage || !navigator.storage.persist) return false;
+      if (await navigator.storage.persisted()) return true;
+      return await navigator.storage.persist();
+    } catch (_) {
+      return false;
+    }
+  })();
+  return persistPromise;
+}
+
+// A clip that fails to save is a word that gets billed again on every tap, so
+// unlike most caches this one is worth complaining about.
+let ttsSaveFailed = false;
+
+// Resolves once the write has actually committed — not merely been queued.
+function putCachedClip(id, blob) {
+  return getTtsDb().then(
+    (db) =>
+      new Promise((resolve) => {
+        try {
+          const tx = db.transaction("clips", "readwrite");
+          tx.objectStore("clips").put({ id, blob, bytes: blob.size, addedAt: Date.now() });
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = () => resolve(false);
+          tx.onabort = () => resolve(false);
+        } catch (_) {
+          resolve(false);
+        }
+      }),
+    () => false
+  );
+}
+
+function noteClipSaved(ok) {
+  if (!ok) ttsSaveFailed = true;
+  return ok;
 }
 
 async function ttsCacheStats() {
@@ -4656,8 +4714,8 @@ function elevenSpeak(phrase, handlers) {
     }
     elevenGenerate(phrase)
       .then((blob) => {
-        putCachedClip(id, blob);
         playClipBlob(blob, handlers);
+        putCachedClip(id, blob).then(noteClipSaved);
       })
       .catch((err) => handlers.onFail && handlers.onFail((err && err.message) || "eleven-failed"));
   });

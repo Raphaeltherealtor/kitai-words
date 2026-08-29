@@ -194,228 +194,497 @@
   </div>
 
   <div id="settings-overlay" class="hidden">
-    <div id="settings" role="dialog" aria-modal="true">
-      <h2 data-i18n="settings_title">Parent Settings</h2>
+    <div id="settings" role="dialog" aria-modal="true" aria-label="Parent settings">
 
-      <div class="settings-tabs" id="settings-tabs">
-        <button class="settings-tab active" data-tab="words" data-i18n="tab_words">📚 Words</button>
-        <button class="settings-tab" data-tab="language" data-i18n="tab_language">🌐 Language</button>
-        <button class="settings-tab" data-tab="game" data-i18n="tab_game">🎮 Game</button>
-        <button class="settings-tab" data-tab="account" data-i18n="tab_account">☁️ Account</button>
-      </div>
-
-      <!-- WORDS & PHOTOS -->
-      <div class="settings-panel" data-panel="words">
-        <div id="word-sync-indicator" class="sync-indicator"></div>
-        <div class="quick-add">
-          <div class="quick-add-title">✨ Quick add a word</div>
-          <div class="quick-add-help">Just type the word in English — we fill in the reading and find photos for you.</div>
-          <label class="quick-add-cat">Category:
-            <select id="quick-add-category"></select>
-          </label>
-          <div class="quick-add-row">
-            <input type="text" id="quick-add-input" autocomplete="off" placeholder="e.g. Penguin" />
-            <button id="quick-add-btn">Add ✨</button>
-          </div>
-          <div id="quick-add-status" class="library-status"></div>
+      <!-- ===== HUB ===== -->
+      <section class="bp-screen" data-screen="hub">
+        <div class="bp-head">
+          <button class="bp-back" data-bp-close aria-label="Back to play">‹</button>
+          <h2 class="bp-title" data-i18n="settings_title">Settings</h2>
         </div>
-        <input type="search" id="image-search" placeholder="Search words" aria-label="Search vocabulary" />
-        <div id="image-category-pills" class="pill-row"></div>
-        <div class="cat-add">
-          <button id="cat-add-toggle" class="word-add-toggle">＋ New category</button>
-          <div id="cat-add-form" class="cat-add-form hidden">
-            <div class="library-help">Make your own category, then tap words to add — we suggest ideas so you don't have to search.</div>
-            <div class="cat-add-row">
-              <input type="text" id="cat-add-emoji" class="cat-emoji-input" autocomplete="off" placeholder="📦" maxlength="4" aria-label="Category icon (emoji)" />
-              <input type="text" id="cat-add-name" autocomplete="off" placeholder="e.g. Dinosaurs" />
-              <button id="cat-add-btn">Add</button>
+        <div class="bp-search-wrap">
+          <div class="bp-search">
+            <span class="bp-search-ico" aria-hidden="true">🔍</span>
+            <input type="search" id="settings-search" autocomplete="off" placeholder="Search settings" data-i18n-ph="s_search_ph" aria-label="Search settings" />
+          </div>
+        </div>
+        <div class="bp-body om-scroll">
+          <div id="settings-search-results" class="bp-group hidden"></div>
+
+          <div class="bp-group" data-hub-group>
+            <div class="bp-group-label" data-i18n="s_hub_library">Library</div>
+            <button class="bp-row" data-bp-go="words">
+              <span class="bp-ico bp-ico-teal">📚</span>
+              <span class="bp-row-text">
+                <span class="bp-row-title" data-i18n="s_words">Words &amp; photos</span>
+                <span class="bp-row-sub" id="sum-words"></span>
+              </span>
+              <span class="bp-chev" aria-hidden="true">›</span>
+            </button>
+            <button class="bp-row" data-bp-go="library">
+              <span class="bp-ico bp-ico-purple">☁️</span>
+              <span class="bp-row-text">
+                <span class="bp-row-title" data-i18n="s_shared">Shared library</span>
+                <span class="bp-row-sub" id="sum-library"></span>
+              </span>
+              <span class="bp-chev" aria-hidden="true">›</span>
+            </button>
+          </div>
+
+          <div class="bp-group" data-hub-group>
+            <div class="bp-group-label" data-i18n="s_hub_learning">Learning</div>
+            <button class="bp-row" data-bp-go="lang">
+              <span class="bp-ico bp-ico-teal">🌐</span>
+              <span class="bp-row-text">
+                <span class="bp-row-title" data-i18n="s_langvoice">Language &amp; voice</span>
+                <span class="bp-row-sub" id="sum-lang"></span>
+              </span>
+              <span class="bp-chev" aria-hidden="true">›</span>
+            </button>
+            <button class="bp-row" data-bp-go="game">
+              <span class="bp-ico bp-ico-pink">🎮</span>
+              <span class="bp-row-text">
+                <span class="bp-row-title" data-i18n="s_game">Game</span>
+                <span class="bp-row-sub" id="sum-game"></span>
+              </span>
+              <span class="bp-chev" aria-hidden="true">›</span>
+            </button>
+            <button class="bp-row" data-bp-go="lock">
+              <span class="bp-ico bp-ico-plain">🔒</span>
+              <span class="bp-row-text">
+                <span class="bp-row-title" data-i18n="s_lock">Child lock</span>
+                <span class="bp-row-sub" data-i18n="s_lock_sub">Hold the padlock 3s to exit</span>
+              </span>
+              <span class="bp-chev" aria-hidden="true">›</span>
+            </button>
+          </div>
+
+          <div class="bp-group" data-hub-group>
+            <div class="bp-group-label" data-i18n="s_hub_more">More</div>
+            <button class="bp-row bp-row-dashed" data-bp-go="advanced">
+              <span class="bp-ico bp-ico-plain">🛠</span>
+              <span class="bp-row-text">
+                <span class="bp-row-title" data-i18n="s_advanced">Advanced</span>
+                <span class="bp-row-sub" id="sum-advanced" data-i18n="s_advanced_sub">Premium voice, photo search, keys</span>
+              </span>
+              <span class="bp-chev" aria-hidden="true">›</span>
+            </button>
+          </div>
+
+          <button id="close-settings" class="bp-done">← <span data-i18n="back_to_play">Back to play</span></button>
+        </div>
+      </section>
+
+      <!-- ===== WORDS & PHOTOS ===== -->
+      <section class="bp-screen hidden" data-screen="words">
+        <div class="bp-head">
+          <button class="bp-back" data-bp-go="hub" aria-label="Back">‹</button>
+          <h2 class="bp-title" data-i18n="s_words">Words &amp; photos</h2>
+          <div class="bp-saved" data-bp-saved>Saved ✓</div>
+        </div>
+        <div class="bp-body om-scroll">
+          <div id="word-sync-indicator" class="sync-indicator"></div>
+
+          <div class="bp-group">
+            <div class="bp-group-label" data-i18n="s_quick_add">Quick add</div>
+            <div class="bp-card">
+              <div class="bp-card-title">✨ <span data-i18n="s_quick_add_title">Add a word</span></div>
+              <div class="bp-hint" data-i18n="s_quick_add_help">Just type the word in English — we fill in the reading and find photos for you.</div>
+              <label class="bp-field">
+                <span class="bp-field-label" data-i18n="label_category">Category</span>
+                <select id="quick-add-category"></select>
+              </label>
+              <div class="bp-inline">
+                <input type="text" id="quick-add-input" autocomplete="off" placeholder="e.g. Penguin" />
+                <button id="quick-add-btn" class="bp-btn bp-btn-accent">Add ✨</button>
+              </div>
+              <div id="quick-add-status" class="library-status"></div>
             </div>
-            <div id="cat-add-status" class="library-status"></div>
-            <div id="cat-suggest-list" class="suggest-chips"></div>
+          </div>
+
+          <div class="bp-group">
+            <div class="bp-group-label" data-i18n="s_your_words">Your words</div>
+            <div class="bp-search">
+              <span class="bp-search-ico" aria-hidden="true">🔍</span>
+              <input type="search" id="image-search" placeholder="Search words" aria-label="Search vocabulary" />
+            </div>
+            <div id="image-category-pills" class="pill-row"></div>
+            <div id="image-list" class="image-list"></div>
+          </div>
+
+          <div class="bp-group">
+            <div class="bp-group-label" data-i18n="s_organise">Organise</div>
+            <div class="cat-add">
+              <button id="cat-add-toggle" class="bp-btn bp-btn-ghost word-add-toggle">＋ New category</button>
+              <div id="cat-add-form" class="cat-add-form bp-card hidden">
+                <div class="bp-hint">Make your own category, then tap words to add — we suggest ideas so you don't have to search.</div>
+                <div class="cat-add-row bp-inline">
+                  <input type="text" id="cat-add-emoji" class="cat-emoji-input" autocomplete="off" placeholder="📦" maxlength="4" aria-label="Category icon (emoji)" />
+                  <input type="text" id="cat-add-name" autocomplete="off" placeholder="e.g. Dinosaurs" />
+                  <button id="cat-add-btn" class="bp-btn bp-btn-accent">Add</button>
+                </div>
+                <div id="cat-add-status" class="library-status"></div>
+                <div id="cat-suggest-list" class="suggest-chips"></div>
+              </div>
+            </div>
+            <button id="word-add-toggle" class="bp-btn bp-btn-ghost word-add-toggle">＋ Add a word (more options)</button>
+            <div id="add-word-form" class="add-word-form bp-card hidden">
+              <div class="bp-hint">Adds to the selected category. Saved on this device (and your library), and shows in the games right away.</div>
+              <label class="bp-field">
+                <span class="bp-field-label" data-i18n="label_category">Category</span>
+                <select id="new-word-category"></select>
+              </label>
+              <label class="bp-field">
+                <span class="bp-field-label">English</span>
+                <input type="text" id="new-word-en" autocomplete="off" placeholder="e.g. Penguin" />
+              </label>
+              <button type="button" id="new-word-suggest" class="bp-btn bp-btn-soft suggest-btn">✨ Suggest from English</button>
+              <div id="new-word-suggestions" class="suggest-chips"></div>
+              <label class="bp-field">
+                <span class="bp-field-label">Word (kana / Hangul)</span>
+                <input type="text" id="new-word-kana" autocomplete="off" placeholder="e.g. ペンギン / 펭귄" />
+              </label>
+              <label class="bp-field">
+                <span class="bp-field-label">Romaji (optional)</span>
+                <input type="text" id="new-word-romaji" autocomplete="off" placeholder="e.g. pengin" />
+              </label>
+              <label class="bp-field">
+                <span class="bp-field-label">Photo URL (optional)</span>
+                <input type="url" id="new-word-photo" autocomplete="off" inputmode="url" placeholder="https://…" />
+              </label>
+              <button id="new-word-add" class="bp-btn bp-btn-accent">+ Add Word</button>
+              <div id="new-word-status" class="library-status"></div>
+            </div>
           </div>
         </div>
-        <button id="word-add-toggle" class="word-add-toggle">＋ Add a word (more options)</button>
-        <div id="add-word-form" class="add-word-form hidden">
-          <div class="library-help">Adds to the selected category. Saved on this device (and your library), and shows in the games right away.</div>
-          <label>Category:
-            <select id="new-word-category"></select>
-          </label>
-          <label>English:
-            <input type="text" id="new-word-en" autocomplete="off" placeholder="e.g. Penguin" />
-          </label>
-          <button type="button" id="new-word-suggest" class="suggest-btn">✨ Suggest from English</button>
-          <div id="new-word-suggestions" class="suggest-chips"></div>
-          <label>Word (kana / Hangul):
-            <input type="text" id="new-word-kana" autocomplete="off" placeholder="e.g. ペンギン / 펭귄" />
-          </label>
-          <label>Romaji (optional):
-            <input type="text" id="new-word-romaji" autocomplete="off" placeholder="e.g. pengin" />
-          </label>
-          <label>Photo URL (optional):
-            <input type="url" id="new-word-photo" autocomplete="off" inputmode="url" placeholder="https://…" />
-          </label>
-          <button id="new-word-add">+ Add Word</button>
-          <div id="new-word-status" class="library-status"></div>
-        </div>
-        <div id="image-list" class="image-list"></div>
-        <details class="photo-search-setup">
-          <summary>🔍 Use Google image search (optional)</summary>
-          <div class="library-help">By default, photo search uses free libraries (Openverse + Wikimedia). To search real Google Images, paste a free Google API key and Search-engine ID (cx). Setup takes ~2 minutes:</div>
-          <ol class="photo-search-steps">
-            <li>Create a <a href="https://programmablesearchengine.google.com/controlpanel/create" target="_blank" rel="noopener">Programmable Search Engine</a> → turn on <b>Image search</b> + <b>Search the entire web</b> → copy its <b>Search engine ID</b>.</li>
-            <li>Get an <a href="https://developers.google.com/custom-search/v1/introduction" target="_blank" rel="noopener">API key</a> (click “Get a Key”).</li>
-          </ol>
-          <label>Google API key:
-            <input type="text" id="google-img-key" autocomplete="off" placeholder="AIza…" />
-          </label>
-          <label>Search engine ID (cx):
-            <input type="text" id="google-img-cx" autocomplete="off" placeholder="e.g. 012345…:abcde" />
-          </label>
-          <div class="theme-hint">Free tier: 100 searches/day. Stored only on this device. Leave blank to keep using the free libraries.</div>
-        </details>
-      </div>
+      </section>
 
-      <!-- LANGUAGE & VOICE -->
-      <div class="settings-panel hidden" data-panel="language">
-        <label><span data-i18n="app_language">App language:</span>
-          <select id="ui-lang-select">
-            <option value="en">English</option>
-            <option value="es">Español</option>
-            <option value="pt">Português</option>
-            <option value="ja">日本語</option>
-            <option value="ko">한국어</option>
-          </select>
-        </label>
-        <div class="theme-hint" data-i18n="app_language_hint">Changes the buttons and menus throughout the app.</div>
-        <label><span data-i18n="output_language">Words / voice language:</span>
-          <select id="lang-select">
-            <option value="ja">日本語 Japanese</option>
-            <option value="ko">한국어 Korean</option>
-            <option value="en">English</option>
-            <option value="es">Español Spanish</option>
-            <option value="pt">Português Portuguese</option>
-          </select>
-        </label>
-        <div class="theme-hint">Switches the words and the spoken voice. Each language needs its own voice installed (or use the online voice key below).</div>
-        <label>
-          <input type="checkbox" id="ko-alt-toggle" />
-          <span data-i18n="ko_alt">Korean: use a boy's words for siblings (형 / 누나 instead of 오빠 / 언니)</span>
-        </label>
-        <label>
-          <input type="checkbox" id="romaji-toggle" />
-          <span data-i18n="romaji_toggle">Show romaji / romanization (off by default)</span>
-        </label>
-        <label><span data-i18n="label_voice">Voice:</span>
-          <select id="voice-select"></select>
-        </label>
-        <div class="library-actions">
-          <button id="voice-test-btn" data-i18n="voice_test">🔊 Test voice</button>
-          <button id="voice-refresh-btn" class="reset" data-i18n="voice_refresh">↻ Refresh voices</button>
+      <!-- ===== LANGUAGE & VOICE ===== -->
+      <section class="bp-screen hidden" data-screen="lang">
+        <div class="bp-head">
+          <button class="bp-back" data-bp-go="hub" aria-label="Back">‹</button>
+          <h2 class="bp-title" data-i18n="s_langvoice">Language &amp; voice</h2>
+          <div class="bp-saved" data-bp-saved>Saved ✓</div>
         </div>
-        <div class="theme-hint">After installing a voice in your phone's settings, tap Refresh. Offline voices are preferred automatically.</div>
-        <label>
-          <input type="checkbox" id="online-voice-toggle" />
-          <span data-i18n="online_voice">Prefer online voice (needs internet; use if device voice won't play)</span>
-        </label>
-        <label><span data-i18n="label_online_key">Online voice key:</span>
-          <input type="text" id="tts-api-key" autocomplete="off" placeholder="VoiceRSS API key" />
-        </label>
-        <div class="theme-hint">Get a free key at voicerss.org (sign up → copy the API key). Paste it here for reliable audio that works regardless of your phone's voice settings.</div>
-        <div id="voice-test-status" class="library-status"></div>
-
-        <!-- Premium voice: the parent's own ElevenLabs account, including a
-             clone of their own voice. Cached per word, so credits are spent
-             once per word and never again. -->
-        <div class="voice-premium">
-          <div class="voice-premium-title">✨ Premium voice (ElevenLabs)</div>
-          <div class="theme-hint">Studio-quality speech instead of the robotic phone voice — and you can read the words in <b>your own cloned voice</b>. Uses your own ElevenLabs account. Each word is saved after the first play, so it only ever costs credits once and works offline afterwards.</div>
-          <label>
-            <input type="checkbox" id="eleven-toggle" />
-            <span>Use ElevenLabs for spoken words</span>
-          </label>
-          <label><span>ElevenLabs API key:</span>
-            <input type="password" id="eleven-key" autocomplete="off" placeholder="sk_…" />
-          </label>
-          <div class="theme-hint">elevenlabs.io → your profile → <b>API Keys</b>. Please create a <b>restricted</b> key (Text to Speech + Voices: read) and set a credit limit on it — this key is stored in the app on your device.</div>
-          <div class="library-actions">
-            <button id="eleven-load-voices" class="reset">↻ Load my voices</button>
-            <button id="eleven-test">🔊 Test</button>
-          </div>
-          <label><span>Voice:</span>
-            <select id="eleven-voice"></select>
-          </label>
-          <label><span>Quality:</span>
-            <select id="eleven-model">
-              <option value="eleven_flash_v2_5">Flash v2.5 — half the credits (recommended)</option>
-              <option value="eleven_multilingual_v2">Multilingual v2 — richest quality</option>
-              <option value="eleven_v3">v3 — most expressive</option>
+        <div class="bp-body om-scroll">
+          <div class="bp-group">
+            <div class="bp-group-label" data-i18n="s_child_hears">The child hears</div>
+            <div class="bp-lang-grid" id="bp-lang-grid">
+              <button type="button" class="bp-lang" data-bp-lang="ja"><span class="bp-lang-flag">🇯🇵</span><span class="bp-lang-name">日本語</span></button>
+              <button type="button" class="bp-lang" data-bp-lang="ko"><span class="bp-lang-flag">🇰🇷</span><span class="bp-lang-name">한국어</span></button>
+              <button type="button" class="bp-lang" data-bp-lang="en"><span class="bp-lang-flag">🔤</span><span class="bp-lang-name">English</span></button>
+              <button type="button" class="bp-lang" data-bp-lang="es"><span class="bp-lang-flag">🇪🇸</span><span class="bp-lang-name">Español</span></button>
+              <button type="button" class="bp-lang" data-bp-lang="pt"><span class="bp-lang-flag">🇧🇷</span><span class="bp-lang-name">Português</span></button>
+            </div>
+            <select id="lang-select" class="bp-shadow-control" aria-hidden="true" tabindex="-1">
+              <option value="ja">日本語 Japanese</option>
+              <option value="ko">한국어 Korean</option>
+              <option value="en">English</option>
+              <option value="es">Español Spanish</option>
+              <option value="pt">Português Portuguese</option>
             </select>
-          </label>
-          <label>
-            <input type="checkbox" id="eleven-sync-key" />
-            <span>Sync this voice setup to my other logins (needs a Shared Library)</span>
-          </label>
-          <div class="library-actions">
-            <button id="eleven-pregen" class="reset">⤓ Pre-download all words</button>
-            <button id="eleven-clear-cache" class="reset">🗑 Clear voice cache</button>
+            <label class="bp-toggle" id="bp-ko-alt-row">
+              <span class="bp-row-text">
+                <span class="bp-row-title">Korean: boy's sibling words</span>
+                <span class="bp-row-sub">형 / 누나 instead of 오빠 / 언니</span>
+              </span>
+              <input type="checkbox" id="ko-alt-toggle" />
+              <span class="bp-switch" aria-hidden="true"></span>
+            </label>
           </div>
-          <div id="eleven-cache-line" class="library-status"></div>
-          <div id="eleven-status" class="library-status"></div>
+
+          <div class="bp-group">
+            <div class="bp-group-label" data-i18n="s_voice">Voice</div>
+            <div class="bp-card">
+              <label class="bp-field">
+                <span class="bp-field-label" data-i18n="label_voice">Voice</span>
+                <select id="voice-select"></select>
+              </label>
+              <div class="bp-inline">
+                <button id="voice-test-btn" class="bp-btn bp-btn-accent" data-i18n="voice_test">🔊 Test voice</button>
+                <button id="voice-refresh-btn" class="bp-btn bp-btn-soft reset" data-i18n="voice_refresh">↻ Refresh voices</button>
+              </div>
+              <div class="bp-hint">Offline voices are picked automatically. Installed a new one in your phone settings? Tap Refresh.</div>
+              <div id="voice-test-status" class="library-status"></div>
+            </div>
+            <button class="bp-row" data-bp-go="advanced">
+              <span class="bp-row-text">
+                <span class="bp-row-title">✨ <span data-i18n="s_premium">Premium voice</span></span>
+                <span class="bp-row-sub" id="sum-eleven">Studio quality, or your own cloned voice</span>
+              </span>
+              <span class="bp-chev" aria-hidden="true">›</span>
+            </button>
+          </div>
+
+          <div class="bp-group">
+            <div class="bp-group-label" data-i18n="s_on_screen">On screen</div>
+            <div class="bp-card">
+              <label class="bp-field">
+                <span class="bp-field-label" data-i18n="app_language">App language</span>
+                <select id="ui-lang-select">
+                  <option value="en">English</option>
+                  <option value="es">Español</option>
+                  <option value="pt">Português</option>
+                  <option value="ja">日本語</option>
+                  <option value="ko">한국어</option>
+                </select>
+              </label>
+              <div class="bp-hint" data-i18n="app_language_hint">Changes the buttons and menus throughout the app.</div>
+            </div>
+            <label class="bp-toggle">
+              <span class="bp-row-text">
+                <span class="bp-row-title">Show romaji</span>
+                <span class="bp-row-sub">neko under ねこ</span>
+              </span>
+              <input type="checkbox" id="romaji-toggle" />
+              <span class="bp-switch" aria-hidden="true"></span>
+            </label>
+          </div>
         </div>
-      </div>
+      </section>
 
-      <!-- GAME -->
-      <div class="settings-panel hidden" data-panel="game">
-        <label><span data-i18n="label_choices">Choices:</span>
-          <select id="choice-count">
-            <option value="2">2</option>
-            <option value="3" selected>3</option>
-            <option value="4">4</option>
-          </select>
-        </label>
-        <label><span data-i18n="label_category">Category:</span>
-          <select id="category-select"></select>
-        </label>
-        <label>
-          <input type="checkbox" id="vibration-toggle" checked />
-          <span data-i18n="vibrate_toggle">Vibrate on wrong (if supported)</span>
-        </label>
-        <label>
-          <input type="checkbox" id="sound-toggle" checked />
-          <span data-i18n="sound_toggle">Enable sounds (chime/buzz)</span>
-        </label>
-        <label><span data-i18n="label_theme">Theme:</span>
-          <select id="theme-select">
-            <option value="ocean">🌊 Ocean</option>
-            <option value="galaxy">🪐 Galaxy</option>
-            <option value="sky">☁️ Sky</option>
-            <option value="sunshine">☀️ Sunshine</option>
-          </select>
-        </label>
-        <div class="theme-hint">Pick a color vibe for the app. Your choice is saved on this device.</div>
-        <div class="settings-subheader" data-i18n="childlock_header">Child Lock</div>
-        <div class="library-help">Tap 🔓 in the top corner to lock the app: it goes fullscreen, keeps the screen on, and hides the settings buttons. To unlock, press and <strong>hold</strong> the padlock for 3 seconds.</div>
-        <div class="theme-hint">Tip: to stop your child leaving the app entirely, also turn on <strong>Guided Access</strong> (iPhone/iPad: triple-click the side button) or <strong>Screen Pinning</strong> (Android). A web app can't block the home gesture on its own.</div>
-      </div>
-
-      <!-- ACCOUNT -->
-      <div class="settings-panel hidden" data-panel="account">
-        <div class="settings-subheader" data-i18n="library_header">Shared Library</div>
-        <div class="library-help">Use the same Library ID + PIN (your phone number + PIN) across phones to share custom photos and words. The cloud bucket is public — please don't use private photos.</div>
-        <label><span data-i18n="label_library_id">Library ID:</span>
-          <input type="text" id="library-id" autocomplete="off" placeholder="e.g. phone number" inputmode="text" />
-        </label>
-        <label><span data-i18n="label_pin">PIN (4 digits):</span>
-          <input type="text" id="library-pin" autocomplete="off" placeholder="****" inputmode="numeric" maxlength="4" pattern="[0-9]*" />
-        </label>
-        <div class="library-actions">
-          <button id="library-save" data-i18n="library_save">Save & Switch</button>
-          <button id="library-reset" class="reset" data-i18n="library_reset">Reset to Device</button>
+      <!-- ===== GAME ===== -->
+      <section class="bp-screen hidden" data-screen="game">
+        <div class="bp-head">
+          <button class="bp-back" data-bp-go="hub" aria-label="Back">‹</button>
+          <h2 class="bp-title" data-i18n="s_game">Game</h2>
+          <div class="bp-saved" data-bp-saved>Saved ✓</div>
         </div>
-        <div id="library-status" class="library-status"></div>
-      </div>
+        <div class="bp-body om-scroll">
+          <div class="bp-group">
+            <div class="bp-group-label" data-i18n="s_difficulty">Difficulty</div>
+            <div class="bp-card">
+              <span class="bp-card-title">Pictures to choose from</span>
+              <div class="bp-chips" id="bp-choice-chips">
+                <button type="button" class="bp-chip" data-bp-choices="2">2</button>
+                <button type="button" class="bp-chip" data-bp-choices="3">3</button>
+                <button type="button" class="bp-chip" data-bp-choices="4">4</button>
+              </div>
+              <select id="choice-count" class="bp-shadow-control" aria-hidden="true" tabindex="-1">
+                <option value="2">2</option>
+                <option value="3" selected>3</option>
+                <option value="4">4</option>
+              </select>
+              <label class="bp-field bp-field-divided">
+                <span class="bp-field-label" data-i18n="s_categories_in_play">Categories in play</span>
+                <select id="category-select"></select>
+              </label>
+            </div>
+          </div>
 
-      <button id="close-settings" data-i18n="done">Done</button>
+          <div class="bp-group">
+            <div class="bp-group-label" data-i18n="s_feedback">Feedback</div>
+            <label class="bp-toggle">
+              <span class="bp-row-text">
+                <span class="bp-row-title" data-i18n="sound_toggle">Enable sounds (chime/buzz)</span>
+              </span>
+              <input type="checkbox" id="sound-toggle" checked />
+              <span class="bp-switch" aria-hidden="true"></span>
+            </label>
+            <label class="bp-toggle">
+              <span class="bp-row-text">
+                <span class="bp-row-title" data-i18n="vibrate_toggle">Vibrate on wrong (if supported)</span>
+              </span>
+              <input type="checkbox" id="vibration-toggle" checked />
+              <span class="bp-switch" aria-hidden="true"></span>
+            </label>
+          </div>
+
+          <div class="bp-group">
+            <div class="bp-group-label" data-i18n="label_theme">Theme</div>
+            <div class="bp-theme-grid" id="bp-theme-grid">
+              <button type="button" class="bp-theme" data-bp-theme="ocean"><span class="bp-theme-dot bp-theme-ocean"></span>🌊 Ocean</button>
+              <button type="button" class="bp-theme" data-bp-theme="galaxy"><span class="bp-theme-dot bp-theme-galaxy"></span>🪐 Galaxy</button>
+              <button type="button" class="bp-theme" data-bp-theme="sky"><span class="bp-theme-dot bp-theme-sky"></span>☁️ Sky</button>
+              <button type="button" class="bp-theme" data-bp-theme="sunshine"><span class="bp-theme-dot bp-theme-sunshine"></span>☀️ Sunshine</button>
+            </div>
+            <select id="theme-select" class="bp-shadow-control" aria-hidden="true" tabindex="-1">
+              <option value="ocean">🌊 Ocean</option>
+              <option value="galaxy">🪐 Galaxy</option>
+              <option value="sky">☁️ Sky</option>
+              <option value="sunshine">☀️ Sunshine</option>
+            </select>
+            <div class="bp-hint">Pick a color vibe for the play screens. Your choice is saved on this device.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== CHILD LOCK ===== -->
+      <section class="bp-screen hidden" data-screen="lock">
+        <div class="bp-head">
+          <button class="bp-back" data-bp-go="hub" aria-label="Back">‹</button>
+          <h2 class="bp-title" data-i18n="s_lock">Child lock</h2>
+        </div>
+        <div class="bp-body om-scroll">
+          <div class="bp-hero">
+            <span class="bp-hero-ico">🔒</span>
+            <span class="bp-row-text">
+              <span class="bp-row-title" data-i18n="s_lock_hero">Locked play</span>
+              <span class="bp-row-sub" data-i18n="s_lock_hero_sub">Fullscreen, screen stays on, settings hidden.</span>
+            </span>
+          </div>
+
+          <ol class="bp-steps">
+            <li><span class="bp-step-n">1</span><span>Tap <b>Lock now</b> — the padlock moves to the bottom corner.</span></li>
+            <li><span class="bp-step-n">2</span><span>Hand the phone over. Taps and drags still work; nothing else does.</span></li>
+            <li><span class="bp-step-n">3</span><span>To get out, press and <b>hold</b> the padlock for 3 seconds.</span></li>
+          </ol>
+
+          <div class="bp-card bp-card-flat">
+            <span class="bp-row-text">
+              <span class="bp-row-title">Keep the screen awake</span>
+              <span class="bp-row-sub">Automatic while locked.</span>
+            </span>
+          </div>
+
+          <div class="bp-note">
+            <b>Want to block the home gesture too?</b> A web app can't do that on its own. Turn on <b>Guided Access</b> (iPhone/iPad: triple-click the side button) or <b>Screen Pinning</b> (Android) alongside this lock.
+          </div>
+
+          <button id="bp-lock-now" class="bp-btn bp-btn-accent bp-btn-block">🔒 <span data-i18n="s_lock_now">Lock now</span></button>
+        </div>
+      </section>
+
+      <!-- ===== SHARED LIBRARY ===== -->
+      <section class="bp-screen hidden" data-screen="library">
+        <div class="bp-head">
+          <button class="bp-back" data-bp-go="hub" aria-label="Back">‹</button>
+          <h2 class="bp-title" data-i18n="s_shared">Shared library</h2>
+          <div class="bp-saved" data-bp-saved>Saved ✓</div>
+        </div>
+        <div class="bp-body om-scroll">
+          <div class="bp-hero bp-hero-accent" id="bp-library-hero">
+            <span class="bp-hero-ico">☁️</span>
+            <span class="bp-row-text">
+              <span class="bp-row-title" id="bp-library-hero-title">Syncing off</span>
+              <span class="bp-row-sub" id="bp-library-hero-sub">This device only</span>
+            </span>
+          </div>
+
+          <div class="bp-group">
+            <div class="bp-group-label" data-i18n="s_this_library">This library</div>
+            <div class="bp-card">
+              <label class="bp-field bp-field-stacked">
+                <span class="bp-field-label" data-i18n="label_library_id">Library ID (your phone number)</span>
+                <input type="text" id="library-id" autocomplete="off" placeholder="e.g. 5551234567" inputmode="text" />
+              </label>
+              <label class="bp-field bp-field-stacked">
+                <span class="bp-field-label" data-i18n="label_pin">PIN (4 digits)</span>
+                <input type="text" id="library-pin" class="bp-pin" autocomplete="off" placeholder="••••" inputmode="numeric" maxlength="4" pattern="[0-9]*" />
+              </label>
+              <div class="bp-hint">Use the same ID + PIN on another phone to share your words and photos. The cloud bucket is public — please don't upload private photos.</div>
+              <button id="library-save" class="bp-btn bp-btn-accent" data-i18n="library_save">Save &amp; Switch</button>
+              <div id="library-status" class="library-status"></div>
+            </div>
+          </div>
+
+          <div class="bp-group">
+            <div class="bp-group-label bp-danger-label" data-i18n="s_danger">Danger zone</div>
+            <button id="library-reset" class="bp-row bp-row-danger reset">
+              <span class="bp-row-text">
+                <span class="bp-row-title" data-i18n="library_reset">Reset to this device</span>
+                <span class="bp-row-sub">Stops syncing. Nothing is deleted in the cloud.</span>
+              </span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== ADVANCED ===== -->
+      <section class="bp-screen hidden" data-screen="advanced">
+        <div class="bp-head">
+          <button class="bp-back" data-bp-go="hub" aria-label="Back">‹</button>
+          <h2 class="bp-title" data-i18n="s_advanced">Advanced</h2>
+          <div class="bp-saved" data-bp-saved>Saved ✓</div>
+        </div>
+        <div class="bp-body om-scroll">
+          <div class="bp-note bp-note-quiet">Optional extras. Everything here works without them — keys are stored on this device only.</div>
+
+          <div class="bp-group">
+            <div class="bp-group-label">✨ <span data-i18n="s_premium_eleven">Premium voice · ElevenLabs</span></div>
+            <label class="bp-toggle">
+              <span class="bp-row-text">
+                <span class="bp-row-title">Use it for spoken words</span>
+                <span class="bp-row-sub">Studio quality — or your own cloned voice</span>
+              </span>
+              <input type="checkbox" id="eleven-toggle" />
+              <span class="bp-switch" aria-hidden="true"></span>
+            </label>
+            <div class="bp-card">
+              <label class="bp-field bp-field-stacked">
+                <span class="bp-field-label">API key</span>
+                <input type="password" id="eleven-key" autocomplete="off" placeholder="sk_…" />
+              </label>
+              <div class="bp-hint">elevenlabs.io → profile → <b>API Keys</b>. Create a <b>restricted</b> key (Text to Speech + Voices: read) and set a credit limit.</div>
+              <div class="bp-inline">
+                <button id="eleven-load-voices" class="bp-btn bp-btn-soft reset">↻ Load voices</button>
+                <button id="eleven-test" class="bp-btn bp-btn-accent">🔊 Test</button>
+              </div>
+              <label class="bp-field">
+                <span class="bp-field-label">Voice</span>
+                <select id="eleven-voice"></select>
+              </label>
+              <label class="bp-field">
+                <span class="bp-field-label">Quality</span>
+                <select id="eleven-model">
+                  <option value="eleven_flash_v2_5">Flash v2.5 — half the credits</option>
+                  <option value="eleven_multilingual_v2">Multilingual v2 — richest</option>
+                  <option value="eleven_v3">v3 — most expressive</option>
+                </select>
+              </label>
+              <label class="bp-toggle bp-toggle-flat">
+                <span class="bp-row-text">
+                  <span class="bp-row-title">Sync this setup to my other logins</span>
+                </span>
+                <input type="checkbox" id="eleven-sync-key" />
+                <span class="bp-switch" aria-hidden="true"></span>
+              </label>
+              <div id="eleven-cache-line" class="library-status"></div>
+              <div class="bp-inline">
+                <button id="eleven-pregen" class="bp-btn bp-btn-soft reset">⤓ Pre-download</button>
+                <button id="eleven-clear-cache" class="bp-btn bp-btn-soft reset">🗑 Clear cache</button>
+              </div>
+              <div id="eleven-status" class="library-status"></div>
+            </div>
+          </div>
+
+          <div class="bp-group">
+            <div class="bp-group-label" data-i18n="s_online_voice">Online fallback voice</div>
+            <label class="bp-toggle">
+              <span class="bp-row-text">
+                <span class="bp-row-title">Prefer online voice</span>
+                <span class="bp-row-sub">Use if your phone's voice won't play</span>
+              </span>
+              <input type="checkbox" id="online-voice-toggle" />
+              <span class="bp-switch" aria-hidden="true"></span>
+            </label>
+            <div class="bp-card">
+              <label class="bp-field bp-field-stacked">
+                <span class="bp-field-label" data-i18n="label_online_key">VoiceRSS key</span>
+                <input type="text" id="tts-api-key" autocomplete="off" placeholder="VoiceRSS API key" />
+              </label>
+              <div class="bp-hint">Free key at voicerss.org — sign up, copy the API key.</div>
+            </div>
+          </div>
+
+          <div class="bp-group">
+            <div class="bp-group-label" data-i18n="s_photo_search">Photo search</div>
+            <div class="bp-card">
+              <div class="bp-hint">Photo search uses free libraries (Openverse + Wikimedia) out of the box. Add Google keys to search Google Images instead.</div>
+              <label class="bp-field bp-field-stacked">
+                <span class="bp-field-label">Google API key</span>
+                <input type="text" id="google-img-key" autocomplete="off" placeholder="AIza…" />
+              </label>
+              <label class="bp-field bp-field-stacked">
+                <span class="bp-field-label">Search engine ID (cx)</span>
+                <input type="text" id="google-img-cx" autocomplete="off" placeholder="e.g. 012345…:abcde" />
+              </label>
+              <div class="bp-hint">Create a <a href="https://programmablesearchengine.google.com/controlpanel/create" target="_blank" rel="noopener">Programmable Search Engine</a> (turn on Image search + Search the entire web) and an <a href="https://developers.google.com/custom-search/v1/introduction" target="_blank" rel="noopener">API key</a>. Free tier: 100 searches a day. Setup takes about two minutes.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
     </div>
   </div>
 

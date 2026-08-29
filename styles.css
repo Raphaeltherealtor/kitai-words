@@ -497,56 +497,15 @@ main {
   transform: scale(1.05);
 }
 
-#settings-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.35);
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 20px;
-  overflow-y: auto;
-  /* Parent settings still scroll, but kept self-contained so the page stays locked */
-  touch-action: pan-y;
-  overscroll-behavior: contain;
-}
 
-#settings {
-  background: #fff;
-  padding: 20px;
-  border-radius: 16px;
-  width: min(480px, 95vw);
-  max-height: 90vh;
-  box-shadow: var(--shadow);
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  touch-action: pan-y;
-  overscroll-behavior: contain;
-  overflow-y: auto;
-}
 
-#settings label {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-}
 
-#settings select {
-  flex: 1;
-  padding: 8px;
-  border-radius: 10px;
-}
 
-#settings button {
-  align-self: flex-end;
-  padding: 10px 16px;
-  border: none;
-  border-radius: 12px;
-  background: var(--accent-2);
-  color: #fff;
-}
+
+
+
+
+
 
 .settings-subheader {
   font-weight: 800;
@@ -615,21 +574,9 @@ main {
 }
 
 /* Add-a-word form */
-#settings input[type="text"],
-#settings input[type="url"] {
-  flex: 1;
-  min-width: 0;
-  padding: 8px;
-  border-radius: 10px;
-  border: 1px solid #ddd;
-}
 
-#settings #new-word-add {
-  align-self: stretch;
-  background: var(--accent);
-  font-weight: 800;
-  font-size: 1.05rem;
-}
+
+
 
 .image-card {
   position: relative;
@@ -1559,37 +1506,10 @@ main {
 }
 
 /* ---- Tabbed Parent Settings ---- */
-.settings-tabs {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin-bottom: 12px;
-  position: sticky;
-  top: 0;
-  background: #fff;
-  padding-bottom: 6px;
-  z-index: 1;
-}
-.settings-tab {
-  flex: 1;
-  min-width: 72px;
-  border: none;
-  background: #f1f1f5;
-  border-radius: 12px;
-  padding: 10px 8px;
-  font-weight: 700;
-  font-size: 0.95rem;
-  cursor: pointer;
-}
-.settings-tab.active {
-  background: var(--accent-2);
-  color: #fff;
-}
-.settings-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
+
+
+
+
 .word-add-toggle {
   border: none;
   background: var(--accent-3);
@@ -1960,3 +1880,701 @@ body.locked {
 }
 .flash-stats { flex-wrap: wrap; }
 .flash-stat { min-width: 70px; }
+
+/* ==========================================================================
+   Bold Play — the parent's settings space.
+   ==========================================================================
+   Settings is a full-screen dark stack of screens, deliberately unlike the
+   bright play area: the parent should feel they've stepped out of the child's
+   app, and a child who gets in here finds nothing that looks tappable-fun.
+   The accent stays teal whatever play theme is chosen, so this space keeps one
+   identity of its own.
+
+   Navigation is hub-and-spoke — one screen at a time, each with a back arrow —
+   so no single screen is ever a long scroll of unrelated switches. */
+
+#settings-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: #0f1626;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+}
+
+#settings {
+  --bp-bg: #0f1626;
+  --bp-card: #1a2438;
+  --bp-field: #131c2e;
+  --bp-line: rgba(255, 255, 255, 0.1);
+  --bp-line-strong: rgba(255, 255, 255, 0.14);
+  --bp-text: #f2f6ff;
+  --bp-mut: #8fa2c4;
+  --bp-chev: #4a5b7d;
+  --bp-ac: #2fe0c0;
+  --bp-on-ac: #072019;
+  --bp-pink: #ff8fab;
+  position: absolute;
+  inset: 0;
+  background: var(--bp-bg);
+  color: var(--bp-text);
+  overflow: hidden;
+}
+
+/* Each screen fills the panel; only one is ever visible. */
+.bp-screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bp-bg);
+  animation: bp-push-in 0.2s ease-out;
+}
+.bp-screen.hidden { display: none; }
+
+@keyframes bp-push-in {
+  from { transform: scale(0.985); opacity: 0.6; }
+  to { transform: scale(1); opacity: 1; }
+}
+@keyframes bp-saved-pop {
+  0% { transform: translateY(-6px); opacity: 0; }
+  18% { transform: translateY(0); opacity: 1; }
+  78% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.bp-head {
+  position: relative;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: max(22px, env(safe-area-inset-top)) 20px 14px;
+}
+#settings .bp-back {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  padding: 0;
+  border: 1px solid var(--bp-line-strong);
+  border-radius: 14px;
+  background: var(--bp-card);
+  color: var(--bp-ac);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.bp-title {
+  flex: 1;
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--bp-text);
+}
+/* Confirmation that a change stuck — settings save on change, with no Save
+   button to press, so without this the parent gets no acknowledgement. */
+.bp-saved {
+  position: absolute;
+  right: 20px;
+  top: 100%;
+  background: var(--bp-ac);
+  color: var(--bp-on-ac);
+  font-size: 0.82rem;
+  font-weight: 800;
+  padding: 9px 14px;
+  border-radius: 999px;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 6;
+}
+.bp-saved.show { animation: bp-saved-pop 1.6s ease forwards; }
+
+.bp-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  padding: 4px 20px max(24px, env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.om-scroll { scrollbar-width: none; -ms-overflow-style: none; }
+.om-scroll::-webkit-scrollbar { width: 0; height: 0; display: none; }
+
+.bp-search-wrap { flex: none; padding: 0 20px 14px; }
+.bp-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bp-card);
+  border: 1px solid var(--bp-line);
+  border-radius: 16px;
+  padding: 14px 16px;
+}
+.bp-search-ico { font-size: 1rem; opacity: 0.6; }
+#settings .bp-search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 500;
+  font-size: 1rem;
+  color: var(--bp-text);
+}
+#settings .bp-search input::placeholder { color: var(--bp-mut); }
+
+.bp-group { display: flex; flex-direction: column; gap: 10px; }
+.bp-group.hidden { display: none; }
+.bp-group-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--bp-ac);
+}
+.bp-danger-label { color: var(--bp-pink); }
+
+/* The workhorse: an icon, a title, a live summary, a chevron. */
+#settings .bp-row {
+  width: 100%;
+  border: 1px solid var(--bp-line);
+  background: var(--bp-card);
+  border-radius: 20px;
+  padding: 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: var(--bp-text);
+}
+#settings .bp-row-dashed { border-style: dashed; border-color: rgba(255,255,255,0.18); background: transparent; }
+#settings .bp-row-danger {
+  border-color: rgba(255, 143, 171, 0.35);
+  background: rgba(255, 143, 171, 0.1);
+}
+#settings .bp-row-danger .bp-row-title { color: #ffc3d2; }
+#settings .bp-row-danger .bp-row-sub { color: #c39aab; }
+
+.bp-ico {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  font-size: 1.25rem;
+}
+.bp-ico-teal { background: rgba(47, 224, 192, 0.14); }
+.bp-ico-purple { background: rgba(132, 94, 247, 0.18); }
+.bp-ico-pink { background: rgba(255, 143, 171, 0.18); }
+.bp-ico-plain { background: rgba(255, 255, 255, 0.08); }
+
+.bp-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.bp-row-title { font-size: 1.1rem; font-weight: 800; line-height: 1.15; color: var(--bp-text); }
+.bp-row-sub { font-size: 0.85rem; font-weight: 500; line-height: 1.25; color: var(--bp-mut); }
+.bp-row-sub:empty { display: none; }
+.bp-chev { flex: none; font-size: 1.4rem; color: var(--bp-chev); }
+
+.bp-card {
+  border: 1px solid var(--bp-line);
+  background: var(--bp-card);
+  border-radius: 20px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.bp-card.hidden { display: none; }
+.bp-card-flat { background: transparent; }
+.bp-card-title { font-size: 1.05rem; font-weight: 800; line-height: 1.15; }
+
+/* Label above control on narrow screens beats label-beside-control: the
+   selects hold long voice names that would otherwise be squeezed to nothing. */
+.bp-field { display: flex; flex-direction: column; gap: 7px; }
+.bp-field-label { font-size: 0.88rem; font-weight: 700; color: var(--bp-mut); }
+.bp-field-divided { border-top: 1px solid rgba(255,255,255,0.07); padding-top: 14px; }
+
+#settings .bp-field select,
+#settings .bp-field input,
+#settings .bp-inline input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--bp-line-strong);
+  background: var(--bp-field);
+  border-radius: 14px;
+  padding: 15px;
+  font: inherit;
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: var(--bp-text);
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+#settings .bp-field select {
+  /* Chevron drawn in, since appearance:none removes the native one. */
+  background-image: linear-gradient(45deg, transparent 50%, var(--bp-chev) 50%),
+                    linear-gradient(135deg, var(--bp-chev) 50%, transparent 50%);
+  background-position: right 20px center, right 14px center;
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 40px;
+}
+#settings input::placeholder { color: #5d6d8c; }
+#settings .bp-pin { width: 130px; letter-spacing: 0.3em; }
+
+.bp-inline { display: flex; gap: 10px; align-items: stretch; flex-wrap: wrap; }
+.bp-inline input { flex: 1; }
+
+#settings .bp-btn {
+  border: none;
+  border-radius: 15px;
+  padding: 15px 14px;
+  font: inherit;
+  font-weight: 800;
+  font-size: 0.95rem;
+  cursor: pointer;
+  color: var(--bp-text);
+  background: rgba(255, 255, 255, 0.07);
+}
+#settings .bp-btn-accent { background: rgba(47, 224, 192, 0.16); color: var(--bp-ac); }
+#settings .bp-btn-soft { background: rgba(255, 255, 255, 0.07); color: #cbd6ea; }
+#settings .bp-btn-ghost {
+  background: transparent;
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  color: #cbd6ea;
+}
+#settings .bp-btn-block { width: 100%; padding: 18px; font-size: 1.05rem; }
+#settings .bp-inline .bp-btn { flex: 1; }
+#settings .bp-done {
+  margin-top: 4px;
+  width: 100%;
+  border: none;
+  border-radius: 18px;
+  padding: 18px;
+  font: inherit;
+  font-weight: 800;
+  font-size: 1.05rem;
+  background: var(--bp-ac);
+  color: var(--bp-on-ac);
+  cursor: pointer;
+}
+
+/* A real checkbox, dressed as a switch — no JS, and the label stays clickable. */
+.bp-toggle {
+  border: 1px solid var(--bp-line);
+  background: var(--bp-card);
+  border-radius: 18px;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+.bp-toggle-flat { border: none; background: transparent; padding: 0; }
+.bp-toggle input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.bp-switch {
+  width: 56px;
+  height: 34px;
+  flex: none;
+  border-radius: 999px;
+  padding: 3px;
+  display: flex;
+  justify-content: flex-start;
+  background: #d7dbe6;
+  transition: background 0.18s ease;
+}
+.bp-switch::after {
+  content: "";
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.18s ease;
+}
+.bp-toggle input:checked ~ .bp-switch { background: var(--bp-ac); }
+.bp-toggle input:checked ~ .bp-switch::after { transform: translateX(22px); }
+.bp-toggle input:focus-visible ~ .bp-switch { outline: 2px solid var(--bp-ac); outline-offset: 2px; }
+
+/* The select each of these grids drives stays in the DOM (all the existing
+   save/restore logic listens to it) but is never shown. */
+.bp-shadow-control {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.bp-lang-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+#settings .bp-lang {
+  border: 1px solid var(--bp-line);
+  background: var(--bp-card);
+  border-radius: 18px;
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+  cursor: pointer;
+  font: inherit;
+  color: var(--bp-mut);
+}
+#settings .bp-lang.active {
+  border: 2px solid var(--bp-ac);
+  background: rgba(47, 224, 192, 0.12);
+  color: var(--bp-text);
+}
+.bp-lang-flag { font-size: 1.5rem; line-height: 1; }
+.bp-lang-name { font-size: 1rem; font-weight: 800; line-height: 1.1; }
+
+.bp-chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+#settings .bp-chip {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 15px;
+  padding: 18px 0;
+  font: inherit;
+  font-weight: 800;
+  font-size: 1.35rem;
+  cursor: pointer;
+  background: transparent;
+  color: var(--bp-mut);
+}
+#settings .bp-chip.active { background: var(--bp-ac); color: var(--bp-on-ac); }
+
+.bp-theme-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+#settings .bp-theme {
+  border: 1px solid var(--bp-line);
+  background: var(--bp-card);
+  border-radius: 16px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  color: var(--bp-mut);
+}
+#settings .bp-theme.active { border: 2px solid var(--bp-ac); background: rgba(47,224,192,0.12); color: var(--bp-text); }
+.bp-theme-dot { width: 18px; height: 18px; flex: none; border-radius: 50%; }
+.bp-theme-ocean { background: linear-gradient(140deg, #35c3f3, #1fd1a5); }
+.bp-theme-galaxy { background: linear-gradient(140deg, #845ef7, #f06595); }
+.bp-theme-sky { background: linear-gradient(140deg, #74c0fc, #d0ebff); }
+.bp-theme-sunshine { background: linear-gradient(140deg, #ffd166, #ff8fab); }
+
+.bp-hint {
+  font-size: 0.84rem;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--bp-mut);
+  text-wrap: pretty;
+}
+.bp-hint b { color: #cbd6ea; }
+.bp-hint a { color: var(--bp-ac); }
+.bp-note {
+  border: 1px solid var(--bp-line);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 18px;
+  padding: 16px 18px;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--bp-mut);
+  text-wrap: pretty;
+}
+.bp-note b { color: var(--bp-text); }
+.bp-note-quiet { border-style: dashed; }
+
+.bp-hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid var(--bp-line);
+  background: var(--bp-card);
+  border-radius: 20px;
+  padding: 18px;
+}
+.bp-hero-accent { border-color: rgba(47, 224, 192, 0.28); background: rgba(47, 224, 192, 0.08); }
+.bp-hero-ico {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: 14px;
+  background: rgba(47, 224, 192, 0.18);
+  display: grid;
+  place-items: center;
+  font-size: 1.2rem;
+}
+
+.bp-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.bp-steps li {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: #cbd6ea;
+}
+.bp-steps b { color: var(--bp-text); }
+.bp-step-n {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: 50%;
+  background: rgba(47, 224, 192, 0.16);
+  color: var(--bp-ac);
+  display: grid;
+  place-items: center;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+/* ---- Dark treatment for the pieces the word list and forms already render ---- */
+#settings .library-status { font-size: 0.85rem; color: var(--bp-mut); font-style: normal; }
+#settings .library-status:empty { display: none; }
+#settings .library-help,
+#settings .theme-hint { font-size: 0.85rem; color: var(--bp-mut); line-height: 1.45; }
+#settings .sync-indicator { font-size: 0.85rem; font-weight: 600; color: var(--bp-mut); margin: 0; }
+#settings .sync-indicator:empty { display: none; }
+#settings .library-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+#settings .pill-row { display: flex; flex-wrap: wrap; gap: 8px; }
+#settings .pill-btn {
+  padding: 9px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--bp-line);
+  background: var(--bp-card);
+  color: var(--bp-mut);
+  font-weight: 700;
+  cursor: pointer;
+}
+#settings .pill-btn.active { background: var(--bp-ac); border-color: var(--bp-ac); color: var(--bp-on-ac); }
+
+#settings .image-list { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+#settings .image-card {
+  position: relative;
+  background: var(--bp-card);
+  border: 1px solid var(--bp-line);
+  border-radius: 16px;
+  padding: 10px;
+  display: grid;
+  gap: 6px;
+  cursor: pointer;
+  box-shadow: none;
+}
+#settings .image-card .image-preview { background: var(--bp-field); border-radius: 12px; }
+#settings .image-card .title { font-weight: 800; font-size: 0.95rem; color: var(--bp-text); }
+#settings .image-card .subtitle { font-size: 0.85rem; color: var(--bp-mut); }
+
+#settings .suggest-btn {
+  border: none;
+  border-radius: 15px;
+  padding: 15px 14px;
+  background: rgba(47, 224, 192, 0.16);
+  color: var(--bp-ac);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  align-self: stretch;
+}
+#settings .suggest-chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+#settings .suggest-chips:empty { display: none; }
+#settings .suggest-chip {
+  background: var(--bp-field);
+  border: 1px solid var(--bp-line);
+  color: var(--bp-text);
+  border-radius: 12px;
+}
+
+#settings .cat-add-form,
+#settings .add-word-form {
+  background: var(--bp-card);
+  border: 1px solid var(--bp-line);
+  border-radius: 20px;
+  padding: 18px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+#settings .cat-add-row { display: flex; gap: 10px; }
+#settings .cat-emoji-input { flex: 0 0 62px; text-align: center; }
+#settings .cat-add-row input { flex: 1; min-width: 0; }
+#settings .word-add-toggle { width: 100%; }
+
+/* The word list's own delete affordance sits over the thumbnail. */
+#settings .image-card .word-delete {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(230, 57, 70, 0.92);
+  color: #fff;
+  font-size: 0.85rem;
+  line-height: 1;
+  z-index: 2;
+  cursor: pointer;
+}
+
+/* A phone in the hand is the real target, but the panel should not become a
+   full-bleed wall of cards on a tablet or desktop. */
+@media (min-width: 620px) {
+  #settings { inset: 0; }
+  .bp-screen { max-width: 560px; margin: 0 auto; border-left: 1px solid var(--bp-line); border-right: 1px solid var(--bp-line); }
+}
+
+/* The word editor and photo finder open straight off the Words screen, so they
+   wear the same clothes — a white modal over the dark panel would read as a
+   different app. */
+#image-modal { background: rgba(6, 10, 20, 0.72); }
+.image-modal-content {
+  background: #1a2438;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 22px;
+  padding: 18px;
+  color: #f2f6ff;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+  max-height: 92vh;
+  overflow-y: auto;
+}
+#image-modal-title { font-weight: 800; font-size: 1.1rem; color: #f2f6ff; }
+.image-modal-header button {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #131c2e;
+  color: #f2f6ff;
+  border-radius: 12px;
+  padding: 8px 12px;
+}
+.image-modal-photos { background: #131c2e; }
+.image-modal-help { font-size: 0.85rem; color: #8fa2c4; line-height: 1.45; }
+.image-modal-help a { color: #2fe0c0; }
+.image-modal-actions button {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #131c2e;
+  color: #cbd6ea;
+  border-radius: 13px;
+  padding: 12px 14px;
+  font-weight: 700;
+}
+.image-modal-actions .reset {
+  background: rgba(255, 143, 171, 0.12);
+  border-color: rgba(255, 143, 171, 0.35);
+  color: #ffc3d2;
+}
+
+.reading-editor {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #131c2e;
+  border-radius: 18px;
+  padding: 16px;
+  gap: 12px;
+}
+.reading-editor-title { color: #f2f6ff; }
+.reading-editor-help { color: #8fa2c4; line-height: 1.45; }
+.reading-editor input {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #0f1626;
+  border-radius: 13px;
+  padding: 14px;
+  color: #f2f6ff;
+}
+.reading-editor input::placeholder { color: #5d6d8c; }
+.reading-speech-row {
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 14px;
+  padding: 12px;
+}
+.reading-speech-label { color: #f2f6ff; }
+#reading-save {
+  background: #2fe0c0;
+  color: #072019;
+  border-radius: 13px;
+  padding: 12px 20px;
+}
+.reading-editor .suggest-btn {
+  background: rgba(47, 224, 192, 0.16);
+  color: #2fe0c0;
+  border-radius: 13px;
+  padding: 12px 18px;
+}
+.reading-editor .suggest-chip,
+.image-modal-content .suggest-chip {
+  background: #0f1626;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f2f6ff;
+  border-radius: 12px;
+}
+
+.stock-search-bar input,
+.stock-url-bar input {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #0f1626;
+  border-radius: 13px;
+  padding: 13px;
+  color: #f2f6ff;
+}
+.stock-search-bar input::placeholder,
+.stock-url-bar input::placeholder { color: #5d6d8c; }
+.stock-search-bar button,
+#stock-url-add {
+  background: rgba(47, 224, 192, 0.16);
+  color: #2fe0c0;
+  border: none;
+  border-radius: 13px;
+  padding: 13px 16px;
+  font-weight: 800;
+}
+#stock-add {
+  background: #2fe0c0;
+  color: #072019;
+  border: none;
+  border-radius: 13px;
+  padding: 14px;
+  font-weight: 800;
+}
+#stock-add:disabled { background: rgba(255, 255, 255, 0.08); color: #5d6d8c; }
+.stock-status { color: #8fa2c4; }
+.stock-dot { background: rgba(255, 255, 255, 0.2); }
+.stock-dot.active { background: #2fe0c0; }
+.image-modal-stock { border-top: 1px solid rgba(255, 255, 255, 0.08); }
+
+/* A five-language grid leaves a widow in two columns; let the last one span. */
+.bp-lang-grid .bp-lang:last-child:nth-child(odd) { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 10px; }
+
+/* Deleting a word is a rare, deliberate act — it should be reachable, not the
+   loudest thing on a screen full of the child's photos. */
+#settings .image-card .word-delete {
+  background: rgba(15, 22, 38, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #ffc3d2;
+  font-size: 0.75rem;
+}
+#settings .image-card .word-delete:hover,
+#settings .image-card .word-delete:focus-visible {
+  background: rgba(230, 57, 70, 0.92);
+  border-color: transparent;
+  color: #fff;
+}
+
+/* The bundled word illustrations are drawn for a white ground, so their plate
+   stays light on purpose — framed to read as a photo, not a leak of the old
+   light theme. */
+.modal-photo-wrap { background: #f4f6fb; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 14px; }

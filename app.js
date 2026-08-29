@@ -168,6 +168,13 @@ const UI_LANGS = ["en", "es", "pt", "ja", "ko"];
 const UI_LANG_LABELS = {
   en: "English", es: "Español", pt: "Português", ja: "日本語", ko: "한국어",
 };
+// Status-line colours for the dark parent-settings panel and photo editor.
+// Green-on-white would vanish against #0f1626, so success/failure are said in
+// the panel's own accent and its pink.
+const BP_OK = "#2fe0c0";
+const BP_BAD = "#ff8fab";
+const BP_DIM = "#8fa2c4";
+
 const I18N = {
   en: {
     ob_sub: "Pick a language to learn", ob_start: "Start playing →",
@@ -193,6 +200,19 @@ const I18N = {
     settings_title: "Parent Settings",
     tab_words: "📚 Words", tab_language: "🌐 Language", tab_game: "🎮 Game", tab_account: "☁️ Account",
     done: "Done", label_category: "Category:",
+    back_to_play: "Back to play", s_search_ph: "Search settings",
+    s_hub_library: "Library", s_hub_learning: "Learning", s_hub_more: "More",
+    s_words: "Words & photos", s_shared: "Shared library", s_langvoice: "Language & voice",
+    s_game: "Game", s_lock: "Child lock", s_lock_sub: "Hold the padlock 3s to exit",
+    s_advanced: "Advanced", s_advanced_sub: "Premium voice, photo search, keys",
+    s_quick_add: "Quick add", s_quick_add_title: "Add a word",
+    s_quick_add_help: "Just type the word in English — we fill in the reading and find photos for you.",
+    s_your_words: "Your words", s_organise: "Organise",
+    s_child_hears: "The child hears", s_voice: "Voice", s_premium: "Premium voice", s_on_screen: "On screen",
+    s_difficulty: "Difficulty", s_categories_in_play: "Categories in play", s_feedback: "Feedback",
+    s_lock_hero: "Locked play", s_lock_hero_sub: "Fullscreen, screen stays on, settings hidden.", s_lock_now: "Lock now",
+    s_this_library: "This library", s_danger: "Danger zone",
+    s_premium_eleven: "Premium voice · ElevenLabs", s_online_voice: "Online fallback voice", s_photo_search: "Photo search",
     app_language: "App language:", app_language_hint: "Changes the buttons and menus throughout the app.",
     output_language: "Words / voice language:",
     label_voice: "Voice:", voice_test: "🔊 Test voice", voice_refresh: "↻ Refresh voices",
@@ -230,6 +250,19 @@ const I18N = {
     settings_title: "Ajustes para padres",
     tab_words: "📚 Palabras", tab_language: "🌐 Idioma", tab_game: "🎮 Juego", tab_account: "☁️ Cuenta",
     done: "Listo", label_category: "Categoría:",
+    back_to_play: "Volver a jugar", s_search_ph: "Buscar ajustes",
+    s_hub_library: "Biblioteca", s_hub_learning: "Aprendizaje", s_hub_more: "Más",
+    s_words: "Palabras y fotos", s_shared: "Biblioteca compartida", s_langvoice: "Idioma y voz",
+    s_game: "Juego", s_lock: "Bloqueo infantil", s_lock_sub: "Mantén el candado 3 s para salir",
+    s_advanced: "Avanzado", s_advanced_sub: "Voz premium, búsqueda de fotos, claves",
+    s_quick_add: "Añadir rápido", s_quick_add_title: "Añadir una palabra",
+    s_quick_add_help: "Escribe la palabra en inglés — nosotros ponemos la lectura y buscamos fotos.",
+    s_your_words: "Tus palabras", s_organise: "Organizar",
+    s_child_hears: "El niño escucha", s_voice: "Voz", s_premium: "Voz premium", s_on_screen: "En pantalla",
+    s_difficulty: "Dificultad", s_categories_in_play: "Categorías en juego", s_feedback: "Respuesta",
+    s_lock_hero: "Juego bloqueado", s_lock_hero_sub: "Pantalla completa, sin apagarse, ajustes ocultos.", s_lock_now: "Bloquear ahora",
+    s_this_library: "Esta biblioteca", s_danger: "Zona de riesgo",
+    s_premium_eleven: "Voz premium · ElevenLabs", s_online_voice: "Voz en línea de reserva", s_photo_search: "Búsqueda de fotos",
     app_language: "Idioma de la app:", app_language_hint: "Cambia los botones y menús de toda la app.",
     output_language: "Idioma de palabras / voz:",
     label_voice: "Voz:", voice_test: "🔊 Probar voz", voice_refresh: "↻ Actualizar voces",
@@ -267,6 +300,19 @@ const I18N = {
     settings_title: "Configurações dos pais",
     tab_words: "📚 Palavras", tab_language: "🌐 Idioma", tab_game: "🎮 Jogo", tab_account: "☁️ Conta",
     done: "Pronto", label_category: "Categoria:",
+    back_to_play: "Voltar ao jogo", s_search_ph: "Buscar ajustes",
+    s_hub_library: "Biblioteca", s_hub_learning: "Aprendizagem", s_hub_more: "Mais",
+    s_words: "Palavras e fotos", s_shared: "Biblioteca partilhada", s_langvoice: "Idioma e voz",
+    s_game: "Jogo", s_lock: "Bloqueio infantil", s_lock_sub: "Segure o cadeado 3 s para sair",
+    s_advanced: "Avançado", s_advanced_sub: "Voz premium, busca de fotos, chaves",
+    s_quick_add: "Adicionar rápido", s_quick_add_title: "Adicionar uma palavra",
+    s_quick_add_help: "Escreva a palavra em inglês — preenchemos a leitura e buscamos fotos.",
+    s_your_words: "Suas palavras", s_organise: "Organizar",
+    s_child_hears: "A criança ouve", s_voice: "Voz", s_premium: "Voz premium", s_on_screen: "Na tela",
+    s_difficulty: "Dificuldade", s_categories_in_play: "Categorias em jogo", s_feedback: "Retorno",
+    s_lock_hero: "Jogo bloqueado", s_lock_hero_sub: "Tela cheia, sempre ligada, ajustes ocultos.", s_lock_now: "Bloquear agora",
+    s_this_library: "Esta biblioteca", s_danger: "Zona de risco",
+    s_premium_eleven: "Voz premium · ElevenLabs", s_online_voice: "Voz online de reserva", s_photo_search: "Busca de fotos",
     app_language: "Idioma do app:", app_language_hint: "Muda os botões e menus em todo o app.",
     output_language: "Idioma das palavras / voz:",
     label_voice: "Voz:", voice_test: "🔊 Testar voz", voice_refresh: "↻ Atualizar vozes",
@@ -304,6 +350,19 @@ const I18N = {
     settings_title: "ほごしゃ せってい",
     tab_words: "📚 ことば", tab_language: "🌐 げんご", tab_game: "🎮 ゲーム", tab_account: "☁️ アカウント",
     done: "かんりょう", label_category: "カテゴリ:",
+    back_to_play: "あそびにもどる", s_search_ph: "せっていをさがす",
+    s_hub_library: "ライブラリ", s_hub_learning: "がくしゅう", s_hub_more: "そのた",
+    s_words: "ことばとしゃしん", s_shared: "きょうゆうライブラリ", s_langvoice: "げんごとこえ",
+    s_game: "ゲーム", s_lock: "チャイルドロック", s_lock_sub: "かぎを3びょうおしてかいじょ",
+    s_advanced: "しょうさいせってい", s_advanced_sub: "プレミアムボイス・しゃしんけんさく・キー",
+    s_quick_add: "かんたんついか", s_quick_add_title: "ことばをついか",
+    s_quick_add_help: "えいごでかくだけ。よみとしゃしんはこちらでよういします。",
+    s_your_words: "あなたのことば", s_organise: "せいり",
+    s_child_hears: "こどもがきくことば", s_voice: "こえ", s_premium: "プレミアムボイス", s_on_screen: "がめんひょうじ",
+    s_difficulty: "むずかしさ", s_categories_in_play: "つかうカテゴリ", s_feedback: "はんのう",
+    s_lock_hero: "ロックちゅう", s_lock_hero_sub: "ぜんがめん・がめんはきえず・せっていはひひょうじ。", s_lock_now: "いまロックする",
+    s_this_library: "このライブラリ", s_danger: "きけんなそうさ",
+    s_premium_eleven: "プレミアムボイス · ElevenLabs", s_online_voice: "オンラインのよびボイス", s_photo_search: "しゃしんけんさく",
     app_language: "アプリの げんご:", app_language_hint: "アプリぜんたいの ボタンや メニューを かえます。",
     output_language: "ことば・こえの げんご:",
     label_voice: "こえ:", voice_test: "🔊 こえを ためす", voice_refresh: "↻ こえを こうしん",
@@ -341,6 +400,19 @@ const I18N = {
     settings_title: "부모 설정",
     tab_words: "📚 낱말", tab_language: "🌐 언어", tab_game: "🎮 게임", tab_account: "☁️ 계정",
     done: "완료", label_category: "분류:",
+    back_to_play: "놀이로 돌아가기", s_search_ph: "설정 검색",
+    s_hub_library: "라이브러리", s_hub_learning: "학습", s_hub_more: "기타",
+    s_words: "단어와 사진", s_shared: "공유 라이브러리", s_langvoice: "언어와 목소리",
+    s_game: "게임", s_lock: "어린이 잠금", s_lock_sub: "자물쇠를 3초 누르면 해제",
+    s_advanced: "고급", s_advanced_sub: "프리미엄 음성, 사진 검색, 키",
+    s_quick_add: "빠른 추가", s_quick_add_title: "단어 추가",
+    s_quick_add_help: "영어로 쓰기만 하세요 — 읽기와 사진은 저희가 채웁니다.",
+    s_your_words: "내 단어", s_organise: "정리",
+    s_child_hears: "아이가 듣는 말", s_voice: "목소리", s_premium: "프리미엄 음성", s_on_screen: "화면 표시",
+    s_difficulty: "난이도", s_categories_in_play: "사용할 분류", s_feedback: "피드백",
+    s_lock_hero: "잠금 놀이", s_lock_hero_sub: "전체화면, 화면 켜짐 유지, 설정 숨김.", s_lock_now: "지금 잠그기",
+    s_this_library: "이 라이브러리", s_danger: "위험 구역",
+    s_premium_eleven: "프리미엄 음성 · ElevenLabs", s_online_voice: "온라인 예비 음성", s_photo_search: "사진 검색",
     app_language: "앱 언어:", app_language_hint: "앱 전체의 버튼과 메뉴를 바꿔요.",
     output_language: "낱말 / 음성 언어:",
     label_voice: "음성:", voice_test: "🔊 음성 테스트", voice_refresh: "↻ 음성 새로고침",
@@ -385,6 +457,9 @@ function applyI18n(root) {
     const s = t(el.getAttribute("data-i18n-aria"));
     if (s != null) el.setAttribute("aria-label", s);
   });
+  root.querySelectorAll(".bp-field-label[data-i18n], .bp-group-label[data-i18n]").forEach((el) => {
+    el.textContent = el.textContent.replace(/[:\uFF1A]\s*$/, "");
+  });
   document.documentElement.lang = state.uiLang;
 }
 
@@ -423,7 +498,6 @@ const els = {
   onboardingStart: document.getElementById("onboarding-start"),
   onboardingStatus: document.getElementById("onboarding-status"),
   closeSettings: document.getElementById("close-settings"),
-  settingsTabs: document.getElementById("settings-tabs"),
   wordAddToggle: document.getElementById("word-add-toggle"),
   addWordForm: document.getElementById("add-word-form"),
   speakBtn: document.getElementById("speak-btn"),
@@ -1159,18 +1233,18 @@ function updateWordSyncIndicator() {
   const el = els.wordSyncIndicator;
   if (!el) return;
   if (!isLibraryConfigured()) {
-    el.textContent = "● Saved on this device — connect a Shared Library below to sync across devices";
-    el.style.color = "#8a8594";
+    el.textContent = "● Saved on this device — turn on Shared library to sync across devices";
+    el.style.color = BP_DIM;
     return;
   }
   switch (state.wordSync) {
     case "syncing":
       el.textContent = "⟳ Syncing…";
-      el.style.color = "#8a8594";
+      el.style.color = BP_DIM;
       break;
     case "ok":
       el.textContent = "✓ Synced to your Shared Library";
-      el.style.color = "#2a9d8f";
+      el.style.color = BP_OK;
       break;
     case "error":
       el.textContent = "⚠ Offline — changes will sync when you're back online";
@@ -1178,7 +1252,7 @@ function updateWordSyncIndicator() {
       break;
     default:
       el.textContent = "● Connected to Shared Library";
-      el.style.color = "#8a8594";
+      el.style.color = BP_DIM;
   }
 }
 
@@ -1222,20 +1296,235 @@ function placeholderImage(emoji) {
 function setNewWordStatus(msg, isError) {
   if (!els.newWordStatus) return;
   els.newWordStatus.textContent = msg;
-  els.newWordStatus.style.color = isError ? "#d62828" : "#2a9d8f";
+  els.newWordStatus.style.color = isError ? BP_BAD : BP_OK;
 }
 
-// Tabbed Parent Settings: show one panel at a time.
-function setupSettingsTabs() {
-  if (!els.settingsTabs) return;
-  const tabs = Array.from(els.settingsTabs.querySelectorAll(".settings-tab"));
-  const panels = Array.from(document.querySelectorAll("#settings .settings-panel"));
-  tabs.forEach((tab) => {
-    tab.addEventListener("click", () => {
-      tabs.forEach((t) => t.classList.toggle("active", t === tab));
-      panels.forEach((p) => p.classList.toggle("hidden", p.dataset.panel !== tab.dataset.tab));
-    });
+// --- Parent settings: hub-and-spoke navigation ----------------------------
+//
+// Settings used to be four tabs over four long scrolls, which buried anything
+// below the fold — the premium-voice panel worst of all. Now each concern owns
+// a screen, the hub lists them with a live one-line summary of what each is
+// currently set to, and only one screen is mounted at a time.
+//
+// The grids for language, choice count and theme are presentation only: each
+// one drives the original <select>, which stays in the DOM (hidden) so every
+// existing load/save/change path keeps working untouched.
+
+const BP_SCREENS = ["hub", "words", "lang", "game", "lock", "library", "advanced"];
+let bpCurrent = "hub";
+
+function bpScreenEl(name) {
+  return document.querySelector(`#settings .bp-screen[data-screen="${name}"]`);
+}
+
+function bpGo(name) {
+  if (!BP_SCREENS.includes(name)) name = "hub";
+  bpCurrent = name;
+  BP_SCREENS.forEach((s) => {
+    const el = bpScreenEl(s);
+    if (el) el.classList.toggle("hidden", s !== name);
   });
+  const body = bpScreenEl(name) && bpScreenEl(name).querySelector(".bp-body");
+  if (body) body.scrollTop = 0;
+  bpRefresh();
+}
+
+// Settings apply the moment they change — there is no Save button — so the
+// parent needs some acknowledgement that the tap landed.
+function bpSaved() {
+  const el = bpScreenEl(bpCurrent);
+  const chip = el && el.querySelector("[data-bp-saved]");
+  if (!chip) return;
+  chip.classList.remove("show");
+  void chip.offsetWidth; // restart the animation
+  chip.classList.add("show");
+}
+
+// Mark the active option in each grid from whatever its <select> holds.
+function bpSyncControls() {
+  document.querySelectorAll("#bp-lang-grid .bp-lang").forEach((b) => {
+    b.classList.toggle("active", b.dataset.bpLang === state.lang);
+  });
+  document.querySelectorAll("#bp-choice-chips .bp-chip").forEach((b) => {
+    b.classList.toggle("active", Number(b.dataset.bpChoices) === state.choiceCount);
+  });
+  document.querySelectorAll("#bp-theme-grid .bp-theme").forEach((b) => {
+    b.classList.toggle("active", b.dataset.bpTheme === state.theme);
+  });
+  // Korean-only reading option: pointless noise in the other four languages.
+  const koRow = document.getElementById("bp-ko-alt-row");
+  if (koRow) koRow.classList.toggle("hidden", state.lang !== "ko");
+}
+
+function bpText(id, msg) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = msg;
+}
+
+// A built-in word always has its bundled picture; only a custom word can
+// genuinely be missing one.
+function bpWordsNeedingPhotos() {
+  try {
+    return state.items.filter((i) => i.custom && getOverrideEntries(i.id).length === 0).length;
+  } catch (_) {
+    return 0;
+  }
+}
+
+// "日本語 Japanese" → "日本語". The hub row has room for one name, and the
+// native one is the one the parent picked.
+function bpShortLang() {
+  return (langCfg().label || "").split(" ")[0];
+}
+
+// "Eddy (Japanese (Japan)) (ja-JP) · offline" → "Eddy (offline)".
+function bpShortVoice() {
+  const opt = els.voiceSelect && els.voiceSelect.selectedOptions[0];
+  const txt = (opt && opt.textContent) || "";
+  const name = txt.split(" (")[0].trim();
+  if (!name) return "";
+  return /offline/i.test(txt) ? `${name} (offline)` : name;
+}
+
+function bpRefresh() {
+  bpSyncControls();
+
+  const total = (state.items || []).length;
+  const missing = bpWordsNeedingPhotos();
+  bpText("sum-words", `${total} words${missing ? ` · ${missing} need a photo` : ""}`);
+
+  const libId = (state.libraryConfig && state.libraryConfig.libraryId || "").trim();
+  bpText("sum-library", libId ? `On · ${libId}` : "Off · this device only");
+  const heroTitle = document.getElementById("bp-library-hero-title");
+  const heroSub = document.getElementById("bp-library-hero-sub");
+  const hero = document.getElementById("bp-library-hero");
+  if (heroTitle && heroSub && hero) {
+    heroTitle.textContent = libId ? "Sharing is on" : "Sharing is off";
+    heroSub.textContent = libId
+      ? `Library ${libId} · ${total} words`
+      : "Words and photos stay on this device.";
+    hero.classList.toggle("bp-hero-accent", !!libId);
+  }
+
+  bpText("sum-lang", [bpShortLang(), bpShortVoice()].filter(Boolean).join(" · "));
+
+  const theme = (state.theme || "ocean");
+  bpText("sum-game", `${state.choiceCount} choices · ${theme.charAt(0).toUpperCase()}${theme.slice(1)} theme`);
+
+  const e = state.eleven || {};
+  bpText(
+    "sum-eleven",
+    elevenReady() ? `On · ${e.voiceName || "your voice"}` : "Studio quality, or your own cloned voice"
+  );
+}
+
+// Every setting worth finding by name, and which screen it lives on. Typing is
+// faster than remembering which drawer something went into.
+const BP_SEARCH_INDEX = [
+  { screen: "words", title: "Words & photos", sub: "Add, edit and delete words", keys: "word photo picture image add edit delete vocabulary category" },
+  { screen: "words", title: "Quick add a word", sub: "Type English, we do the rest", keys: "quick add new word english suggest" },
+  { screen: "library", title: "Shared library", sub: "Sync words and photos across phones", keys: "library sync share cloud pin id phone backup device" },
+  { screen: "lang", title: "Language the child hears", sub: "Japanese, Korean, English, Spanish, Portuguese", keys: "language japanese korean english spanish portuguese words output" },
+  { screen: "lang", title: "Voice", sub: "Which voice reads the words", keys: "voice speak sound speech read test refresh offline" },
+  { screen: "lang", title: "App language", sub: "Buttons and menus", keys: "app language interface ui menu buttons" },
+  { screen: "lang", title: "Show romaji", sub: "neko under ねこ", keys: "romaji romanisation romanization reading latin" },
+  { screen: "game", title: "Pictures to choose from", sub: "2, 3 or 4", keys: "choices difficulty pictures easy hard number" },
+  { screen: "game", title: "Categories in play", sub: "Which words come up", keys: "category categories mixed animals fruit play" },
+  { screen: "game", title: "Sounds & vibration", sub: "Chime, buzz, vibrate", keys: "sound sounds chime buzz vibrate vibration haptic feedback mute" },
+  { screen: "game", title: "Theme", sub: "Ocean, Galaxy, Sky, Sunshine", keys: "theme colour color ocean galaxy sky sunshine look" },
+  { screen: "lock", title: "Child lock", sub: "Hold the padlock 3s to exit", keys: "lock child kiosk fullscreen guided access screen pinning padlock" },
+  { screen: "advanced", title: "Premium voice (ElevenLabs)", sub: "Studio quality or your cloned voice", keys: "elevenlabs premium voice clone api key credits cache offline download quality model" },
+  { screen: "advanced", title: "Online fallback voice", sub: "VoiceRSS key", keys: "voicerss online voice fallback key internet" },
+  { screen: "advanced", title: "Photo search", sub: "Google API key and search engine ID", keys: "google photo image search api key cx openverse wikimedia" },
+];
+
+function bpRenderSearch(term) {
+  const box = document.getElementById("settings-search-results");
+  if (!box) return;
+  const q = term.trim().toLowerCase();
+  const groups = document.querySelectorAll("#settings [data-hub-group]");
+  if (!q) {
+    box.classList.add("hidden");
+    box.innerHTML = "";
+    groups.forEach((g) => g.classList.remove("hidden"));
+    return;
+  }
+  groups.forEach((g) => g.classList.add("hidden"));
+  const hits = BP_SEARCH_INDEX.filter(
+    (r) => `${r.title} ${r.sub} ${r.keys}`.toLowerCase().includes(q)
+  );
+  box.innerHTML = "";
+  box.classList.remove("hidden");
+  if (!hits.length) {
+    const empty = document.createElement("div");
+    empty.className = "bp-hint";
+    empty.textContent = `Nothing in settings matches “${term.trim()}”.`;
+    box.appendChild(empty);
+    return;
+  }
+  hits.forEach((r) => {
+    const btn = document.createElement("button");
+    btn.className = "bp-row";
+    btn.innerHTML =
+      '<span class="bp-row-text"><span class="bp-row-title"></span><span class="bp-row-sub"></span></span><span class="bp-chev" aria-hidden="true">›</span>';
+    btn.querySelector(".bp-row-title").textContent = r.title;
+    btn.querySelector(".bp-row-sub").textContent = r.sub;
+    btn.addEventListener("click", () => {
+      const input = document.getElementById("settings-search");
+      if (input) input.value = "";
+      bpRenderSearch("");
+      bpGo(r.screen);
+    });
+    box.appendChild(btn);
+  });
+}
+
+function setupSettingsNav() {
+  const root = document.getElementById("settings");
+  if (!root) return;
+
+  root.addEventListener("click", (ev) => {
+    const go = ev.target.closest("[data-bp-go]");
+    if (go) { bpGo(go.dataset.bpGo); return; }
+    if (ev.target.closest("[data-bp-close]")) { hideSettings(); return; }
+
+    const lang = ev.target.closest("[data-bp-lang]");
+    if (lang && els.langSelect) {
+      els.langSelect.value = lang.dataset.bpLang;
+      els.langSelect.dispatchEvent(new Event("change"));
+      bpSyncControls();
+      return;
+    }
+    const ch = ev.target.closest("[data-bp-choices]");
+    if (ch && els.choiceCount) {
+      els.choiceCount.value = ch.dataset.bpChoices;
+      els.choiceCount.dispatchEvent(new Event("change"));
+      bpSyncControls();
+      return;
+    }
+    const th = ev.target.closest("[data-bp-theme]");
+    if (th && els.themeSelect) {
+      els.themeSelect.value = th.dataset.bpTheme;
+      els.themeSelect.dispatchEvent(new Event("change"));
+      bpSyncControls();
+      return;
+    }
+  });
+
+  // One listener covers every control on every screen, so a new setting gets
+  // its confirmation for free.
+  root.addEventListener("change", () => { bpSaved(); bpRefresh(); });
+
+  const search = document.getElementById("settings-search");
+  if (search) search.addEventListener("input", () => bpRenderSearch(search.value));
+
+  const lockNow = document.getElementById("bp-lock-now");
+  if (lockNow) {
+    lockNow.addEventListener("click", () => {
+      hideSettings();
+      lockApp();
+    });
+  }
 }
 
 // --- English → Japanese/Korean word suggestions --------------------------
@@ -2243,7 +2532,7 @@ function saveVoicePref() {
 function elevenSay(msg, color) {
   const el = els.elevenStatus;
   if (!el) return;
-  el.style.color = color || "#5a5564";
+  el.style.color = color || BP_DIM;
   el.textContent = msg;
 }
 
@@ -2316,7 +2605,7 @@ function renderElevenVoiceOptions() {
 async function elevenLoadVoices() {
   const e = state.eleven;
   if (!e.key) {
-    elevenSay("⚠ Paste your ElevenLabs API key first.", "#d62828");
+    elevenSay("⚠ Paste your ElevenLabs API key first.", BP_BAD);
     return;
   }
   elevenSay("⟳ Loading your voices…");
@@ -2327,7 +2616,7 @@ async function elevenLoadVoices() {
         res.status === 401
           ? "⚠ ElevenLabs rejected that key. Check it, and that it allows “Voices: read”."
           : `⚠ Couldn't load voices (HTTP ${res.status}).`,
-        "#d62828"
+        BP_BAD
       );
       return;
     }
@@ -2346,11 +2635,11 @@ async function elevenLoadVoices() {
     const clones = e.voices.filter((v) => v.category === "cloned" || v.category === "professional").length;
     elevenSay(
       `✓ ${e.voices.length} voice${e.voices.length === 1 ? "" : "s"} loaded${clones ? ` — ${clones} of them your own clone${clones === 1 ? "" : "s"}` : ""}.`,
-      "#2a9d8f"
+      BP_OK
     );
     elevenShowQuota();
   } catch (_) {
-    elevenSay("⚠ Couldn't reach ElevenLabs. Check your internet.", "#d62828");
+    elevenSay("⚠ Couldn't reach ElevenLabs. Check your internet.", BP_BAD);
   }
 }
 
@@ -2375,7 +2664,7 @@ async function elevenShowQuota() {
 async function elevenTestVoice() {
   const e = state.eleven;
   if (!e.key || !e.voiceId) {
-    elevenSay("⚠ Add your key and pick a voice first.", "#d62828");
+    elevenSay("⚠ Add your key and pick a voice first.", BP_BAD);
     return;
   }
   elevenSay("🔊 Generating a sample…");
@@ -2385,13 +2674,13 @@ async function elevenTestVoice() {
     putCachedClip(ttsCacheKey(phrase), blob);
     playClipBlob(blob, {
       onStart: () => {
-        elevenSay(`✓ Working — “${e.voiceName || "your voice"}” speaking ${langCfg().label}.`, "#2a9d8f");
+        elevenSay(`✓ Working — “${e.voiceName || "your voice"}” speaking ${langCfg().label}.`, BP_OK);
         elevenShowQuota();
       },
-      onFail: () => elevenSay("⚠ Audio generated but wouldn't play. Tap anywhere in the app first, then retry.", "#d62828"),
+      onFail: () => elevenSay("⚠ Audio generated but wouldn't play. Tap anywhere in the app first, then retry.", BP_BAD),
     });
   } catch (err) {
-    elevenSay(`⚠ ${(err && err.message) || "ElevenLabs request failed"}.`, "#d62828");
+    elevenSay(`⚠ ${(err && err.message) || "ElevenLabs request failed"}.`, BP_BAD);
   }
 }
 
@@ -2401,7 +2690,7 @@ async function elevenTestVoice() {
 async function elevenPregenerate() {
   const e = state.eleven;
   if (!e.key || !e.voiceId) {
-    elevenSay("⚠ Add your key and pick a voice first.", "#d62828");
+    elevenSay("⚠ Add your key and pick a voice first.", BP_BAD);
     return;
   }
   const phrases = Array.from(
@@ -2412,7 +2701,7 @@ async function elevenPregenerate() {
     if (!(await getCachedClip(ttsCacheKey(p)))) pending.push(p);
   }
   if (!pending.length) {
-    elevenSay(`✓ All ${phrases.length} ${langCfg().label} words are already saved. Nothing to download.`, "#2a9d8f");
+    elevenSay(`✓ All ${phrases.length} ${langCfg().label} words are already saved. Nothing to download.`, BP_OK);
     return;
   }
   const chars = pending.reduce((n, p) => n + p.length, 0);
@@ -2436,13 +2725,13 @@ async function elevenPregenerate() {
       // Out of credits or a revoked key won't fix itself — stop rather than
       // hammering the API once per remaining word.
       if (failed >= 3) {
-        elevenSay(`⚠ Stopped after ${done} saved — ${(err && err.message) || "generation failed"}.`, "#d62828");
+        elevenSay(`⚠ Stopped after ${done} saved — ${(err && err.message) || "generation failed"}.`, BP_BAD);
         refreshElevenCacheLine();
         return;
       }
     }
   }
-  elevenSay(`✓ Saved ${done} word${done === 1 ? "" : "s"}${failed ? ` (${failed} failed)` : ""}. They now play offline.`, "#2a9d8f");
+  elevenSay(`✓ Saved ${done} word${done === 1 ? "" : "s"}${failed ? ` (${failed} failed)` : ""}. They now play offline.`, BP_OK);
   refreshElevenCacheLine();
   elevenShowQuota();
 }
@@ -2463,7 +2752,7 @@ async function refreshElevenCacheLine() {
   const guard = persisted
     ? " Storage is protected, so the phone won't clear them."
     : " ⚠ The phone may clear these if it runs low on space — tap Pre-download after that to restore them.";
-  el.style.color = ttsSaveFailed ? "#d62828" : "#5a5564";
+  el.style.color = ttsSaveFailed ? BP_BAD : BP_DIM;
   el.textContent =
     saved + guard + (ttsSaveFailed ? " ⚠ Some clips could not be saved (device storage is full), so those words will cost credits again." : "");
 }
@@ -2591,7 +2880,7 @@ function bindElevenUI() {
       state.eleven.enabled = ev.target.checked;
       saveElevenPrefs();
       if (state.eleven.enabled && !state.eleven.voiceId) {
-        elevenSay("⚠ Add your key and tap “Load my voices” to finish setting this up.", "#d62828");
+        elevenSay("⚠ Add your key and tap “Load my voices” to finish setting this up.", BP_BAD);
       }
     });
   }
@@ -2623,9 +2912,9 @@ function bindElevenUI() {
       state.eleven.syncKey = ev.target.checked;
       saveElevenPrefs();
       if (state.eleven.syncKey && !isLibraryConfigured()) {
-        elevenSay("⚠ Connect a Shared Library (Account tab) first — that's what carries this to your other logins.", "#d62828");
+        elevenSay("⚠ Connect a Shared library first — that's what carries this to your other logins.", BP_BAD);
       } else if (state.eleven.syncKey) {
-        elevenSay("✓ Voice setup synced. Sign in to the same Shared Library elsewhere to pick it up.", "#2a9d8f");
+        elevenSay("✓ Voice setup synced. Sign in to the same Shared Library elsewhere to pick it up.", BP_OK);
       }
     });
   }
@@ -2637,7 +2926,7 @@ function bindElevenUI() {
       if (!confirm("Delete the saved voice clips on this device? Words will be generated again (and billed again) on their next tap.")) return;
       await clearTtsCache();
       ttsSaveFailed = false;
-      elevenSay("✓ Voice cache cleared.", "#2a9d8f");
+      elevenSay("✓ Voice cache cleared.", BP_OK);
       refreshElevenCacheLine();
     });
   }
@@ -2653,10 +2942,10 @@ function refreshVoices() {
   const n = state.voices.length;
   if (n) {
     const cur = state.voices.find((v) => v.voiceURI === state.voiceId);
-    el.style.color = "#2a9d8f";
+    el.style.color = BP_OK;
     el.textContent = `Found ${n} ${langCfg().label} voice${n > 1 ? "s" : ""}. Selected: ${cur ? cur.name : "default"}.`;
   } else {
-    el.style.color = "#d62828";
+    el.style.color = BP_BAD;
     el.textContent = `No ${langCfg().label} voice found yet. Install that language's TTS in Android settings, then tap Refresh again.`;
   }
 }
@@ -2842,7 +3131,7 @@ function bindUI() {
       );
     });
   }
-  setupSettingsTabs();
+  setupSettingsNav();
   if (els.wordAddToggle) {
     els.wordAddToggle.addEventListener("click", toggleAddWordForm);
   }
@@ -3340,7 +3629,7 @@ function saveWordReading() {
   if (!kana) {
     if (els.readingStatus) {
       els.readingStatus.textContent = "Please enter the word.";
-      els.readingStatus.style.color = "#d62828";
+      els.readingStatus.style.color = BP_BAD;
     }
     return;
   }
@@ -3376,7 +3665,7 @@ function saveWordReading() {
 
   if (els.readingStatus) {
     els.readingStatus.textContent = "Saved. ✓";
-    els.readingStatus.style.color = "#2a9d8f";
+    els.readingStatus.style.color = BP_OK;
   }
   const fresh = state.items.find((i) => i.id === itemId);
   if (fresh) setImageModalTitle(fresh);
@@ -3821,6 +4110,7 @@ function showSettings() {
     els.quickAddCategory.value = state.imageCategoryId;
   }
   els.overlay.classList.remove("hidden");
+  bpGo("hub");
   updateWordSyncIndicator();
   refreshElevenCacheLine();
 }
@@ -4857,7 +5147,7 @@ async function testVoice() {
   const key = (state.ttsApiKey || "").trim();
 
   if (key) {
-    el.style.color = "#5a5564";
+    el.style.color = BP_DIM;
     el.textContent = "🔊 Testing online voice…";
     const url = onlineTtsUrls(langCfg().sample)[0];
     try {
@@ -4865,18 +5155,18 @@ async function testVoice() {
       const ct = (res.headers.get("content-type") || "").toLowerCase();
       if (res.ok && ct.includes("audio")) {
         try { onlineAudio = new Audio(url); onlineAudio.play().catch(() => {}); } catch (_) {}
-        el.style.color = "#2a9d8f";
+        el.style.color = BP_OK;
         el.textContent = "✓ Online voice working!";
       } else {
         const txt = (await res.text()).trim();
-        el.style.color = "#d62828";
+        el.style.color = BP_BAD;
         el.textContent = `⚠ ${txt.slice(0, 140) || "Online voice failed — check your API key."}`;
       }
     } catch (_) {
       // A CORS/network error blocked the diagnostic; just try to play it.
       playOnlineTts(langCfg().sample, {
-        onStart: () => { el.style.color = "#2a9d8f"; el.textContent = "✓ Online voice working!"; },
-        onFail: () => { el.style.color = "#d62828"; el.textContent = "⚠ Couldn't reach the online voice. Check your internet and the key."; },
+        onStart: () => { el.style.color = BP_OK; el.textContent = "✓ Online voice working!"; },
+        onFail: () => { el.style.color = BP_BAD; el.textContent = "⚠ Couldn't reach the online voice. Check your internet and the key."; },
       });
     }
     return;
@@ -4890,16 +5180,16 @@ async function testVoice() {
     ? `${chosen.name} (${chosen.lang}, ${chosen.localService ? "offline" : "network"})`
     : `no device ${langCfg().label} voice`;
   const info = `Device voice: ${desc} · ${matches.length} ${prefix.toUpperCase()} / ${voices.length} total.`;
-  el.style.color = "#5a5564";
+  el.style.color = BP_DIM;
   el.textContent = `${info} 🔊 Speaking…`;
   synthesize(langCfg().sample, {
     showErrors: true,
     onStatus: (s, kind) => {
       if (s === "start") {
-        el.style.color = "#2a9d8f";
+        el.style.color = BP_OK;
         el.textContent = `${info} ✓ Working (${kind === "online" ? "online" : "device"} voice).`;
       } else if (s === "error") {
-        el.style.color = "#d62828";
+        el.style.color = BP_BAD;
         el.textContent =
           `${info} ⚠ Still failed. Add a free online-voice key below (Voice → "Online voice key") and tap Test voice again.`;
       }

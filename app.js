@@ -4576,16 +4576,8 @@ function elevenReady() {
 }
 
 // One generation. Throws with a short reason the settings screen can show.
-async function elevenGenerate(text) {
+async function elevenPost(body) {
   const e = state.eleven;
-  const body = {
-    text,
-    model_id: e.model || ELEVEN_DEFAULT_MODEL,
-  };
-  // Japanese is the one language where ElevenLabs' language-aware normalizer
-  // is supported, and it matters for readings of numbers and counters.
-  if (state.lang === "ja") body.apply_language_text_normalization = true;
-
   const res = await fetch(
     `${ELEVEN_API}/text-to-speech/${encodeURIComponent(e.voiceId)}?output_format=mp3_44100_128`,
     {
@@ -4600,9 +4592,40 @@ async function elevenGenerate(text) {
       const j = await res.json();
       detail = (j && j.detail && (j.detail.message || j.detail.status)) || "";
     } catch (_) {}
-    throw new Error(detail || `HTTP ${res.status}`);
+    const err = new Error(detail || `HTTP ${res.status}`);
+    err.status = res.status;
+    throw err;
   }
   return await res.blob();
+}
+
+async function elevenGenerate(text) {
+  const model = state.eleven.model || ELEVEN_DEFAULT_MODEL;
+  const body = { text, model_id: model };
+
+  // Multilingual v2 picks the language up from the text itself and rejects an
+  // explicit language_code; every other model takes one, and pinning it stops
+  // "ゴリラ" being read as if it were English.
+  const code = (langCfg().prefix || "").slice(0, 2);
+  if (code && model !== "eleven_multilingual_v2") {
+    body.language_code = code;
+    // The language-aware normalizer is Japanese-only, and it needs the
+    // language_code above — without one the API answers "not supported for
+    // language code 'None'" and we lose the whole generation.
+    if (state.lang === "ja") body.apply_language_text_normalization = true;
+  }
+
+  try {
+    return await elevenPost(body);
+  } catch (err) {
+    // A plan or model that won't take these hints shouldn't cost the child the
+    // premium voice — drop them and try once more before falling back.
+    const tunable = "language_code" in body || "apply_language_text_normalization" in body;
+    if (!tunable || !(err.status >= 400 && err.status < 500)) throw err;
+    delete body.language_code;
+    delete body.apply_language_text_normalization;
+    return await elevenPost(body);
+  }
 }
 
 let elevenObjectUrl = null;

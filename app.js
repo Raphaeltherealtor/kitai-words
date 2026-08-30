@@ -202,6 +202,21 @@ const I18N = {
     done: "Done", label_category: "Category:",
     back_to_play: "Back to play", s_search_ph: "Search settings",
     s_hub_library: "Library", s_hub_learning: "Learning", s_hub_more: "More",
+    round_label: "round", s_words_short: "Words", s_edit: "Edit", s_done: "Done",
+    s_all: "All", s_new: "New", s_new_category: "New category",
+    s_cat_ideas: "Tap a suggestion to fill it in:", s_create_category: "Create category",
+    s_quick_add_help_short: "Type English — we fill in the reading and find photos.",
+    s_add_word: "Add a word", s_add_word_btn: "Add word",
+    s_add_word_note: "Saved on this device and in your shared library. It shows up in the games right away.",
+    s_photo_blank: "Leave it blank and we'll find photos for you after saving.",
+    s_words_unit: "words", s_need_photo: "need a photo", s_add_photo: "add photo",
+    s_add_more_options: "Add with more options",
+    im_photos: "Photos", im_word_sound: "Word & sound",
+    im_shows_says: "What the app shows & says", im_romaji: "Romaji (optional)",
+    s_my_words: "My words",
+    im_photo_help: "Up to 30 photos per word — the game picks a random one each round. GIFs work and stay animated.",
+    im_from_phone: "From phone", im_camera: "Camera", im_find: "Find photos online",
+    im_reset_title: "Reset to the bundled picture", im_reset_sub: "Removes your photos for this word",
     s_words: "Words & photos", s_shared: "Shared library", s_langvoice: "Language & voice",
     s_game: "Game", s_lock: "Child lock", s_lock_sub: "Hold the padlock 3s to exit",
     s_advanced: "Advanced", s_advanced_sub: "Premium voice, photo search, keys",
@@ -252,6 +267,21 @@ const I18N = {
     done: "Listo", label_category: "Categoría:",
     back_to_play: "Volver a jugar", s_search_ph: "Buscar ajustes",
     s_hub_library: "Biblioteca", s_hub_learning: "Aprendizaje", s_hub_more: "Más",
+    round_label: "ronda", s_words_short: "Palabras", s_edit: "Editar", s_done: "Listo",
+    s_all: "Todas", s_new: "Nueva", s_new_category: "Nueva categoría",
+    s_cat_ideas: "Toca una sugerencia para rellenarla:", s_create_category: "Crear categoría",
+    s_quick_add_help_short: "Escribe en inglés — nosotros ponemos la lectura y buscamos fotos.",
+    s_add_word: "Añadir palabra", s_add_word_btn: "Añadir palabra",
+    s_add_word_note: "Se guarda en este dispositivo y en tu biblioteca compartida. Aparece en los juegos al instante.",
+    s_photo_blank: "Déjalo vacío y buscaremos fotos después de guardar.",
+    s_words_unit: "palabras", s_need_photo: "sin foto", s_add_photo: "añadir foto",
+    s_add_more_options: "Añadir con más opciones",
+    im_photos: "Fotos", im_word_sound: "Palabra y sonido",
+    im_shows_says: "Lo que la app muestra y dice", im_romaji: "Romaji (opcional)",
+    s_my_words: "Mis palabras",
+    im_photo_help: "Hasta 30 fotos por palabra — el juego elige una al azar en cada ronda. Los GIF funcionan y se mueven.",
+    im_from_phone: "Del teléfono", im_camera: "Cámara", im_find: "Buscar fotos en línea",
+    im_reset_title: "Volver a la imagen original", im_reset_sub: "Borra tus fotos de esta palabra",
     s_words: "Palabras y fotos", s_shared: "Biblioteca compartida", s_langvoice: "Idioma y voz",
     s_game: "Juego", s_lock: "Bloqueo infantil", s_lock_sub: "Mantén el candado 3 s para salir",
     s_advanced: "Avanzado", s_advanced_sub: "Voz premium, búsqueda de fotos, claves",
@@ -302,6 +332,21 @@ const I18N = {
     done: "Pronto", label_category: "Categoria:",
     back_to_play: "Voltar ao jogo", s_search_ph: "Buscar ajustes",
     s_hub_library: "Biblioteca", s_hub_learning: "Aprendizagem", s_hub_more: "Mais",
+    round_label: "rodada", s_words_short: "Palavras", s_edit: "Editar", s_done: "Pronto",
+    s_all: "Todas", s_new: "Nova", s_new_category: "Nova categoria",
+    s_cat_ideas: "Toque numa sugestão para preencher:", s_create_category: "Criar categoria",
+    s_quick_add_help_short: "Escreva em inglês — nós colocamos a leitura e procuramos fotos.",
+    s_add_word: "Adicionar palavra", s_add_word_btn: "Adicionar palavra",
+    s_add_word_note: "Salvo neste aparelho e na sua biblioteca compartilhada. Aparece nos jogos na hora.",
+    s_photo_blank: "Deixe em branco e procuramos fotos depois de salvar.",
+    s_words_unit: "palavras", s_need_photo: "sem foto", s_add_photo: "adicionar foto",
+    s_add_more_options: "Adicionar com mais opções",
+    im_photos: "Fotos", im_word_sound: "Palavra e som",
+    im_shows_says: "O que o app mostra e diz", im_romaji: "Romaji (opcional)",
+    s_my_words: "Minhas palavras",
+    im_photo_help: "Até 30 fotos por palavra — o jogo escolhe uma ao acaso em cada rodada. GIFs funcionam e continuam animados.",
+    im_from_phone: "Do telefone", im_camera: "Câmera", im_find: "Procurar fotos online",
+    im_reset_title: "Voltar à imagem original", im_reset_sub: "Remove suas fotos desta palavra",
     s_words: "Palavras e fotos", s_shared: "Biblioteca partilhada", s_langvoice: "Idioma e voz",
     s_game: "Jogo", s_lock: "Bloqueio infantil", s_lock_sub: "Segure o cadeado 3 s para sair",
     s_advanced: "Avançado", s_advanced_sub: "Voz premium, busca de fotos, chaves",
@@ -352,6 +397,21 @@ const I18N = {
     done: "かんりょう", label_category: "カテゴリ:",
     back_to_play: "あそびにもどる", s_search_ph: "せっていをさがす",
     s_hub_library: "ライブラリ", s_hub_learning: "がくしゅう", s_hub_more: "そのた",
+    round_label: "かい", s_words_short: "ことば", s_edit: "へんしゅう", s_done: "かんりょう",
+    s_all: "すべて", s_new: "あたらしい", s_new_category: "あたらしい カテゴリー",
+    s_cat_ideas: "タップして いれてね:", s_create_category: "カテゴリーを つくる",
+    s_quick_add_help_short: "えいごで いれてね — よみかたと しゃしんは じどうで さがします。",
+    s_add_word: "ことばを ついか", s_add_word_btn: "ついかする",
+    s_add_word_note: "このデバイスと きょうゆうライブラリに ほぞんされ、すぐ ゲームに でてきます。",
+    s_photo_blank: "からのままでも OK。ほぞんの あとに しゃしんを さがします。",
+    s_words_unit: "ことば", s_need_photo: "しゃしん なし", s_add_photo: "しゃしんを ついか",
+    s_add_more_options: "くわしく ついか",
+    im_photos: "しゃしん", im_word_sound: "ことばと おと",
+    im_shows_says: "アプリが みせて はなす ことば", im_romaji: "ローマじ（にんい）",
+    s_my_words: "ことばリスト",
+    im_photo_help: "1つの ことばに 30まいまで。まいかい ランダムに えらばれます。GIF も うごきます。",
+    im_from_phone: "スマホから", im_camera: "カメラ", im_find: "ネットで さがす",
+    im_reset_title: "もとの えに もどす", im_reset_sub: "この ことばの しゃしんを けします",
     s_words: "ことばとしゃしん", s_shared: "きょうゆうライブラリ", s_langvoice: "げんごとこえ",
     s_game: "ゲーム", s_lock: "チャイルドロック", s_lock_sub: "かぎを3びょうおしてかいじょ",
     s_advanced: "しょうさいせってい", s_advanced_sub: "プレミアムボイス・しゃしんけんさく・キー",
@@ -402,6 +462,21 @@ const I18N = {
     done: "완료", label_category: "분류:",
     back_to_play: "놀이로 돌아가기", s_search_ph: "설정 검색",
     s_hub_library: "라이브러리", s_hub_learning: "학습", s_hub_more: "기타",
+    round_label: "라운드", s_words_short: "단어", s_edit: "편집", s_done: "완료",
+    s_all: "전체", s_new: "새로", s_new_category: "새 카테고리",
+    s_cat_ideas: "추천을 눌러 채우세요:", s_create_category: "카테고리 만들기",
+    s_quick_add_help_short: "영어로 입력하면 읽는 법과 사진을 대신 찾아드려요.",
+    s_add_word: "단어 추가", s_add_word_btn: "단어 추가",
+    s_add_word_note: "이 기기와 공유 라이브러리에 저장되고 게임에 바로 나옵니다.",
+    s_photo_blank: "비워 두면 저장한 뒤에 사진을 찾아드려요.",
+    s_words_unit: "단어", s_need_photo: "사진 없음", s_add_photo: "사진 추가",
+    s_add_more_options: "옵션 더보기로 추가",
+    im_photos: "사진", im_word_sound: "단어와 소리",
+    im_shows_says: "앱이 보여주고 말하는 것", im_romaji: "로마자 (선택)",
+    s_my_words: "내 단어",
+    im_photo_help: "단어당 최대 30장 — 매 라운드 무작위로 한 장을 씁니다. GIF도 움직입니다.",
+    im_from_phone: "휴대폰에서", im_camera: "카메라", im_find: "온라인에서 사진 찾기",
+    im_reset_title: "기본 그림으로 되돌리기", im_reset_sub: "이 단어의 사진을 지웁니다",
     s_words: "단어와 사진", s_shared: "공유 라이브러리", s_langvoice: "언어와 목소리",
     s_game: "게임", s_lock: "어린이 잠금", s_lock_sub: "자물쇠를 3초 누르면 해제",
     s_advanced: "고급", s_advanced_sub: "프리미엄 음성, 사진 검색, 키",
@@ -469,12 +544,23 @@ const els = {
   cards: document.getElementById("cards"),
   promptWord: document.getElementById("prompt-word"),
   feedback: document.getElementById("feedback"),
+  playBar: document.getElementById("play-bar"),
+  playClose: document.getElementById("play-close"),
+  playContext: document.getElementById("play-context"),
+  playProgress: document.getElementById("play-progress"),
+  playProgressFill: document.getElementById("play-progress-fill"),
+  playRound: document.getElementById("play-round"),
+  playRoundNum: document.getElementById("play-round-num"),
+  modeDock: document.getElementById("mode-dock"),
+  appHeader: document.querySelector("header"),
   trackLabel: document.getElementById("track-label"),
   modeLabel: document.getElementById("mode-label"),
   categoryLabel: document.getElementById("category-label"),
   voiceWarning: document.getElementById("voice-warning"),
   parentBtn: document.getElementById("parent-button"),
   homeBtn: document.getElementById("home-button"),
+  homeWords: document.getElementById("home-words"),
+  homeWordsCount: document.getElementById("home-words-count"),
   overlay: document.getElementById("settings-overlay"),
   choiceCount: document.getElementById("choice-count"),
   categorySelect: document.getElementById("category-select"),
@@ -498,7 +584,8 @@ const els = {
   onboardingStart: document.getElementById("onboarding-start"),
   onboardingStatus: document.getElementById("onboarding-status"),
   closeSettings: document.getElementById("close-settings"),
-  wordAddToggle: document.getElementById("word-add-toggle"),
+  wordsEditToggle: document.getElementById("words-edit-toggle"),
+  wordsCountLine: document.getElementById("words-count-line"),
   addWordForm: document.getElementById("add-word-form"),
   speakBtn: document.getElementById("speak-btn"),
   dropzoneSection: document.getElementById("dropzone-section"),
@@ -517,7 +604,6 @@ const els = {
   imageCategoryPills: document.getElementById("image-category-pills"),
   imageModal: document.getElementById("image-modal"),
   imageModalTitle: document.getElementById("image-modal-title"),
-  imageModalImg: document.getElementById("image-modal-img"),
   imageModalClose: document.getElementById("image-modal-close"),
   imageModalUpload: document.getElementById("image-modal-upload"),
   imageModalCamera: document.getElementById("image-modal-camera"),
@@ -568,7 +654,13 @@ const els = {
   newWordStatus: document.getElementById("new-word-status"),
   newWordSuggest: document.getElementById("new-word-suggest"),
   newWordSuggestions: document.getElementById("new-word-suggestions"),
-  imageModalEdit: document.getElementById("image-modal-edit"),
+  imageModalBack: document.getElementById("image-modal-back"),
+  imageModalSay: document.getElementById("image-modal-say"),
+  imTabPhotos: document.getElementById("im-tab-photos"),
+  imTabWord: document.getElementById("im-tab-word"),
+  imPhotoCount: document.getElementById("im-photo-count"),
+  imPanelPhotos: document.getElementById("im-panel-photos"),
+  imPanelWord: document.getElementById("im-panel-word"),
   readingEditor: document.getElementById("reading-editor"),
   readingInput: document.getElementById("reading-input"),
   readingRomaji: document.getElementById("reading-romaji"),
@@ -614,7 +706,8 @@ const els = {
   lockButton: document.getElementById("lock-button"),
   lockBadge: document.getElementById("lock-badge"),
   lockRingFill: document.getElementById("lock-ring-fill"),
-  catAddToggle: document.getElementById("cat-add-toggle"),
+  catAddClose: document.getElementById("cat-add-close"),
+  catIdeaChips: document.getElementById("cat-idea-chips"),
   catAddForm: document.getElementById("cat-add-form"),
   catAddEmoji: document.getElementById("cat-add-emoji"),
   catAddName: document.getElementById("cat-add-name"),
@@ -1310,7 +1403,7 @@ function setNewWordStatus(msg, isError) {
 // one drives the original <select>, which stays in the DOM (hidden) so every
 // existing load/save/change path keeps working untouched.
 
-const BP_SCREENS = ["hub", "words", "lang", "game", "lock", "library", "advanced"];
+const BP_SCREENS = ["hub", "words", "wordadd", "lang", "game", "lock", "library", "advanced"];
 let bpCurrent = "hub";
 
 function bpScreenEl(name) {
@@ -1423,6 +1516,8 @@ function bpRefresh() {
 const BP_SEARCH_INDEX = [
   { screen: "words", title: "Words & photos", sub: "Add, edit and delete words", keys: "word photo picture image add edit delete vocabulary category" },
   { screen: "words", title: "Quick add a word", sub: "Type English, we do the rest", keys: "quick add new word english suggest" },
+  { screen: "words", title: "New category", sub: "Make your own group of words", keys: "category new group make custom dinosaurs vehicles" },
+  { screen: "wordadd", title: "Add a word (more options)", sub: "Kana, romaji and a photo link", keys: "add word kana hangul romaji photo link manual full form" },
   { screen: "library", title: "Shared library", sub: "Sync words and photos across phones", keys: "library sync share cloud pin id phone backup device" },
   { screen: "lang", title: "Language the child hears", sub: "Japanese, Korean, English, Spanish, Portuguese", keys: "language japanese korean english spanish portuguese words output" },
   { screen: "lang", title: "Voice", sub: "Which voice reads the words", keys: "voice speak sound speech read test refresh offline" },
@@ -1852,17 +1947,8 @@ function suggestLang() {
   return state.lang === "ko" ? "ko" : "ja";
 }
 
-// "Add a word" shown right inside the Words tab; pre-fills the category the
+// The long "Add a word" form on its own screen; it pre-fills the category the
 // parent is currently viewing (e.g. browsing People → new word defaults to People).
-function toggleAddWordForm() {
-  if (!els.addWordForm) return;
-  const opening = els.addWordForm.classList.contains("hidden");
-  els.addWordForm.classList.toggle("hidden", !opening);
-  if (opening && els.newWordCategory && state.imageCategoryId && state.imageCategoryId !== "all") {
-    els.newWordCategory.value = state.imageCategoryId;
-  }
-}
-
 function addCustomItemFromForm() {
   const categoryId = els.newWordCategory ? els.newWordCategory.value : "";
   const en = (els.newWordEn?.value || "").trim();
@@ -1936,10 +2022,40 @@ function setCatAddStatus(msg, isError) {
   els.catAddStatus.classList.toggle("error", !!isError);
 }
 
+// Naming a category is the hard part of making one, so offer a few.
+const CATEGORY_IDEAS = [
+  ["🦕", "Dinosaurs"], ["🚗", "Vehicles"], ["🌦", "Weather"], ["👨‍👩‍👧", "Family"],
+  ["🎵", "Music"], ["👕", "Clothes"], ["🧸", "Toys"], ["🏫", "School"],
+  ["⚽", "Sports"], ["🐞", "Bugs"],
+];
+
+function renderCategoryIdeas() {
+  const box = els.catIdeaChips;
+  if (!box) return;
+  box.innerHTML = "";
+  const have = new Set(state.categories.map((c) => (c.label_en || "").toLowerCase()));
+  CATEGORY_IDEAS.filter(([, name]) => !have.has(name.toLowerCase()))
+    .slice(0, 6)
+    .forEach(([emoji, name]) => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "suggest-chip";
+      chip.textContent = `${emoji} ${name}`;
+      chip.addEventListener("click", () => {
+        if (els.catAddEmoji) els.catAddEmoji.value = emoji;
+        if (els.catAddName) els.catAddName.value = name;
+      });
+      box.appendChild(chip);
+    });
+}
+
 function toggleCategoryForm() {
   if (!els.catAddForm) return;
   els.catAddForm.classList.toggle("hidden");
-  if (!els.catAddForm.classList.contains("hidden") && els.catAddName) els.catAddName.focus();
+  if (!els.catAddForm.classList.contains("hidden")) {
+    renderCategoryIdeas();
+    if (els.catAddName) els.catAddName.focus();
+  }
 }
 
 async function addCategoryFromForm() {
@@ -3026,6 +3142,10 @@ function bindUI() {
   els.parentBtn.addEventListener("click", showSettings);
   els.parentBtn.addEventListener("pointerleave", cancelLongPress);
   onTap(els.homeBtn, goHome);
+  if (els.playClose) onTap(els.playClose, goHome);
+  // The library is the thing a parent opens settings for; put it on the home
+  // screen so it isn't two taps behind a gear.
+  if (els.homeWords) onTap(els.homeWords, () => { showSettings(); bpGo("words"); });
   els.closeSettings.addEventListener("click", hideSettings);
 
   els.choiceCount.addEventListener("change", (e) => {
@@ -3132,9 +3252,6 @@ function bindUI() {
     });
   }
   setupSettingsNav();
-  if (els.wordAddToggle) {
-    els.wordAddToggle.addEventListener("click", toggleAddWordForm);
-  }
 
   if (els.imageModalClose) {
     els.imageModalClose.addEventListener("click", closeImageModal);
@@ -3156,8 +3273,19 @@ function bindUI() {
   if (els.imageModalFind) {
     els.imageModalFind.addEventListener("click", toggleStockSearch);
   }
-  if (els.imageModalEdit) {
-    els.imageModalEdit.addEventListener("click", toggleReadingEditor);
+  if (els.imTabPhotos) els.imTabPhotos.addEventListener("click", () => imSetTab("photos"));
+  if (els.imTabWord) {
+    els.imTabWord.addEventListener("click", () => {
+      imSetTab("word");
+      if (els.readingInput) els.readingInput.focus();
+    });
+  }
+  if (els.imageModalBack) els.imageModalBack.addEventListener("click", closeImageModal);
+  if (els.imageModalSay) {
+    els.imageModalSay.addEventListener("click", () => {
+      const item = state.items.find((i) => i.id === state.imageModalItemId);
+      if (item) synthesize(speechText(item), { showErrors: true });
+    });
   }
   if (els.readingSuggest) {
     els.readingSuggest.addEventListener("click", () => {
@@ -3301,7 +3429,8 @@ function bindUI() {
   if (els.flashHome) onTap(els.flashHome, () => { hideFlashComplete(); goHome(); });
   if (els.flashFinish) onTap(els.flashFinish, () => endFlashSession());
 
-  if (els.catAddToggle) els.catAddToggle.addEventListener("click", toggleCategoryForm);
+  if (els.catAddClose) els.catAddClose.addEventListener("click", toggleCategoryForm);
+  if (els.wordsEditToggle) els.wordsEditToggle.addEventListener("click", toggleWordsEditing);
   if (els.catAddBtn) els.catAddBtn.addEventListener("click", addCategoryFromForm);
   if (els.catAddName) {
     els.catAddName.addEventListener("keydown", (e) => {
@@ -3477,6 +3606,7 @@ function buildImageManager() {
 }
 
 function renderImageList() {
+  if (els.homeWordsCount) els.homeWordsCount.textContent = String((state.items || []).length);
   if (!els.imageList) return;
   const term = (els.imageSearch?.value || "").toLowerCase().trim();
   els.imageList.innerHTML = "";
@@ -3490,6 +3620,7 @@ function renderImageList() {
       btn.textContent = cat ? `${cat.emoji} ${label}` : label;
       btn.addEventListener("click", () => {
         state.imageCategoryId = id;
+        syncQuickAddCategory();
         renderImageList();
       });
       // Custom categories get a small ✕ to delete (with confirm).
@@ -3507,19 +3638,37 @@ function renderImageList() {
       }
       return btn;
     };
-    els.imageCategoryPills.appendChild(makePill("all", "All"));
+    els.imageCategoryPills.appendChild(makePill("all", t("s_all")));
     state.categories.forEach((cat) => {
       els.imageCategoryPills.appendChild(makePill(cat.id, cat.label_en, cat));
     });
+    // Making a category belongs with the categories, not in a drawer below.
+    const add = document.createElement("button");
+    add.className = "pill-btn pill-new";
+    add.textContent = `＋ ${t("s_new")}`;
+    add.addEventListener("click", toggleCategoryForm);
+    els.imageCategoryPills.appendChild(add);
   }
 
-  const filteredItems = state.items.filter((item) => {
-    const catOk = state.imageCategoryId === "all" || item.categoryId === state.imageCategoryId;
-    if (!catOk) return false;
+  const inCategory = state.items.filter(
+    (item) => state.imageCategoryId === "all" || item.categoryId === state.imageCategoryId
+  );
+  const filteredItems = inCategory.filter((item) => {
     if (!term) return true;
     const haystack = `${item.en} ${item.jaKana} ${item.jaRomaji} ${item.ko || ""} ${item.koRomaji || ""}`.toLowerCase();
     return haystack.includes(term);
   });
+
+  // A parent scanning the library wants to know what still needs work.
+  if (els.wordsCountLine) {
+    const missing = inCategory.filter(
+      (i) => i.custom && !i.photoUrl && getOverrideEntries(i.id).length === 0
+    ).length;
+    const total = inCategory.length;
+    els.wordsCountLine.textContent = missing
+      ? `${total} ${t("s_words_unit")} · ${missing} ${t("s_need_photo")}`
+      : `${total} ${t("s_words_unit")}`;
+  }
 
   filteredItems.forEach((item) => {
     const card = document.createElement("div");
@@ -3528,13 +3677,11 @@ function renderImageList() {
     preview.className = "image-preview";
     const arr = getOverrideEntries(item.id);
     if (arr.length > 0) {
-      arr.slice(0, 3).forEach((entry, i) => {
-        const t = document.createElement("img");
-        t.src = entry.url;
-        t.className = "image-thumb stack-" + i;
-        t.alt = item.en;
-        preview.appendChild(t);
-      });
+      const t0 = document.createElement("img");
+      t0.src = arr[0].url;
+      t0.className = "image-thumb";
+      t0.alt = item.en;
+      preview.appendChild(t0);
     } else {
       const img = document.createElement("img");
       applyDefaultImage(img, item);
@@ -3542,20 +3689,30 @@ function renderImageList() {
       img.className = "image-thumb";
       preview.appendChild(img);
     }
+
+    // A bundled word always has its illustration; only a word the parent added
+    // can actually be missing a picture, so only that one gets nagged about.
+    const badge = document.createElement("span");
+    if (arr.length === 0 && item.custom && !item.photoUrl) {
+      badge.className = "image-badge image-badge-warn";
+      badge.textContent = t("s_add_photo");
+      card.classList.add("needs-photo");
+    } else if (arr.length > 0) {
+      badge.className = "image-badge";
+      badge.textContent = `${arr.length} 📷`;
+    }
+    if (badge.className) preview.appendChild(badge);
     card.appendChild(preview);
 
     const title = document.createElement("div");
     title.className = "title";
-    title.textContent = item.en;
+    title.textContent = wordText(item) || item.en;
     card.appendChild(title);
 
     const sub = document.createElement("div");
     sub.className = "subtitle";
-    if (arr.length === 0) {
-      sub.textContent = item.custom ? "Custom word" : "Default image";
-    } else {
-      sub.textContent = arr.length === 1 ? "1 custom photo" : `${arr.length} custom photos`;
-    }
+    const romaji = state.lang === "ko" ? item.koRomaji : item.jaRomaji;
+    sub.textContent = [item.en, romaji].filter(Boolean).join(" · ");
     card.appendChild(sub);
 
     const del = document.createElement("button");
@@ -3572,12 +3729,55 @@ function renderImageList() {
     card.addEventListener("click", () => openImageModal(item));
     els.imageList.appendChild(card);
   });
+
+  // The long form is a screen of its own now — the grid just offers the door.
+  const more = document.createElement("button");
+  more.className = "image-card image-card-add";
+  more.innerHTML = `<span class="add-plus">＋</span><span class="add-label">${t("s_add_more_options")}</span>`;
+  more.addEventListener("click", openAddWordScreen);
+  els.imageList.appendChild(more);
+}
+
+// The quick-add box has no category picker of its own — it lands in whichever
+// category the pills are filtered to.
+function syncQuickAddCategory() {
+  if (!els.quickAddCategory) return;
+  if (state.imageCategoryId && state.imageCategoryId !== "all") {
+    els.quickAddCategory.value = state.imageCategoryId;
+  }
+}
+
+function openAddWordScreen() {
+  if (els.newWordCategory && state.imageCategoryId && state.imageCategoryId !== "all") {
+    els.newWordCategory.value = state.imageCategoryId;
+  }
+  bpGo("wordadd");
+}
+
+function toggleWordsEditing() {
+  if (!els.imageList) return;
+  const editing = els.imageList.classList.toggle("editing");
+  if (els.wordsEditToggle) {
+    els.wordsEditToggle.textContent = editing ? t("s_done") : t("s_edit");
+    els.wordsEditToggle.classList.toggle("active", editing);
+  }
 }
 
 function setImageModalTitle(item) {
   if (!els.imageModalTitle) return;
-  const native = [item.jaKana, item.ko].filter(Boolean).join(" · ");
-  els.imageModalTitle.textContent = native ? `${item.en} (${native})` : item.en;
+  const native = wordText(item);
+  const romaji = state.lang === "ko" ? item.koRomaji : item.jaRomaji;
+  const cat = state.categories.find((c) => c.id === item.categoryId);
+  const meta = [item.en, romaji, cat ? `${cat.emoji} ${cat.label_en}` : ""].filter(Boolean).join(" · ");
+  els.imageModalTitle.innerHTML = "";
+  const head = document.createElement("span");
+  head.className = "image-modal-word";
+  head.textContent = native && native !== item.en ? native : item.en;
+  const sub = document.createElement("span");
+  sub.className = "image-modal-meta";
+  sub.textContent = meta;
+  els.imageModalTitle.appendChild(head);
+  els.imageModalTitle.appendChild(sub);
 }
 
 function openImageModal(item) {
@@ -3585,27 +3785,35 @@ function openImageModal(item) {
   state.imageModalItemId = item.id;
   setImageModalTitle(item);
   hideStockSearch();
-  hideReadingEditor();
   // Editing a reading only makes sense in a spoken language (not English mode).
-  if (els.imageModalEdit) els.imageModalEdit.classList.toggle("hidden", state.lang === "en");
+  const english = state.lang === "en";
+  if (els.imTabWord) els.imTabWord.classList.toggle("hidden", english);
+  fillReadingEditor(item);
+  imSetTab("photos");
   renderImageModalContent();
   els.imageModal.classList.remove("hidden");
+}
+
+// --- Photos / Word & sound tabs ---
+
+function imSetTab(tab) {
+  if (state.lang === "en") tab = "photos";
+  state.imageModalTab = tab;
+  if (els.imTabPhotos) els.imTabPhotos.classList.toggle("active", tab === "photos");
+  if (els.imTabWord) els.imTabWord.classList.toggle("active", tab === "word");
+  if (els.imPanelPhotos) els.imPanelPhotos.classList.toggle("hidden", tab !== "photos");
+  if (els.imPanelWord) els.imPanelWord.classList.toggle("hidden", tab !== "word");
+  if (tab !== "photos") hideStockSearch();
 }
 
 // --- Reading / inflection editor (correct how a word is shown & spoken) ---
 
 function hideReadingEditor() {
-  if (els.readingEditor) els.readingEditor.classList.add("hidden");
   if (els.readingSuggestions) els.readingSuggestions.innerHTML = "";
   if (els.readingStatus) els.readingStatus.textContent = "";
 }
 
-function toggleReadingEditor() {
-  if (!els.readingEditor) return;
-  const opening = els.readingEditor.classList.contains("hidden");
-  if (!opening) { hideReadingEditor(); return; }
-  hideStockSearch();
-  const item = state.items.find((i) => i.id === state.imageModalItemId);
+function fillReadingEditor(item) {
   if (!item) return;
   const isKo = state.lang === "ko";
   if (els.readingInput) els.readingInput.value = isKo ? item.ko || "" : item.jaKana || "";
@@ -3613,10 +3821,7 @@ function toggleReadingEditor() {
   // The "say it as" (accent) field is Japanese-only.
   if (els.readingSpeechRow) els.readingSpeechRow.classList.toggle("hidden", isKo);
   if (els.readingSpeech) els.readingSpeech.value = isKo ? "" : item.jaSpeech || "";
-  if (els.readingSuggestions) els.readingSuggestions.innerHTML = "";
-  if (els.readingStatus) els.readingStatus.textContent = "";
-  els.readingEditor.classList.remove("hidden");
-  if (els.readingInput) els.readingInput.focus();
+  hideReadingEditor();
 }
 
 function saveWordReading() {
@@ -3680,6 +3885,7 @@ function renderImageModalContent() {
   const item = state.items.find((i) => i.id === itemId);
   if (!item) return;
   const arr = getOverrideEntries(itemId);
+  if (els.imPhotoCount) els.imPhotoCount.textContent = String(arr.length);
   if (els.imageModalPhotos) {
     els.imageModalPhotos.innerHTML = "";
     if (arr.length === 0) {
@@ -3718,7 +3924,7 @@ function renderImageModalContent() {
   }
   if (els.imageModalReset) {
     els.imageModalReset.disabled = arr.length === 0;
-    els.imageModalReset.textContent = arr.length > 1 ? "Remove All" : "Reset";
+    els.imageModalReset.classList.toggle("hidden", arr.length === 0);
   }
 }
 
@@ -4028,15 +4234,20 @@ async function addStockPhotoByUrl() {
 }
 
 function setActiveModeButton(type) {
+  state.roundNo = 0;
   els.modeButtons.forEach((b) => b.classList.remove("active"));
   const match = Array.from(els.modeButtons).find((b) => b.dataset.gametype === type);
-  if (match) match.classList.add("active");
+  if (!match) return;
+  match.classList.add("active");
+  // The dock scrolls, so the mode you just chose should not sit half off-screen.
+  if (match.scrollIntoView) match.scrollIntoView({ inline: "center", block: "nearest" });
 }
 
 function updateModeButtonsForTrack(track) {
   const [btn1, btn2, btn3, btn4, btn5] = els.modeButtons;
   if (track === "vocab") {
     if (els.categoryQuick) els.categoryQuick.parentElement.classList.remove("hidden");
+    if (els.playContext) els.playContext.classList.add("pickable");
     btn1.dataset.gametype = "tap";
     btn1.textContent = t("mode_tap");
     btn1.classList.remove("hidden");
@@ -4067,6 +4278,7 @@ function updateModeButtonsForTrack(track) {
     setActiveModeButton("tap");
   } else if (track === "hiragana" || track === "katakana") {
     if (els.categoryQuick) els.categoryQuick.parentElement.classList.add("hidden");
+    if (els.playContext) els.playContext.classList.remove("pickable");
     btn1.dataset.gametype = "kana-tap";
     btn1.textContent = t("mode_kana_tap");
     btn1.classList.remove("hidden");
@@ -4127,6 +4339,7 @@ function goHome() {
   state.currentSection = "home";
   els.homeScreen.classList.remove("hidden");
   els.gameScreen.classList.add("hidden");
+  setPlayChrome(false);
 }
 
 // ---- Child Lock ------------------------------------------------------------
@@ -4262,6 +4475,16 @@ function showGame() {
   state.currentSection = "game";
   els.homeScreen.classList.add("hidden");
   els.gameScreen.classList.remove("hidden");
+  setPlayChrome(true);
+}
+
+// The play screen carries its own top bar (close · mode · progress · round) and
+// a bottom dock, so the app header would only repeat what is already there.
+function setPlayChrome(playing) {
+  document.body.classList.toggle("playing", playing);
+  if (els.appHeader) els.appHeader.classList.toggle("hidden", playing);
+  if (els.modeDock) els.modeDock.classList.toggle("hidden", !playing);
+  if (playing) updatePlayBar();
 }
 
 function pickPool() {
@@ -4379,8 +4602,7 @@ function renderFlashView() {
   if (els.flashBar) els.flashBar.classList.remove("hidden");
   renderCards(state.currentChoices);
   els.promptWord.textContent = wordText(state.currentTarget);
-  const cleared = state.flash.total - state.flash.deck.length;
-  els.modeLabel.textContent = `${t("mode_flash")} · ${cleared}/${state.flash.total}`;
+  els.modeLabel.textContent = t("mode_flash");
   updateFlashLiveScore();
 }
 
@@ -4389,6 +4611,7 @@ function updateFlashLiveScore() {
   const a = state.flash.answered;
   const emptyMsg = state.currentGameType === "memory" ? t("mem_watch") : t("flash_live_default");
   els.flashLiveScore.textContent = a ? `${state.flash.correct}/${a} correct` : emptyMsg;
+  updatePlayBar();
 }
 
 // ---- Memory mode -----------------------------------------------------------
@@ -4404,8 +4627,7 @@ function renderMemoryView() {
   if (els.flashBar) els.flashBar.classList.remove("hidden");
   renderCards(state.currentChoices); // renders face-up, each card with a .card-back overlay
   els.promptWord.textContent = wordText(state.currentTarget);
-  const cleared = state.flash.total - state.flash.deck.length;
-  els.modeLabel.textContent = `${t("mode_memory")} · ${cleared}/${state.flash.total}`;
+  els.modeLabel.textContent = t("mode_memory");
   updateFlashLiveScore();
   els.feedback.textContent = t("mem_look_listen");
 }
@@ -4615,6 +4837,7 @@ function chooseKanaRound() {
 
 function startRound() {
   if (state.currentSection !== "game") return;
+  state.roundNo = (state.roundNo || 0) + 1;
   if (state.currentGameType === "kana-alphabet" || state.currentGameType === "kana-alphabet-quiz") {
     renderCurrentView();
     return;
@@ -4677,6 +4900,46 @@ function renderCurrentView() {
       renderAlphabetQuizView();
     }
   }
+  updatePlayBar();
+}
+
+// One line instead of three bars: which mode, what is being played, how far in.
+// Deck modes (flash / memory) and the kana alphabet know their length, so they
+// get a progress fill; the endless modes just count rounds.
+function updatePlayBar() {
+  if (!els.playBar) return;
+  const deck =
+    state.flash.active &&
+    (state.currentGameType === "flash" || state.currentGameType === "memory");
+  const kana =
+    state.currentGameType === "kana-alphabet" ||
+    state.currentGameType === "kana-alphabet-quiz";
+  let pct = 0;
+  let round = state.roundNo || 1;
+  let showBar = false;
+
+  if (deck && state.flash.total) {
+    const cleared = state.flash.total - state.flash.deck.length;
+    pct = (cleared / state.flash.total) * 100;
+    round = Math.min(cleared + 1, state.flash.total);
+    showBar = true;
+  } else if (kana) {
+    const set = getAlphabetSet() || [];
+    const idx = state.alphabetIndex[state.currentTrack] || 0;
+    if (set.length) {
+      pct = ((idx + 1) / set.length) * 100;
+      round = idx + 1;
+      showBar = true;
+    }
+  }
+
+  if (els.playProgress) els.playProgress.classList.toggle("hidden", !showBar);
+  if (els.playProgressFill) els.playProgressFill.style.width = `${Math.max(0, Math.min(100, pct))}%`;
+  if (els.playRoundNum) els.playRoundNum.textContent = String(round);
+  // The live score replaces the track/category line once there is a score.
+  const live = deck && state.flash.answered > 0;
+  if (els.flashLiveScore) els.flashLiveScore.classList.toggle("hidden", !live);
+  if (els.playContext) els.playContext.classList.toggle("hidden", live);
 }
 
 function showPromptArea(show) {
@@ -5209,6 +5472,7 @@ function advanceAlphabet(delta) {
   if (next < 0 || next >= set.length) return;
   state.alphabetIndex[trackKey] = next;
   renderAlphabetView();
+  updatePlayBar();
 }
 
 function renderAlphabetQuizView() {
@@ -5280,6 +5544,7 @@ function advanceQuizAuto() {
   if (next >= set.length) next = 0;
   state.alphabetIndex[trackKey] = next;
   buildAlphabetQuizRound();
+  updatePlayBar();
 }
 
 function renderCards(items) {

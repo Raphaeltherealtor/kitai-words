@@ -135,6 +135,7 @@ main {
   overscroll-behavior: contain;
 }
 
+#home-screen { display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 12px; }
 #home-screen h1 {
   margin: 8px 0 12px;
   color: var(--on-bg);
@@ -179,6 +180,104 @@ main {
   font-size: 0.95rem;
 }
 
+/* ---- Play chrome ---------------------------------------------------------
+   One row at the top (leave · what we're playing · how far in) and one dock at
+   the bottom (which mode · finish). The old status line, mode tabs, flash bar
+   and count bar were four stacked rows before a single picture appeared. */
+#play-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 2px 2px;
+}
+#play-close {
+  width: 42px;
+  height: 42px;
+  flex: none;
+  border: none;
+  border-radius: 14px;
+  background: #fff;
+  color: #7a8598;
+  font-size: 1.1rem;
+  line-height: 1;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+}
+.play-bar-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.play-bar-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  color: var(--on-bg);
+  text-shadow: var(--on-bg-shadow);
+}
+#mode-label {
+  flex: none;
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+#play-context,
+.flash-live-score {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  opacity: 0.85;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.play-progress {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.35);
+  overflow: hidden;
+}
+#play-progress-fill {
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background: var(--accent-2);
+  transition: width 0.35s ease;
+}
+.play-round {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  background: rgba(15, 22, 38, 0.85);
+  color: #ffe7c2;
+  border-radius: 15px;
+  padding: 8px 12px;
+}
+#play-round-num { font-size: 1.1rem; font-weight: 800; line-height: 1; }
+.play-round-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+/* The dock sits in thumb reach and stays put while the round changes. */
+#mode-dock {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #17202f;
+  padding: 12px 14px max(14px, env(safe-area-inset-bottom));
+}
+#mode-dock.hidden { display: none; }
+
 #status {
   display: flex;
   gap: 10px;
@@ -187,6 +286,7 @@ main {
   color: var(--on-bg);
   text-shadow: var(--on-bg-shadow);
 }
+#status:empty { display: none; }
 
 #voice-warning {
   color: #c0392b;
@@ -208,23 +308,29 @@ main {
 }
 
 #mode-switcher {
+  flex: 1;
+  min-width: 0;
   display: flex;
   gap: 8px;
-  flex-wrap: wrap;
+  overflow-x: auto;
 }
 
 .mode-btn {
+  flex: none;
   border: none;
-  background: #fff;
-  padding: 10px 14px;
-  border-radius: 12px;
-  box-shadow: var(--shadow);
-  font-weight: 700;
+  background: rgba(255, 255, 255, 0.08);
+  color: #cbd6ea;
+  padding: 13px 15px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 0.86rem;
+  white-space: nowrap;
+  cursor: pointer;
 }
 
 .mode-btn.active {
-  background: var(--accent-2);
-  color: #fff;
+  background: #fff;
+  color: #17202f;
 }
 
 #find-count-bar {
@@ -992,34 +1098,6 @@ main {
   position: relative;
 }
 
-.image-thumb.stack-0 {
-  object-fit: cover;
-  z-index: 2;
-  position: relative;
-}
-
-.image-thumb.stack-1,
-.image-thumb.stack-2 {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: inherit;
-}
-
-.image-thumb.stack-1 {
-  transform: rotate(4deg) translate(6px, 4px);
-  z-index: 1;
-  opacity: 0.65;
-}
-
-.image-thumb.stack-2 {
-  transform: rotate(-4deg) translate(-6px, 4px);
-  z-index: 0;
-  opacity: 0.45;
-}
-
 .image-modal-actions {
   display: flex;
   gap: 8px;
@@ -1461,10 +1539,6 @@ main {
   border-radius: 12px;
   background: #faf9fd;
 }
-.reading-editor-title {
-  font-weight: 800;
-  color: #2b2540;
-}
 .reading-editor-help {
   font-size: 0.85rem;
   color: #6b6577;
@@ -1510,15 +1584,6 @@ main {
 
 
 
-.word-add-toggle {
-  border: none;
-  background: var(--accent-3);
-  color: #fff;
-  font-weight: 800;
-  border-radius: 12px;
-  padding: 12px;
-  cursor: pointer;
-}
 .add-word-form {
   display: flex;
   flex-direction: column;
@@ -1860,23 +1925,21 @@ body.locked {
 
 /* ---- Flash bar (finish + live score) ---- */
 #flash-bar {
+  flex: none;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  background: #fff;
-  border-radius: 12px;
-  padding: 8px 12px;
-  box-shadow: var(--shadow);
 }
-.flash-live-score { font-weight: 800; color: var(--text); }
+.flash-live-score.hidden,
+#play-context.hidden { display: none; }
 .flash-finish {
   border: none;
-  background: var(--accent);
-  color: #fff;
+  background: var(--accent-2);
+  color: #06231c;
   font-weight: 800;
-  padding: 8px 16px;
-  border-radius: 10px;
+  font-size: 0.86rem;
+  white-space: nowrap;
+  padding: 13px 16px;
+  border-radius: 999px;
+  cursor: pointer;
 }
 .flash-stats { flex-wrap: wrap; }
 .flash-stat { min-width: 70px; }
@@ -2413,7 +2476,6 @@ body.locked {
 #settings .cat-add-row { display: flex; gap: 10px; }
 #settings .cat-emoji-input { flex: 0 0 62px; text-align: center; }
 #settings .cat-add-row input { flex: 1; min-width: 0; }
-#settings .word-add-toggle { width: 100%; }
 
 /* The word list's own delete affordance sits over the thumbnail. */
 #settings .image-card .word-delete {
@@ -2486,7 +2548,6 @@ body.locked {
   padding: 16px;
   gap: 12px;
 }
-.reading-editor-title { color: #f2f6ff; }
 .reading-editor-help { color: #8fa2c4; line-height: 1.45; }
 .reading-editor input {
   border: 1px solid rgba(255, 255, 255, 0.14);
@@ -2559,13 +2620,14 @@ body.locked {
 /* A five-language grid leaves a widow in two columns; let the last one span. */
 .bp-lang-grid .bp-lang:last-child:nth-child(odd) { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 10px; }
 
-/* Deleting a word is a rare, deliberate act — it should be reachable, not the
-   loudest thing on a screen full of the child's photos. */
+/* Deleting a word is a rare, deliberate act — it hides behind Edit, and once
+   you are in Edit it should be obvious which badge removes what. */
 #settings .image-card .word-delete {
-  background: rgba(15, 22, 38, 0.78);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  color: #ffc3d2;
-  font-size: 0.75rem;
+  background: #ff6b6b;
+  border: none;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 800;
 }
 #settings .image-card .word-delete:hover,
 #settings .image-card .word-delete:focus-visible {
@@ -2578,3 +2640,232 @@ body.locked {
    stays light on purpose — framed to read as a photo, not a leak of the old
    light theme. */
 .modal-photo-wrap { background: #f4f6fb; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 14px; }
+
+/* The dock owns the bottom edge while a game is on, so main stops short. */
+body.playing main { padding-bottom: 12px; }
+
+/* ---- Words manager -------------------------------------------------------
+   The library became a screen of its own: a fixed head (search + categories),
+   a scrolling grid of pictures, and a quick-add bar pinned where the thumb is.
+   Everything the parent hunts for is on one screen instead of down a scroll. */
+.bp-head-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.bp-head-text .bp-title { flex: none; }
+.bp-head-sub { font-size: 0.82rem; font-weight: 500; color: var(--bp-mut); }
+.bp-head-sub:empty { display: none; }
+#settings .bp-head-btn {
+  flex: none;
+  border: 1px solid var(--bp-line-strong);
+  background: var(--bp-card);
+  color: #cbd6ea;
+  font: inherit;
+  font-weight: 800;
+  font-size: 0.9rem;
+  padding: 12px 14px;
+  border-radius: 14px;
+  cursor: pointer;
+}
+#settings .bp-head-btn.active { background: var(--bp-ac); border-color: var(--bp-ac); color: var(--bp-on-ac); }
+
+.bp-fixed {
+  flex: none;
+  padding: 0 20px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.bp-fixed .pill-row { flex-wrap: nowrap; overflow-x: auto; }
+#settings .pill-new { border-style: dashed; border-color: rgba(255, 255, 255, 0.24); background: transparent; }
+
+.bp-body-grid { padding-top: 4px; gap: 12px; }
+
+.bp-foot {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 20px max(20px, env(safe-area-inset-bottom));
+  background: linear-gradient(to top, var(--bp-bg) 70%, rgba(15, 22, 38, 0));
+}
+.bp-foot-hint { font-size: 0.8rem; font-weight: 500; color: #55668a; line-height: 1.3; }
+
+#settings .bp-card-head { display: flex; align-items: center; gap: 10px; }
+#settings .bp-card-head .bp-card-title { flex: 1; }
+#settings .bp-card-x {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  padding: 0;
+  border: none;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--bp-mut);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Two per row, picture first: a parent recognises the photo long before the
+   word, and the badge says at a glance which words still need one. */
+#settings .image-list { grid-template-columns: 1fr 1fr; gap: 12px; }
+#settings .image-card { padding: 0; border-radius: 18px; overflow: hidden; gap: 0; }
+#settings .image-card .image-preview { border-radius: 0; }
+#settings .image-card .title,
+#settings .image-card .subtitle { padding: 0 12px; }
+#settings .image-card .title { font-size: 1.1rem; padding-top: 10px; }
+#settings .image-card .subtitle { padding-bottom: 12px; }
+.image-badge {
+  position: absolute;
+  right: 7px;
+  bottom: 7px;
+  background: rgba(7, 18, 32, 0.78);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 5px 8px;
+  border-radius: 999px;
+}
+.image-badge-warn { background: var(--bp-pink); color: #3d0d18; }
+#settings .image-card .image-preview { position: relative; }
+
+#settings .image-card-add {
+  border-style: dashed;
+  border-color: rgba(255, 255, 255, 0.2);
+  background: transparent;
+  color: var(--bp-mut);
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font: inherit;
+  text-align: center;
+  padding: 12px;
+}
+.image-card-add .add-plus { font-size: 1.7rem; line-height: 1; }
+.image-card-add .add-label { font-size: 0.92rem; font-weight: 800; }
+
+/* Removing a word is behind Edit, so a hunting finger can't delete the cat. */
+#settings .image-card .word-delete { display: none; top: 7px; left: 7px; right: auto; width: 30px; height: 30px; }
+#settings .image-list.editing .image-card .word-delete { display: block; }
+#settings .image-list.editing .image-card-add { display: none; }
+
+/* ---- Word detail: photos and words are two jobs, not one long scroll ---- */
+.image-modal-header { align-items: center; gap: 10px; }
+#image-modal-title { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.image-modal-word { font-size: 1.3rem; font-weight: 800; line-height: 1.1; }
+.image-modal-meta {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #8fa2c4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.image-modal-tabs { display: flex; gap: 8px; margin: 14px 0; }
+.im-tab {
+  flex: 1;
+  border: none;
+  border-radius: 15px;
+  padding: 14px 10px;
+  background: rgba(255, 255, 255, 0.07);
+  color: #8fa2c4;
+  font: inherit;
+  font-weight: 800;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+.im-tab.active { background: #2fe0c0; color: #072019; }
+.im-tab.hidden { display: none; }
+.im-panel { display: flex; flex-direction: column; gap: 14px; }
+.im-panel.hidden { display: none; }
+.image-modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.image-modal-actions button { justify-content: center; }
+.image-modal-find {
+  border: none;
+  border-radius: 16px;
+  padding: 17px;
+  background: rgba(47, 224, 192, 0.16);
+  color: #2fe0c0;
+  font: inherit;
+  font-weight: 800;
+  font-size: 1.02rem;
+  cursor: pointer;
+}
+.image-modal-danger {
+  border: 1px solid rgba(255, 143, 171, 0.35);
+  background: rgba(255, 143, 171, 0.1);
+  border-radius: 18px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.image-modal-danger.hidden { display: none; }
+.danger-title { font-weight: 800; color: #ffc3d2; }
+.danger-sub { font-size: 0.84rem; color: #c39aab; }
+.reading-editor { display: flex; flex-direction: column; }
+#settings .image-card.needs-photo { border-color: rgba(255, 143, 171, 0.4); }
+
+/* The category the child is playing sits in the play line and is also the
+   control that changes it — one word, not a labelled dropdown row. */
+/* The line reads "Vocabulary · Animals ▾" and *is* the picker: the real select
+   lies invisibly over it, so the native list opens where the words are named. */
+#play-context { position: relative; }
+#play-context.pickable::after { content: " ▾"; opacity: 0.8; }
+#category-quick-wrapper { position: absolute; inset: -6px; }
+#category-quick-wrapper.hidden { display: none; }
+#category-quick {
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  border: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+#voice-warning {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #ffe3e3;
+  background: rgba(192, 57, 43, 0.75);
+  border-radius: 12px;
+  padding: 8px 12px;
+}
+
+/* The category row scrolls sideways; wrapping it pushed the words themselves
+   off the screen. */
+#settings .bp-fixed .pill-row { flex-wrap: nowrap; overflow-x: auto; }
+
+/* Grid thumbnails fill their square — a letterboxed photo reads as broken. */
+#settings .image-card .image-preview img { object-fit: cover; }
+
+.reading-field { display: flex; flex-direction: column; gap: 7px; }
+.reading-field-label { font-size: 0.88rem; font-weight: 700; color: #8fa2c4; }
+.image-modal-back { font-size: 1.4rem; line-height: 1; }
+
+/* The library is what a parent comes back for; the home screen names it. */
+.home-words {
+  margin-top: auto;
+  width: 100%;
+  border: none;
+  border-radius: 20px;
+  padding: 18px;
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+  font-weight: 800;
+  font-size: 1.05rem;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+}
+
+/* Find It's picture count is a control, not a status line — keep it slim. */
+#find-count-bar {
+  gap: 8px;
+  font-size: 0.85rem;
+}
+.find-count-label { font-weight: 700; color: var(--on-bg); text-shadow: var(--on-bg-shadow); }
+.find-count-btn { width: 38px; height: 38px; border-radius: 12px; }

@@ -73,31 +73,24 @@
           <div class="tile-sub" data-i18n="track_kanji_sub">Coming soon</div>
         </button>
       </div>
+      <button id="home-words" class="home-words">📚 <span data-i18n="s_my_words">My words</span> · <span id="home-words-count">0</span></button>
     </section>
 
     <section id="game-screen" class="hidden">
-      <div id="status">
-        <span id="track-label">Vocabulary</span>
-        <span id="mode-label">Listen & Tap</span>
-        <span id="category-label">Mixed</span>
-        <span id="voice-warning" class="hidden">No Japanese voice found. Playing without speech.</span>
-        <label id="category-quick-wrapper" class="hidden"><span data-i18n="label_category">Category:</span>
-          <select id="category-quick"></select>
-        </label>
+      <div id="play-bar">
+        <button id="play-close" aria-label="Back to home" data-i18n-aria="aria_home">✕</button>
+        <div class="play-bar-main">
+          <div class="play-bar-line">
+            <span id="mode-label">Listen &amp; Tap</span>
+            <span id="play-context"><span id="track-label">Vocabulary</span><span class="play-dot"> · </span><span id="category-label">Mixed</span><label id="category-quick-wrapper" class="hidden"><select id="category-quick" aria-label="Category"></select></label></span>
+            <span id="flash-live-score" class="flash-live-score hidden" data-i18n="flash_live_default">Tap the right picture</span>
+          </div>
+          <div id="play-progress" class="play-progress hidden"><div id="play-progress-fill"></div></div>
+        </div>
+        <div id="play-round" class="play-round"><span id="play-round-num">1</span><span class="play-round-label" data-i18n="round_label">round</span></div>
       </div>
 
-      <div id="mode-switcher">
-        <button data-gametype="tap" class="mode-btn active">Listen & Tap</button>
-        <button data-gametype="drag-complete" class="mode-btn">Drag to Complete</button>
-        <button data-gametype="kana-alphabet" class="mode-btn hidden">Alphabet</button>
-        <button data-gametype="kana-alphabet-quiz" class="mode-btn hidden">Quiz</button>
-        <button data-gametype="memory" class="mode-btn hidden">Memory 🧠</button>
-      </div>
-
-      <div id="flash-bar" class="hidden">
-        <span id="flash-live-score" class="flash-live-score" data-i18n="flash_live_default">Tap the right picture</span>
-        <button id="flash-finish" class="flash-finish" data-i18n="flash_finish">Finish ✓</button>
-      </div>
+      <div id="voice-warning" class="hidden">No Japanese voice found. Playing without speech.</div>
 
       <div id="find-count-bar" class="hidden">
         <span class="find-count-label" data-i18n="find_count_q">How many pictures?</span>
@@ -154,6 +147,19 @@
       </section>
     </section>
   </main>
+
+  <div id="mode-dock" class="hidden">
+    <div id="mode-switcher" class="om-scroll">
+      <button data-gametype="tap" class="mode-btn active">Listen &amp; Tap</button>
+      <button data-gametype="drag-complete" class="mode-btn">Drag to Complete</button>
+      <button data-gametype="kana-alphabet" class="mode-btn hidden">Alphabet</button>
+      <button data-gametype="kana-alphabet-quiz" class="mode-btn hidden">Quiz</button>
+      <button data-gametype="memory" class="mode-btn hidden">Memory 🧠</button>
+    </div>
+    <div id="flash-bar" class="hidden">
+      <button id="flash-finish" class="flash-finish" data-i18n="flash_finish">Finish ✓</button>
+    </div>
+  </div>
 
   <div id="flash-complete" class="hidden">
     <div class="flash-fireworks" aria-hidden="true"></div>
@@ -279,83 +285,91 @@
       <section class="bp-screen hidden" data-screen="words">
         <div class="bp-head">
           <button class="bp-back" data-bp-go="hub" aria-label="Back">‹</button>
-          <h2 class="bp-title" data-i18n="s_words">Words &amp; photos</h2>
+          <div class="bp-head-text">
+            <h2 class="bp-title" data-i18n="s_words_short">Words</h2>
+            <span class="bp-head-sub" id="words-count-line"></span>
+          </div>
+          <button id="words-edit-toggle" class="bp-head-btn" data-i18n="s_edit">Edit</button>
           <div class="bp-saved" data-bp-saved>Saved ✓</div>
         </div>
-        <div class="bp-body om-scroll">
+
+        <div class="bp-fixed">
           <div id="word-sync-indicator" class="sync-indicator"></div>
-
-          <div class="bp-group">
-            <div class="bp-group-label" data-i18n="s_quick_add">Quick add</div>
-            <div class="bp-card">
-              <div class="bp-card-title">✨ <span data-i18n="s_quick_add_title">Add a word</span></div>
-              <div class="bp-hint" data-i18n="s_quick_add_help">Just type the word in English — we fill in the reading and find photos for you.</div>
-              <label class="bp-field">
-                <span class="bp-field-label" data-i18n="label_category">Category</span>
-                <select id="quick-add-category"></select>
-              </label>
-              <div class="bp-inline">
-                <input type="text" id="quick-add-input" autocomplete="off" placeholder="e.g. Penguin" />
-                <button id="quick-add-btn" class="bp-btn bp-btn-accent">Add ✨</button>
-              </div>
-              <div id="quick-add-status" class="library-status"></div>
-            </div>
+          <div class="bp-search">
+            <span class="bp-search-ico" aria-hidden="true">🔍</span>
+            <input type="search" id="image-search" placeholder="Search words" aria-label="Search vocabulary" />
           </div>
-
-          <div class="bp-group">
-            <div class="bp-group-label" data-i18n="s_your_words">Your words</div>
-            <div class="bp-search">
-              <span class="bp-search-ico" aria-hidden="true">🔍</span>
-              <input type="search" id="image-search" placeholder="Search words" aria-label="Search vocabulary" />
+          <div id="image-category-pills" class="pill-row om-scroll"></div>
+          <div id="cat-add-form" class="cat-add-form bp-card hidden">
+            <div class="bp-card-head">
+              <span class="bp-card-title" data-i18n="s_new_category">New category</span>
+              <button id="cat-add-close" class="bp-card-x" aria-label="Close">✕</button>
             </div>
-            <div id="image-category-pills" class="pill-row"></div>
-            <div id="image-list" class="image-list"></div>
+            <div class="cat-add-row bp-inline">
+              <input type="text" id="cat-add-emoji" class="cat-emoji-input" autocomplete="off" placeholder="📦" maxlength="4" aria-label="Category icon (emoji)" />
+              <input type="text" id="cat-add-name" autocomplete="off" placeholder="e.g. Dinosaurs" />
+            </div>
+            <div class="bp-hint" data-i18n="s_cat_ideas">Tap a suggestion to fill it in:</div>
+            <div id="cat-idea-chips" class="suggest-chips"></div>
+            <button id="cat-add-btn" class="bp-btn bp-btn-accent" data-i18n="s_create_category">Create category</button>
+            <div id="cat-suggest-list" class="suggest-chips"></div>
+            <div id="cat-add-status" class="library-status"></div>
           </div>
+        </div>
 
-          <div class="bp-group">
-            <div class="bp-group-label" data-i18n="s_organise">Organise</div>
-            <div class="cat-add">
-              <button id="cat-add-toggle" class="bp-btn bp-btn-ghost word-add-toggle">＋ New category</button>
-              <div id="cat-add-form" class="cat-add-form bp-card hidden">
-                <div class="bp-hint">Make your own category, then tap words to add — we suggest ideas so you don't have to search.</div>
-                <div class="cat-add-row bp-inline">
-                  <input type="text" id="cat-add-emoji" class="cat-emoji-input" autocomplete="off" placeholder="📦" maxlength="4" aria-label="Category icon (emoji)" />
-                  <input type="text" id="cat-add-name" autocomplete="off" placeholder="e.g. Dinosaurs" />
-                  <button id="cat-add-btn" class="bp-btn bp-btn-accent">Add</button>
-                </div>
-                <div id="cat-add-status" class="library-status"></div>
-                <div id="cat-suggest-list" class="suggest-chips"></div>
-              </div>
-            </div>
-            <button id="word-add-toggle" class="bp-btn bp-btn-ghost word-add-toggle">＋ Add a word (more options)</button>
-            <div id="add-word-form" class="add-word-form bp-card hidden">
-              <div class="bp-hint">Adds to the selected category. Saved on this device (and your library), and shows in the games right away.</div>
-              <label class="bp-field">
-                <span class="bp-field-label" data-i18n="label_category">Category</span>
-                <select id="new-word-category"></select>
-              </label>
-              <label class="bp-field">
-                <span class="bp-field-label">English</span>
-                <input type="text" id="new-word-en" autocomplete="off" placeholder="e.g. Penguin" />
-              </label>
-              <button type="button" id="new-word-suggest" class="bp-btn bp-btn-soft suggest-btn">✨ Suggest from English</button>
-              <div id="new-word-suggestions" class="suggest-chips"></div>
-              <label class="bp-field">
-                <span class="bp-field-label">Word (kana / Hangul)</span>
-                <input type="text" id="new-word-kana" autocomplete="off" placeholder="e.g. ペンギン / 펭귄" />
-              </label>
-              <label class="bp-field">
-                <span class="bp-field-label">Romaji (optional)</span>
-                <input type="text" id="new-word-romaji" autocomplete="off" placeholder="e.g. pengin" />
-              </label>
-              <label class="bp-field">
-                <span class="bp-field-label">Photo URL (optional)</span>
-                <input type="url" id="new-word-photo" autocomplete="off" inputmode="url" placeholder="https://…" />
-              </label>
-              <button id="new-word-add" class="bp-btn bp-btn-accent">+ Add Word</button>
-              <div id="new-word-status" class="library-status"></div>
-            </div>
+        <div class="bp-body om-scroll bp-body-grid">
+          <div id="image-list" class="image-list"></div>
+        </div>
+
+        <div class="bp-foot">
+          <div class="bp-foot-hint" data-i18n="s_quick_add_help_short">Type English — we fill in the reading and find photos.</div>
+          <div class="bp-inline">
+            <input type="text" id="quick-add-input" autocomplete="off" placeholder="e.g. Penguin" />
+            <button id="quick-add-btn" class="bp-btn bp-btn-accent">Add ✨</button>
           </div>
+          <select id="quick-add-category" class="bp-shadow-control" aria-hidden="true" tabindex="-1"></select>
+          <div id="quick-add-status" class="library-status"></div>
+        </div>
+      </section>
+
+      <!-- ===== ADD A WORD (more options) ===== -->
+      <section class="bp-screen hidden" data-screen="wordadd">
+        <div class="bp-head">
+          <button class="bp-back" data-bp-go="words" aria-label="Back">‹</button>
+          <h2 class="bp-title" data-i18n="s_add_word">Add a word</h2>
+          <div class="bp-saved" data-bp-saved>Added ✓</div>
+        </div>
+        <div class="bp-body om-scroll">
+          <div class="bp-note bp-note-quiet" data-i18n="s_add_word_note">Saved on this device and in your shared library. It shows up in the games right away.</div>
+          <div id="add-word-form" class="add-word-form bp-card">
+            <label class="bp-field">
+              <span class="bp-field-label" data-i18n="label_category">Category</span>
+              <select id="new-word-category"></select>
+            </label>
+            <label class="bp-field bp-field-stacked">
+              <span class="bp-field-label">English</span>
+              <input type="text" id="new-word-en" autocomplete="off" placeholder="e.g. Penguin" />
+            </label>
+            <button type="button" id="new-word-suggest" class="bp-btn bp-btn-soft suggest-btn">✨ Suggest from English</button>
+            <div id="new-word-suggestions" class="suggest-chips"></div>
+            <label class="bp-field bp-field-stacked">
+              <span class="bp-field-label">Word (kana / Hangul)</span>
+              <input type="text" id="new-word-kana" autocomplete="off" placeholder="e.g. ペンギン / 펭귄" />
+            </label>
+            <label class="bp-field bp-field-stacked">
+              <span class="bp-field-label">Romaji (optional)</span>
+              <input type="text" id="new-word-romaji" autocomplete="off" placeholder="e.g. pengin" />
+            </label>
+            <label class="bp-field bp-field-stacked">
+              <span class="bp-field-label">Photo link (optional)</span>
+              <input type="url" id="new-word-photo" autocomplete="off" inputmode="url" placeholder="https://…" />
+            </label>
+            <div class="bp-hint" data-i18n="s_photo_blank">Leave it blank and we'll find photos for you after saving.</div>
+            <div id="new-word-status" class="library-status"></div>
+          </div>
+        </div>
+        <div class="bp-foot">
+          <button id="new-word-add" class="bp-btn bp-btn-accent bp-btn-block">＋ <span data-i18n="s_add_word_btn">Add word</span></button>
         </div>
       </section>
 
@@ -691,51 +705,71 @@
   <div id="image-modal" class="hidden" role="dialog" aria-modal="true">
     <div class="image-modal-content">
       <div class="image-modal-header">
+        <button id="image-modal-close" class="image-modal-back" aria-label="Back">‹</button>
         <div id="image-modal-title"></div>
-        <button id="image-modal-close" aria-label="Close">✕</button>
+        <button id="image-modal-say" aria-label="Say the word">🔊</button>
       </div>
-      <div id="reading-editor" class="reading-editor hidden">
-        <div class="reading-editor-title">Word &amp; pronunciation</div>
-        <div class="reading-editor-help">Fix the reading if it's shown or spoken wrong. This is what the app displays and says.</div>
-        <input type="text" id="reading-input" autocomplete="off" placeholder="e.g. ねこ" />
-        <input type="text" id="reading-romaji" autocomplete="off" placeholder="romaji (optional)" />
-        <div id="reading-speech-row" class="reading-speech-row hidden">
-          <label class="reading-speech-label" for="reading-speech">🔊 Say it as (fixes accent)</label>
-          <input type="text" id="reading-speech" autocomplete="off" placeholder="e.g. 箸 or 橋 — kanji" />
-          <div class="reading-editor-help">Same kana can have different pitch (箸 chopsticks vs 橋 bridge). Enter the kanji so the voice says it right — the tile still shows the kana above. Leave blank to speak the kana.</div>
-        </div>
-        <div class="reading-editor-actions">
-          <button type="button" id="reading-suggest" class="suggest-btn">✨ Suggest</button>
-          <button type="button" id="reading-save">Save word</button>
-        </div>
-        <div id="reading-suggestions" class="suggest-chips"></div>
-        <div id="reading-status" class="library-status"></div>
+
+      <div class="image-modal-tabs">
+        <button id="im-tab-photos" class="im-tab active" data-im-tab="photos"><span data-i18n="im_photos">Photos</span> · <span id="im-photo-count">0</span></button>
+        <button id="im-tab-word" class="im-tab" data-im-tab="word" data-i18n="im_word_sound">Word &amp; sound</button>
       </div>
-      <div id="image-modal-photos" class="image-modal-photos"></div>
-      <div class="image-modal-help">Up to 30 photos per word — GIFs work too and will move! The app picks a random one each round.<br>Got a video? Turn it into a GIF for free at <a href="https://ezgif.com/video-to-gif" target="_blank" rel="noopener">ezgif.com/video-to-gif</a>.</div>
-      <div class="image-modal-actions">
-        <button id="image-modal-upload">+ Add Photo</button>
-        <button id="image-modal-camera">📷 Camera</button>
-        <button id="image-modal-find">🔍 Find Photos</button>
-        <button id="image-modal-edit">✏️ Edit word</button>
-        <button id="image-modal-reset" class="reset">Reset</button>
+
+      <div id="im-panel-photos" class="im-panel">
+        <div class="image-modal-help" data-i18n="im_photo_help">Up to 30 photos per word — the game picks a random one each round. GIFs work and stay animated.</div>
+        <div id="image-modal-photos" class="image-modal-photos"></div>
+        <div class="image-modal-actions">
+          <button id="image-modal-upload">🖼 <span data-i18n="im_from_phone">From phone</span></button>
+          <button id="image-modal-camera">📷 <span data-i18n="im_camera">Camera</span></button>
+        </div>
+        <button id="image-modal-find" class="image-modal-find">🔍 <span data-i18n="im_find">Find photos online</span></button>
+        <div id="image-modal-stock" class="image-modal-stock hidden">
+          <div class="stock-search-bar">
+            <input type="search" id="stock-search-input" placeholder="Search photos…" />
+            <button id="stock-search-go">Search</button>
+          </div>
+          <div id="stock-search-results" class="stock-search-results"></div>
+          <div id="stock-search-dots" class="stock-search-dots" aria-hidden="true"></div>
+          <div class="stock-add-bar">
+            <button id="stock-add" disabled>Add selected</button>
+          </div>
+          <div class="stock-url-bar">
+            <input type="url" id="stock-url-input" inputmode="url" placeholder="…or paste an image / GIF link (https://…)" />
+            <button id="stock-url-add">Add URL</button>
+          </div>
+          <div class="image-modal-help">Photos from Google (if set up), Openverse &amp; Wikimedia — millions of images. Tap to select several, then Add. Or paste any image or GIF link (a GIF link stays animated).<br>Got a video? Turn it into a GIF free at <a href="https://ezgif.com/video-to-gif" target="_blank" rel="noopener">ezgif.com</a> and paste the link.</div>
+        </div>
+        <button id="image-modal-reset" class="image-modal-danger">
+          <span class="danger-title" data-i18n="im_reset_title">Reset to the bundled picture</span>
+          <span class="danger-sub" data-i18n="im_reset_sub">Removes your photos for this word</span>
+        </button>
       </div>
-      <div id="image-modal-stock" class="image-modal-stock hidden">
-        <div class="stock-search-bar">
-          <input type="search" id="stock-search-input" placeholder="Search photos…" />
-          <button id="stock-search-go">Search</button>
+
+      <div id="im-panel-word" class="im-panel hidden">
+        <div id="reading-editor" class="reading-editor">
+          <div class="reading-editor-help">Fix the reading if it's shown or spoken wrong. This is what the app displays and says.</div>
+          <label class="reading-field">
+            <span class="reading-field-label" data-i18n="im_shows_says">What the app shows &amp; says</span>
+            <input type="text" id="reading-input" autocomplete="off" placeholder="e.g. ねこ" />
+          </label>
+          <label class="reading-field">
+            <span class="reading-field-label" data-i18n="im_romaji">Romaji (optional)</span>
+            <input type="text" id="reading-romaji" autocomplete="off" placeholder="neko" />
+          </label>
+          <div id="reading-speech-row" class="reading-speech-row hidden">
+            <label class="reading-speech-label" for="reading-speech">🔊 Say it as (fixes accent)</label>
+            <input type="text" id="reading-speech" autocomplete="off" placeholder="e.g. 箸 or 橋 — kanji" />
+            <div class="reading-editor-help">Same kana can have different pitch (箸 chopsticks vs 橋 bridge). Enter the kanji so the voice says it right — the tile still shows the kana above. Leave blank to speak the kana.</div>
+          </div>
+          <div class="reading-editor-actions">
+            <button type="button" id="reading-suggest" class="suggest-btn">✨ Suggest</button>
+            <button type="button" id="reading-save">Save word</button>
+          </div>
+          <div id="reading-suggestions" class="suggest-chips"></div>
+          <div id="reading-status" class="library-status"></div>
         </div>
-        <div id="stock-search-results" class="stock-search-results"></div>
-        <div id="stock-search-dots" class="stock-search-dots" aria-hidden="true"></div>
-        <div class="stock-add-bar">
-          <button id="stock-add" disabled>Add selected</button>
-        </div>
-        <div class="stock-url-bar">
-          <input type="url" id="stock-url-input" inputmode="url" placeholder="…or paste an image / GIF link (https://…)" />
-          <button id="stock-url-add">Add URL</button>
-        </div>
-        <div class="image-modal-help">Photos from Google (if set up), Openverse &amp; Wikimedia — millions of images. Tap to select several, then Add. Or paste any image or GIF link (a GIF link stays animated).</div>
       </div>
+
       <input type="file" id="image-modal-file" accept="image/*" multiple class="hidden" />
       <input type="file" id="image-modal-camera-input" accept="image/*" capture="environment" class="hidden" />
     </div>

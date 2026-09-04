@@ -19,6 +19,10 @@ const state = {
   findRepsDone: 0,
   categoryId: "mixed",
   romaji: false,
+  // Hide the word printed under each picture. A child who can already read
+  // matches the letters instead of looking at the picture, which is the one
+  // thing the game is meant to teach. Persisted — a parent sets it once.
+  hideCardWords: false,
   vibration: true,
   voices: [],
   voiceId: null,
@@ -91,6 +95,17 @@ const state = {
   // Screen Wake Lock sentinel so we can release it on unlock.
   locked: false,
   wakeLock: null,
+  // The two English grammar tracks (Prepositions, Sentences), loaded from
+  // data/grammar.json. They only appear when the language being taught is
+  // English: articles, plural -s and word order are the lesson, and none of
+  // them survives translation into Japanese or Korean.
+  grammar: null,
+  prepositions: [],
+  // Sentences: one generated round (subject · verb · object) and which of the
+  // three slots the child is filling right now.
+  sentenceRound: null,
+  sentenceSlot: 0,
+  lessonIndex: 0,
 };
 
 // Supported languages. `speech` = BCP-47 tag for SpeechSynthesis, `hl` =
@@ -183,6 +198,20 @@ const I18N = {
     track_vocab: "Vocabulary", track_vocab_sub: "Listen & match pictures",
     track_hiragana: "Hiragana", track_katakana: "Katakana", track_kana_sub: "Sound & pick, complete",
     track_kanji: "Kanji", track_kanji_sub: "Coming soon",
+    track_prep: "Prepositions", track_prep_sub: "Where is the ball?",
+    track_sentences: "Sentences", track_sentences_sub: "a, an, the & adding s",
+    mode_prep_tap: "Where is it?", mode_prep_drag: "Move the Ball 🖐",
+    mode_sentence: "Build it 🧱", mode_articles: "a · an · the 📖",
+    s_hide_words: "Hide the word on the pictures",
+    s_hide_words_sub: "A child who can read shouldn't be able to match the letters instead of the picture. There's an 👁 button on the play screen too.",
+    aria_peek: "Show or hide the words on the pictures",
+    prep_put_ball: "Put the ball {word} the box.",
+    prep_drag_hint: "Drag the red ball where the word says.",
+    prep_not_there: "Not there — try again!",
+    sent_prompt: "Say what you see",
+    sent_tap_hint: "Tap the words that match the picture.",
+    sent_done: "You built it! 🎉",
+    lesson_of: "{n} of {total}",
     mode_tap: "Listen & Tap", mode_drag: "Drag to Complete", mode_find: "Find It 🔍",
     mode_flash: "Flash Cards 🎴", mode_memory: "Memory 🧠",
     mode_kana_tap: "Sound & Pick", mode_alphabet: "Alphabet", mode_quiz: "Quiz",
@@ -567,6 +596,8 @@ const els = {
   categoryQuick: document.getElementById("category-quick"),
   voiceSelect: document.getElementById("voice-select"),
   romajiToggle: document.getElementById("romaji-toggle"),
+  hideWordsToggle: document.getElementById("hide-words-toggle"),
+  wordsPeek: document.getElementById("words-peek"),
   vibrationToggle: document.getElementById("vibration-toggle"),
   soundToggle: document.getElementById("sound-toggle"),
   themeSelect: document.getElementById("theme-select"),
@@ -720,6 +751,21 @@ const els = {
   flashLiveScore: document.getElementById("flash-live-score"),
   googleImgKey: document.getElementById("google-img-key"),
   googleImgCx: document.getElementById("google-img-cx"),
+  prepDragSection: document.getElementById("prep-drag-section"),
+  prepStage: document.getElementById("prep-stage"),
+  prepBall: document.getElementById("prep-ball"),
+  sentenceSection: document.getElementById("sentence-section"),
+  sentenceScene: document.getElementById("sentence-scene"),
+  sentenceSlots: document.getElementById("sentence-slots"),
+  sentenceChoices: document.getElementById("sentence-choices"),
+  lessonSection: document.getElementById("lesson-section"),
+  lessonEmoji: document.getElementById("lesson-emoji"),
+  lessonTitle: document.getElementById("lesson-title"),
+  lessonLines: document.getElementById("lesson-lines"),
+  lessonPrev: document.getElementById("lesson-prev"),
+  lessonNext: document.getElementById("lesson-next"),
+  lessonSpeak: document.getElementById("lesson-speak"),
+  lessonProgress: document.getElementById("lesson-progress"),
 };
 
 const SUPABASE_URL = "https://nfaxncksesfcfqavmlae.supabase.co";
@@ -730,6 +776,7 @@ document.addEventListener("DOMContentLoaded", init);
 
 async function init() {
   loadThemePref();
+  loadHideWordsPref();
   loadLangPref();
   loadVoicePref();
   loadElevenPrefs();
@@ -738,11 +785,13 @@ async function init() {
   await loadData();
   await loadHiragana();
   await loadKatakana();
+  await loadGrammar();
   await loadImageOverrides();
   buildImageManager();
   await setupVoices();
   applyTheme();
   applyI18n();
+  applyHideWordsUI();
   applyLangToUI();
   bindUI();
   registerServiceWorker();
@@ -827,11 +876,56 @@ async function loadKatakana() {
   state.kataWords = kata.words;
 }
 
+// Prepositions, sentence parts and the articles lesson. A missing or broken
+// file just means the two English tracks stay hidden — never a dead app.
+async function loadGrammar() {
+  try {
+    const res = await fetch("data/grammar.json");
+    state.grammar = await res.json();
+    state.prepositions = state.grammar.prepositions || [];
+  } catch (_) {
+    state.grammar = null;
+    state.prepositions = [];
+  }
+}
+
 async function loadKanji() {
   const res = await fetch("data/kanji.json");
   const kan = await res.json();
   state.kanjiChars = kan.characters;
   state.kanjiWords = kan.words;
+}
+
+const HIDE_WORDS_KEY = "kitai-hide-words";
+function loadHideWordsPref() {
+  try { state.hideCardWords = localStorage.getItem(HIDE_WORDS_KEY) === "1"; } catch (_) {}
+}
+
+// Both controls say the same thing, so they are refreshed together: the switch
+// in Parent Settings and the 👁 button that sits in the dock during play.
+function applyHideWordsUI() {
+  if (els.hideWordsToggle) els.hideWordsToggle.checked = state.hideCardWords;
+  if (els.wordsPeek) {
+    els.wordsPeek.textContent = state.hideCardWords ? "🙈" : "👁";
+    els.wordsPeek.classList.toggle("off", state.hideCardWords);
+  }
+}
+
+function setHideCardWords(hidden) {
+  state.hideCardWords = !!hidden;
+  try { localStorage.setItem(HIDE_WORDS_KEY, state.hideCardWords ? "1" : "0"); } catch (_) {}
+  applyHideWordsUI();
+  if (state.currentSection === "game") renderCurrentView();
+}
+
+// Only the modes that print a word under a picture can hide one. Spelling out
+// a word, the kana tracks and the sentence builder are *about* the letters.
+function viewHasCardWords() {
+  if (state.currentTrack === "vocab") {
+    return ["tap", "find", "flash", "memory"].includes(state.currentGameType);
+  }
+  if (state.currentTrack === "prepositions") return state.currentGameType === "prep-tap";
+  return false;
 }
 
 const THEME_KEY = "kitai-theme";
@@ -870,6 +964,13 @@ function applyLangToUI() {
   const kana = langCfg().kana;
   document.querySelectorAll('.tile[data-track="hiragana"], .tile[data-track="katakana"], .tile[data-track="kanji"]').forEach((tile) => {
     tile.classList.toggle("hidden", !kana);
+  });
+  // Prepositions and Sentences teach English grammar — articles, plural -s,
+  // subject-verb-object order. Nothing there transfers to the other languages,
+  // so the tracks only exist while English is the language being taught.
+  const english = state.lang === "en" && !!state.grammar;
+  document.querySelectorAll('.tile[data-track="prepositions"], .tile[data-track="sentences"]').forEach((tile) => {
+    tile.classList.toggle("hidden", !english);
   });
 }
 
@@ -1435,6 +1536,7 @@ function bpSaved() {
 
 // Mark the active option in each grid from whatever its <select> holds.
 function bpSyncControls() {
+  applyHideWordsUI();
   document.querySelectorAll("#bp-lang-grid .bp-lang").forEach((b) => {
     b.classList.toggle("active", b.dataset.bpLang === state.lang);
   });
@@ -1502,7 +1604,14 @@ function bpRefresh() {
   bpText("sum-lang", [bpShortLang(), bpShortVoice()].filter(Boolean).join(" · "));
 
   const theme = (state.theme || "ocean");
-  bpText("sum-game", `${state.choiceCount} choices · ${theme.charAt(0).toUpperCase()}${theme.slice(1)} theme`);
+  bpText(
+    "sum-game",
+    [
+      `${state.choiceCount} choices`,
+      state.hideCardWords ? "words hidden" : null,
+      `${theme.charAt(0).toUpperCase()}${theme.slice(1)} theme`,
+    ].filter(Boolean).join(" · ")
+  );
 
   const e = state.eleven || {};
   bpText(
@@ -1526,6 +1635,7 @@ const BP_SEARCH_INDEX = [
   { screen: "game", title: "Pictures to choose from", sub: "2, 3 or 4", keys: "choices difficulty pictures easy hard number" },
   { screen: "game", title: "Categories in play", sub: "Which words come up", keys: "category categories mixed animals fruit play" },
   { screen: "game", title: "Sounds & vibration", sub: "Chime, buzz, vibrate", keys: "sound sounds chime buzz vibrate vibration haptic feedback mute" },
+  { screen: "game", title: "Hide the word on the pictures", sub: "So a reader can't match the letters", keys: "hide word words label text secret reading reader cheat give away answer spoil" },
   { screen: "game", title: "Theme", sub: "Ocean, Galaxy, Sky, Sunshine", keys: "theme colour color ocean galaxy sky sunshine look" },
   { screen: "lock", title: "Child lock", sub: "Hold the padlock 3s to exit", keys: "lock child kiosk fullscreen guided access screen pinning padlock" },
   { screen: "advanced", title: "Premium voice (ElevenLabs)", sub: "Studio quality or your cloned voice", keys: "elevenlabs premium voice clone api key credits cache offline download quality model" },
@@ -3155,10 +3265,7 @@ function bindUI() {
 
   els.categorySelect.addEventListener("change", (e) => {
     state.categoryId = e.target.value;
-    els.categoryLabel.textContent =
-      e.target.value === "mixed"
-        ? "Mixed"
-        : state.categories.find((c) => c.id === e.target.value)?.label_en || "Mixed";
+    refreshCategoryChip();
     if (els.categoryQuick && els.categoryQuick.value !== e.target.value) {
       els.categoryQuick.value = e.target.value;
     }
@@ -3170,10 +3277,7 @@ function bindUI() {
   if (els.categoryQuick) {
     els.categoryQuick.addEventListener("change", (e) => {
       state.categoryId = e.target.value;
-      els.categoryLabel.textContent =
-        e.target.value === "mixed"
-          ? "Mixed"
-          : state.categories.find((c) => c.id === e.target.value)?.label_en || "Mixed";
+      refreshCategoryChip();
       if (els.categorySelect && els.categorySelect.value !== e.target.value) {
         els.categorySelect.value = e.target.value;
       }
@@ -3187,6 +3291,11 @@ function bindUI() {
     state.voiceId = e.target.value;
     saveVoicePref();
   });
+
+  if (els.hideWordsToggle) {
+    els.hideWordsToggle.addEventListener("change", (e) => setHideCardWords(e.target.checked));
+  }
+  if (els.wordsPeek) onTap(els.wordsPeek, () => setHideCardWords(!state.hideCardWords));
 
   els.romajiToggle.addEventListener("change", (e) => {
     state.romaji = e.target.checked;
@@ -3341,19 +3450,15 @@ function bindUI() {
 
   els.modeButtons.forEach((btn) => {
     onTap(btn, () => {
-      if (
-        state.currentTrack === "vocab" ||
-        state.currentTrack === "hiragana" ||
-        state.currentTrack === "katakana"
-      ) {
-        els.modeButtons.forEach((b) => b.classList.remove("active"));
-        btn.classList.add("active");
-        state.currentGameType = btn.dataset.gametype;
-        if (state.currentGameType === "find") resetFindSession();
-        if (state.currentGameType === "flash") { startFlashSession(); return; }
-        if (state.currentGameType === "memory") { startMemorySession(); return; }
-        startRound();
-      }
+      if (btn.disabled || btn.classList.contains("hidden")) return;
+      els.modeButtons.forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      state.currentGameType = btn.dataset.gametype;
+      if (state.currentGameType === "find") resetFindSession();
+      if (state.currentGameType === "flash") { startFlashSession(); return; }
+      if (state.currentGameType === "memory") { startMemorySession(); return; }
+      if (state.currentGameType === "articles") state.lessonIndex = 0;
+      startRound();
     });
   });
 
@@ -3366,22 +3471,25 @@ function bindUI() {
       }
       state.currentTrack = track;
       state.currentSection = "game";
-      if (track === "vocab") els.trackLabel.textContent = "Vocabulary";
-      else if (track === "hiragana") els.trackLabel.textContent = "Hiragana";
-      else els.trackLabel.textContent = "Katakana";
-      if (track === "vocab") {
-        els.categoryLabel.textContent =
-          state.categoryId === "mixed"
-            ? "Mixed"
-            : state.categories.find((c) => c.id === state.categoryId)?.label_en || "Mixed";
-      } else {
-        els.categoryLabel.textContent = "Kana";
-      }
+      const TRACK_LABELS = {
+        vocab: t("track_vocab"), hiragana: "Hiragana", katakana: "Katakana",
+        prepositions: t("track_prep"), sentences: t("track_sentences"),
+      };
+      els.trackLabel.textContent = TRACK_LABELS[track] || track;
+      if (track === "vocab") refreshCategoryChip();
+      else if (track === "hiragana" || track === "katakana") els.categoryLabel.textContent = "Kana";
+      else els.categoryLabel.textContent = "";
+      if (track === "sentences") state.lessonIndex = 0;
       updateModeButtonsForTrack(track);
       showGame();
       startRound();
     });
   });
+
+  bindPrepStage();
+  if (els.lessonPrev) onTap(els.lessonPrev, () => advanceLesson(-1));
+  if (els.lessonNext) onTap(els.lessonNext, () => advanceLesson(1));
+  if (els.lessonSpeak) onTap(els.lessonSpeak, speakLessonCard);
 
   onTap(els.alphabetPrev, () => advanceAlphabet(-1));
   onTap(els.alphabetNext, () => advanceAlphabet(1));
@@ -4233,6 +4341,18 @@ async function addStockPhotoByUrl() {
   }
 }
 
+// What the category chip in the play bar reads. The emoji does the work on a
+// phone: "🐾 Animals" is findable at a glance where plain small text was not.
+function categoryChipLabel() {
+  if (state.categoryId === "mixed") return "🎲 Mixed";
+  const cat = state.categories.find((c) => c.id === state.categoryId);
+  return cat ? `${cat.emoji} ${cat.label_en}` : "🎲 Mixed";
+}
+
+function refreshCategoryChip() {
+  if (els.categoryLabel) els.categoryLabel.textContent = categoryChipLabel();
+}
+
 function setActiveModeButton(type) {
   state.roundNo = 0;
   els.modeButtons.forEach((b) => b.classList.remove("active"));
@@ -4245,6 +4365,11 @@ function setActiveModeButton(type) {
 
 function updateModeButtonsForTrack(track) {
   const [btn1, btn2, btn3, btn4, btn5] = els.modeButtons;
+  // The grammar tracks have nothing to say in the context slot, and a bar that
+  // narrow turns "Prepositions" into "P.".
+  if (els.playBar) {
+    els.playBar.classList.toggle("no-context", track === "prepositions" || track === "sentences");
+  }
   if (track === "vocab") {
     if (els.categoryQuick) els.categoryQuick.parentElement.classList.remove("hidden");
     if (els.playContext) els.playContext.classList.add("pickable");
@@ -4302,6 +4427,24 @@ function updateModeButtonsForTrack(track) {
     if (btn5) btn5.classList.add("hidden");
     state.currentGameType = "kana-tap";
     setActiveModeButton("kana-tap");
+  } else if (track === "prepositions" || track === "sentences") {
+    // Two modes each: one that names what is already there, one that makes the
+    // child do it. The category picker means nothing here, so it stays away.
+    if (els.categoryQuick) els.categoryQuick.parentElement.classList.add("hidden");
+    if (els.playContext) els.playContext.classList.remove("pickable");
+    const first = track === "prepositions" ? "prep-tap" : "sentence-build";
+    const second = track === "prepositions" ? "prep-drag" : "articles";
+    btn1.dataset.gametype = first;
+    btn1.textContent = t(track === "prepositions" ? "mode_prep_tap" : "mode_sentence");
+    btn1.classList.remove("hidden");
+    btn1.disabled = false;
+    btn2.dataset.gametype = second;
+    btn2.textContent = t(track === "prepositions" ? "mode_prep_drag" : "mode_articles");
+    btn2.classList.remove("hidden");
+    btn2.disabled = false;
+    [btn3, btn4, btn5].forEach((b) => { if (b) b.classList.add("hidden"); });
+    state.currentGameType = first;
+    setActiveModeButton(first);
   } else {
     if (els.categoryQuick) els.categoryQuick.parentElement.classList.add("hidden");
     els.modeButtons.forEach((b) => (b.disabled = true));
@@ -4813,6 +4956,602 @@ function stopFireworks() {
   if (stage) stage.innerHTML = "";
 }
 
+// ---- Card grid width -------------------------------------------------------
+// The grid used to auto-fit on a 150px minimum, which collapsed to one column
+// on a phone set to a large display size (~300 CSS px): one card filling the
+// screen and the rest of the choices pushed under the dock. Now the round says
+// how many columns it wants, from how many pictures it has and how much width
+// there actually is — never more columns than there are pictures.
+const CARD_GAP = 12;
+// The shape we'd choose given room: 4 pictures read better as a 2x2 than a row
+// of four, 6 as two rows of three. Never more columns than there are pictures.
+const CARD_COLS_WANTED = { 1: 1, 2: 2, 3: 3, 4: 2, 5: 3, 6: 3, 7: 4, 8: 4, 9: 3, 10: 5 };
+function applyCardColumns(n) {
+  if (!els.cards) return;
+  const width = els.cards.clientWidth || Math.max(240, window.innerWidth - 24);
+  // Find It deals in many small pictures on purpose; the matching modes want
+  // few big ones, so they hold out for a wider card.
+  const minCard = n >= 6 ? 78 : 140;
+  // Two columns is the floor whenever there is more than one picture: a single
+  // column is what put the second choice off the bottom of the screen, and a
+  // half-width card is still a big target for a toddler.
+  const fits = Math.max(n >= 2 ? 2 : 1, Math.floor((width + CARD_GAP) / (minCard + CARD_GAP)));
+  const want = CARD_COLS_WANTED[n] || 4;
+  els.cards.style.setProperty("--card-cols", String(Math.max(1, Math.min(want, fits))));
+}
+
+// ---- Prepositions ----------------------------------------------------------
+// Twelve words, one red ball and one orange box. Every picture is the same
+// scene with the ball somewhere else, so the only thing the child has to
+// notice is the position — which is exactly what the word means. "Where is
+// it?" names a picture that is already there; "Move the Ball" makes them put
+// it there, which is the same lesson from the other side.
+
+function choosePrepRound() {
+  const pool = state.prepositions;
+  if (!pool.length) {
+    state.currentTarget = null;
+    state.currentChoices = [];
+    return;
+  }
+  // The drag stage only has room for the six positions a ball can hold still
+  // in; "through", "around" and the rest stay picture-only.
+  const list = state.currentGameType === "prep-drag" ? pool.filter((p) => p.zone) : pool;
+  const usable = list.length ? list : pool;
+  const notLast = state.currentTarget ? usable.filter((p) => p.id !== state.currentTarget.id) : usable;
+  const from = notLast.length ? notLast : usable;
+  const target = from[Math.floor(Math.random() * from.length)];
+  state.currentTarget = target;
+
+  if (state.currentGameType === "prep-drag") {
+    state.currentChoices = [];
+    return;
+  }
+  const others = shuffle(pool.filter((p) => p.id !== target.id));
+  const count = Math.min(state.choiceCount, pool.length);
+  state.currentChoices = shuffle([target, ...others.slice(0, Math.max(1, count - 1))]).slice(0, count);
+}
+
+function renderPrepTapView() {
+  els.modeLabel.textContent = t("mode_prep_tap");
+  hideAllGameViews();
+  showPromptArea(true);
+  if (!state.currentTarget) {
+    els.promptWord.textContent = "—";
+    els.feedback.textContent = t("fb_no_words");
+    return;
+  }
+  els.cards.classList.remove("hidden");
+  renderPrepCards(state.currentChoices);
+  els.promptWord.textContent = state.currentTarget.en;
+}
+
+function renderPrepCards(items) {
+  applyCardColumns(items.length);
+  els.cards.innerHTML = "";
+  items.forEach((p) => {
+    const card = document.createElement("div");
+    card.className = "card";
+    card.dataset.id = p.id;
+
+    const img = document.createElement("img");
+    img.src = p.imagePath;
+    img.alt = p.en;
+    card.appendChild(img);
+
+    if (!state.hideCardWords) {
+      const label = document.createElement("div");
+      label.className = "label-ja";
+      label.textContent = p.en;
+      card.appendChild(label);
+    }
+
+    onTap(card, () => handlePrepTap(p, card));
+    els.cards.appendChild(card);
+  });
+}
+
+function handlePrepTap(p, cardEl) {
+  if (tapsLocked() || !state.currentTarget) return;
+  if (p.id === state.currentTarget.id) {
+    lockForCorrectAdvance();
+    cardEl.classList.add("correct");
+    els.feedback.textContent = t("fb_great");
+    playCorrect();
+    showCorrectOverlay();
+    synthesize(p.sentence, {});
+    setTimeout(() => startRound(), CORRECT_ADVANCE_MS + 900);
+  } else {
+    state.lockUntil = Date.now() + WRONG_DEAD_MS;
+    cardEl.classList.add("wrong");
+    els.feedback.textContent = t("fb_try_again");
+    buzz();
+    showWrongOverlay();
+    setTimeout(() => cardEl.classList.remove("wrong"), 400);
+    setTimeout(() => speakCurrent(), REPEAT_MS);
+  }
+}
+
+// Where the ball waits between rounds: the bottom-left corner, which is the one
+// part of the stage that isn't a drop zone.
+const PREP_BALL_HOME = { left: 3, top: 72 };
+let prepDrag = null;
+
+function renderPrepDragView() {
+  els.modeLabel.textContent = t("mode_prep_drag");
+  hideAllGameViews();
+  showPromptArea(true);
+  if (!state.currentTarget || !els.prepDragSection) return;
+  els.prepDragSection.classList.remove("hidden");
+  els.promptWord.textContent = state.currentTarget.en;
+  els.feedback.textContent = t("prep_drag_hint");
+  clearPrepZoneMarks();
+  resetPrepBall();
+}
+
+function resetPrepBall() {
+  if (!els.prepBall) return;
+  els.prepBall.classList.remove("dragging", "settled-in");
+  els.prepBall.style.left = `${PREP_BALL_HOME.left}%`;
+  els.prepBall.style.top = `${PREP_BALL_HOME.top}%`;
+}
+
+function clearPrepZoneMarks() {
+  if (!els.prepStage) return;
+  els.prepStage.querySelectorAll(".prep-zone").forEach((z) => {
+    z.classList.remove("hover", "right", "wrong");
+  });
+}
+
+// Zones overlap on purpose (the box sits inside "behind", "on" sits on its
+// rim). The smallest box that contains the ball is the most specific answer,
+// so area breaks the tie: "in" beats "on" beats "behind".
+function prepZoneAt(x, y) {
+  if (!els.prepStage) return null;
+  let best = null;
+  let bestArea = Infinity;
+  els.prepStage.querySelectorAll(".prep-zone").forEach((z) => {
+    const r = z.getBoundingClientRect();
+    if (x < r.left || x > r.right || y < r.top || y > r.bottom) return;
+    const area = r.width * r.height;
+    if (area < bestArea) { best = z; bestArea = area; }
+  });
+  return best;
+}
+
+function placePrepBallAt(x, y) {
+  if (!prepDrag) return;
+  const s = prepDrag.stage;
+  const w = els.prepBall.offsetWidth;
+  const h = els.prepBall.offsetHeight;
+  const left = Math.min(Math.max(x - s.left - w / 2, 0), Math.max(0, s.width - w));
+  const top = Math.min(Math.max(y - s.top - h / 2, 0), Math.max(0, s.height - h));
+  els.prepBall.style.left = `${(left / s.width) * 100}%`;
+  els.prepBall.style.top = `${(top / s.height) * 100}%`;
+}
+
+function snapPrepBallToZone(zone) {
+  const s = els.prepStage.getBoundingClientRect();
+  const r = zone.getBoundingClientRect();
+  const w = els.prepBall.offsetWidth;
+  const h = els.prepBall.offsetHeight;
+  const left = r.left - s.left + r.width / 2 - w / 2;
+  const top = r.top - s.top + r.height / 2 - h / 2;
+  els.prepBall.style.left = `${(left / s.width) * 100}%`;
+  els.prepBall.style.top = `${(top / s.height) * 100}%`;
+  // Dropped inside the box, the ball has to go *behind* the box's front wall
+  // or it just looks like it is sitting on the picture.
+  els.prepBall.classList.toggle("settled-in", zone.dataset.zone === "in");
+}
+
+function onPrepBallDown(e) {
+  if (state.currentGameType !== "prep-drag" || tapsLocked()) return;
+  const ball = els.prepBall.getBoundingClientRect();
+  prepDrag = {
+    id: e.pointerId,
+    dx: e.clientX - (ball.left + ball.width / 2),
+    dy: e.clientY - (ball.top + ball.height / 2),
+    stage: els.prepStage.getBoundingClientRect(),
+  };
+  els.prepBall.classList.add("dragging");
+  els.prepBall.classList.remove("settled-in");
+  try { els.prepStage.setPointerCapture(e.pointerId); } catch (_) {}
+  e.preventDefault();
+}
+
+function onPrepBallMove(e) {
+  if (!prepDrag || e.pointerId !== prepDrag.id) return;
+  const x = e.clientX - prepDrag.dx;
+  const y = e.clientY - prepDrag.dy;
+  placePrepBallAt(x, y);
+  const over = prepZoneAt(x, y);
+  els.prepStage.querySelectorAll(".prep-zone").forEach((z) => {
+    z.classList.toggle("hover", z === over);
+  });
+}
+
+function onPrepBallUp(e) {
+  if (!prepDrag || e.pointerId !== prepDrag.id) return;
+  const x = e.clientX - prepDrag.dx;
+  const y = e.clientY - prepDrag.dy;
+  const zone = prepZoneAt(x, y);
+  prepDrag = null;
+  els.prepBall.classList.remove("dragging");
+  els.prepStage.querySelectorAll(".prep-zone").forEach((z) => z.classList.remove("hover"));
+  try { els.prepStage.releasePointerCapture(e.pointerId); } catch (_) {}
+
+  const target = state.currentTarget;
+  if (!zone || !target) { resetPrepBall(); return; }
+
+  if (zone.dataset.zone === target.zone) {
+    lockForCorrectAdvance();
+    zone.classList.add("right");
+    snapPrepBallToZone(zone);
+    els.feedback.textContent = t("fb_great");
+    playCorrect();
+    showCorrectOverlay();
+    synthesize(target.sentence, {});
+    setTimeout(() => startRound(), CORRECT_ADVANCE_MS + 1100);
+  } else {
+    state.lockUntil = Date.now() + WRONG_DEAD_MS;
+    zone.classList.add("wrong");
+    els.feedback.textContent = t("prep_not_there");
+    buzz();
+    showWrongOverlay();
+    setTimeout(() => { zone.classList.remove("wrong"); resetPrepBall(); }, 520);
+    setTimeout(() => speakCurrent(), REPEAT_MS);
+  }
+}
+
+function bindPrepStage() {
+  if (!els.prepBall || !els.prepStage) return;
+  els.prepBall.addEventListener("pointerdown", onPrepBallDown);
+  els.prepStage.addEventListener("pointermove", onPrepBallMove);
+  els.prepStage.addEventListener("pointerup", onPrepBallUp);
+  els.prepStage.addEventListener("pointercancel", onPrepBallUp);
+}
+
+// ---- Sentences -------------------------------------------------------------
+// A subject, a verb and one of the child's own vocabulary words, glued into a
+// sentence they have to finish: "A girl plays basketball." The object comes
+// with a picture and a count, and the wrong chips are wrong only because of
+// that picture — one umbrella needs "an umbrella", two need the s.
+
+const SENT_VOWELS = "aeiou";
+
+function sentenceCfg() {
+  return (state.grammar && state.grammar.sentence) || null;
+}
+
+// "a" or "an". The vowel-letter rule is right nearly every time; the handful
+// of words where the *sound* disagrees with the spelling (an hour, a uniform)
+// are listed in grammar.json.
+function articleFor(noun) {
+  const g = sentenceCfg() || {};
+  const first = String(noun).toLowerCase().split(/\s+/)[0];
+  const exception = (g.articleExceptions || {})[first];
+  if (exception) return exception;
+  return SENT_VOWELS.includes(first.charAt(0)) ? "an" : "a";
+}
+
+function pluralize(noun) {
+  const g = sentenceCfg() || {};
+  const lower = String(noun).toLowerCase();
+  const irregular = (g.irregularPlurals || {})[lower];
+  if (irregular) return irregular;
+  if (/(?:s|x|z|ch|sh)$/.test(lower)) return `${lower}es`;
+  if (/[^aeiou]y$/.test(lower)) return `${lower.slice(0, -1)}ies`;
+  // No -f → -ves rule here on purpose: it is a closed list (knife, leaf, wolf)
+  // that lives in irregularPlurals, and as a rule it turns giraffe into
+  // "girafves". Same for -o → -oes, which would wreck piano and photo.
+  return `${lower}s`;
+}
+
+// the sun, the moon — there is only one of them in the world, so there is
+// nothing for "a" to pick out. This is the rule the Articles lesson teaches.
+function isUniqueNoun(noun) {
+  const g = sentenceCfg() || {};
+  return (g.uniqueNouns || []).includes(String(noun).toLowerCase());
+}
+
+// milk, rice, water — you can't count them one, two, three, so they take no
+// article and never take an s. Lesson card 8 is exactly this.
+function isMassNoun(noun) {
+  const g = sentenceCfg() || {};
+  return (g.massNouns || []).includes(String(noun).toLowerCase());
+}
+
+// Plenty of vocabulary words are already plural ("Eyes", "Shoes"). Pluralising
+// those again gave "two eyeses", so every phrase is built from the singular.
+function nounSingular(noun) {
+  const g = sentenceCfg() || {};
+  const lower = String(noun).toLowerCase();
+  return (g.pluralNouns || {})[lower] || lower;
+}
+
+function nounPhrase(noun, count) {
+  if (isMassNoun(noun)) return String(noun).toLowerCase();
+  if (isUniqueNoun(noun)) return `the ${noun}`;
+  const one = nounSingular(noun);
+  if (count > 1) return `two ${pluralize(one)}`;
+  return `${articleFor(one)} ${one}`;
+}
+
+// The two wrong ways to say the same picture. For a countable thing they are
+// the article slip and the missing (or spurious) s; for milk and for the sun
+// they are "a milk" and "two milks", which is the whole point of those rules.
+function nounDistractors(noun, count) {
+  const lower = String(noun).toLowerCase();
+  if (isMassNoun(lower) || isUniqueNoun(lower)) {
+    return [`${articleFor(lower)} ${lower}`, `two ${pluralize(lower)}`];
+  }
+  const one = nounSingular(lower);
+  if (count > 1) return [`two ${one}`, `${articleFor(one)} ${one}`];
+  return [flipArticle(`${articleFor(one)} ${one}`), `two ${pluralize(one)}`];
+}
+
+function flipArticle(phrase) {
+  if (phrase.startsWith("an ")) return `a ${phrase.slice(3)}`;
+  if (phrase.startsWith("a ")) return `an ${phrase.slice(2)}`;
+  if (phrase.startsWith("the ")) return `a ${phrase.slice(4)}`;
+  return phrase;
+}
+
+function capitalizeFirst(s) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function pickOther(list, notThis) {
+  const rest = list.filter((x) => x.id !== notThis.id);
+  const from = rest.length ? rest : list;
+  return from[Math.floor(Math.random() * from.length)];
+}
+
+// Always keeps the correct answer, drops duplicates (two fish has no plural s
+// to get wrong) and caps at three chips — more than that on a phone is a wall.
+function makeChoices(correct, candidates) {
+  const out = [correct];
+  candidates.forEach((c) => { if (c && !out.includes(c)) out.push(c); });
+  return shuffle(out.slice(0, 3));
+}
+
+function buildSentenceRound() {
+  const g = sentenceCfg();
+  if (!g) { state.sentenceRound = null; return; }
+
+  const subject = g.subjects[Math.floor(Math.random() * g.subjects.length)];
+  const otherSubject = pickOther(g.subjects, subject);
+  const verb = g.verbs[Math.floor(Math.random() * g.verbs.length)];
+  const otherVerb = pickOther(g.verbs, verb);
+
+  const skip = g.skipCategories || [];
+  const skipNouns = g.skipNouns || [];
+  const pool = state.items.filter(
+    (i) => !skip.includes(i.categoryId) && !skipNouns.includes(String(i.en).toLowerCase())
+  );
+  const object = pool.length
+    ? pool[Math.floor(Math.random() * pool.length)]
+    : { id: "fallback-ball", en: "Ball", emoji: "⚽" };
+  const noun = String(object.en).toLowerCase();
+  const countable = !isMassNoun(noun) && !isUniqueNoun(noun);
+  const count = countable && Math.random() < 0.4 ? 2 : 1;
+
+  const subjPhrase = `${articleFor(subject.en)} ${subject.en}`;
+  const slots = [capitalizeFirst(subjPhrase), verb.third, nounPhrase(noun, count)];
+
+  state.sentenceRound = {
+    subject,
+    verb,
+    object,
+    noun,
+    count,
+    slots,
+    choices: [
+      makeChoices(slots[0], [
+        capitalizeFirst(flipArticle(subjPhrase)),
+        capitalizeFirst(`${articleFor(otherSubject.en)} ${otherSubject.en}`),
+      ]),
+      makeChoices(slots[1], [verb.base, otherVerb.third]),
+      makeChoices(slots[2], nounDistractors(noun, count)),
+    ],
+    filled: [null, null, null],
+    sentence: `${slots[0]} ${slots[1]} ${slots[2]}.`,
+  };
+  state.sentenceSlot = 0;
+}
+
+function sentenceSoFar() {
+  const r = state.sentenceRound;
+  if (!r) return "";
+  const done = r.filled.every((f) => f != null);
+  return r.slots.map((s, i) => (r.filled[i] == null ? "___" : s)).join(" ") + (done ? "." : "");
+}
+
+function renderSentenceView() {
+  els.modeLabel.textContent = t("mode_sentence");
+  hideAllGameViews();
+  showPromptArea(true);
+  if (!state.sentenceRound || !els.sentenceSection) {
+    els.promptWord.textContent = "—";
+    els.feedback.textContent = t("fb_no_words");
+    return;
+  }
+  els.sentenceSection.classList.remove("hidden");
+  if (els.promptWord) {
+    els.promptWord.classList.add("compact");
+    // Empty slots are already drawn below; repeating "___ ___ ___" up here
+    // would just be the same blank line twice.
+    els.promptWord.textContent = t("sent_prompt");
+  }
+  els.feedback.textContent = "";
+  renderSentenceScene();
+  renderSentenceSlots();
+  renderSentenceChoices();
+}
+
+function renderSentenceScene() {
+  const r = state.sentenceRound;
+  if (!els.sentenceScene) return;
+  els.sentenceScene.innerHTML = "";
+
+  const emojiPart = (glyph) => {
+    const wrap = document.createElement("div");
+    wrap.className = "sc-part";
+    const span = document.createElement("span");
+    span.className = "sc-emoji";
+    span.textContent = glyph || "❓";
+    wrap.appendChild(span);
+    return wrap;
+  };
+  const op = (glyph) => {
+    const span = document.createElement("span");
+    span.className = "sc-op";
+    span.textContent = glyph;
+    return span;
+  };
+
+  els.sentenceScene.appendChild(emojiPart(r.subject.emoji));
+  els.sentenceScene.appendChild(op("→"));
+  els.sentenceScene.appendChild(emojiPart(r.verb.emoji));
+  els.sentenceScene.appendChild(op("→"));
+
+  // The object is shown as many times as the sentence claims — that count is
+  // the only clue for "a umbrella" vs "two umbrellas".
+  const objects = document.createElement("div");
+  objects.className = "sc-part";
+  for (let i = 0; i < r.count; i++) {
+    if (r.object.imagePath || r.object.photoUrl || r.object.categoryId) {
+      const img = document.createElement("img");
+      img.className = "sc-img";
+      img.alt = r.object.en;
+      applyItemImage(img, r.object);
+      objects.appendChild(img);
+    } else {
+      const span = document.createElement("span");
+      span.className = "sc-emoji";
+      span.textContent = r.object.emoji || "⚽";
+      objects.appendChild(span);
+    }
+  }
+  els.sentenceScene.appendChild(objects);
+}
+
+function renderSentenceSlots() {
+  const r = state.sentenceRound;
+  if (!els.sentenceSlots) return;
+  els.sentenceSlots.innerHTML = "";
+  r.slots.forEach((text, i) => {
+    const slot = document.createElement("div");
+    const done = r.filled[i] != null;
+    slot.className = `sent-slot${done ? " filled" : ""}${!done && i === state.sentenceSlot ? " active" : ""}`;
+    slot.textContent = done ? text : "___";
+    els.sentenceSlots.appendChild(slot);
+  });
+  const stop = document.createElement("span");
+  stop.className = "sent-stop";
+  stop.textContent = ".";
+  els.sentenceSlots.appendChild(stop);
+}
+
+function renderSentenceChoices() {
+  const r = state.sentenceRound;
+  if (!els.sentenceChoices) return;
+  els.sentenceChoices.innerHTML = "";
+  const i = state.sentenceSlot;
+  if (!r || i >= r.slots.length) return;
+  r.choices[i].forEach((text) => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "sent-chip";
+    chip.textContent = text;
+    onTap(chip, () => handleSentenceChoice(text, chip));
+    els.sentenceChoices.appendChild(chip);
+  });
+}
+
+function handleSentenceChoice(text, chip) {
+  if (tapsLocked()) return;
+  const r = state.sentenceRound;
+  if (!r) return;
+  const i = state.sentenceSlot;
+
+  if (text !== r.slots[i]) {
+    state.lockUntil = Date.now() + WRONG_DEAD_MS;
+    chip.classList.add("wrong");
+    els.feedback.textContent = t("fb_try_again");
+    buzz();
+    setTimeout(() => chip.classList.remove("wrong"), 450);
+    return;
+  }
+
+  r.filled[i] = text;
+  chip.classList.add("right");
+  playCorrect();
+  synthesize(text, {});
+  state.sentenceSlot = i + 1;
+
+  if (state.sentenceSlot >= r.slots.length) {
+    lockForCorrectAdvance();
+    renderSentenceSlots();
+    els.sentenceChoices.innerHTML = "";
+    els.promptWord.textContent = r.sentence;
+    els.feedback.textContent = t("sent_done");
+    showCorrectOverlay();
+    setTimeout(() => synthesize(r.sentence, {}), 700);
+    setTimeout(() => startRound(), CORRECT_ADVANCE_MS + 2600);
+    return;
+  }
+
+  setTimeout(() => {
+    renderSentenceSlots();
+    renderSentenceChoices();
+    els.promptWord.textContent = sentenceSoFar();
+  }, 280);
+}
+
+// ---- Articles: a read-together lesson, not a quiz ---------------------------
+
+function lessonCards() {
+  return (state.grammar && state.grammar.articles) || [];
+}
+
+function renderLessonView() {
+  els.modeLabel.textContent = t("mode_articles");
+  hideAllGameViews();
+  showPromptArea(false);
+  const cards = lessonCards();
+  if (!cards.length || !els.lessonSection) return;
+  els.lessonSection.classList.remove("hidden");
+
+  const i = Math.max(0, Math.min(state.lessonIndex, cards.length - 1));
+  state.lessonIndex = i;
+  const card = cards[i];
+  els.lessonEmoji.textContent = card.emoji || "📖";
+  els.lessonTitle.textContent = card.title || "";
+  els.lessonLines.innerHTML = "";
+  (card.lines || []).forEach((line) => {
+    const div = document.createElement("div");
+    div.className = "lesson-line";
+    div.textContent = line;
+    els.lessonLines.appendChild(div);
+  });
+  els.lessonProgress.textContent = t("lesson_of", { n: i + 1, total: cards.length });
+}
+
+function speakLessonCard() {
+  const card = lessonCards()[state.lessonIndex];
+  if (card) synthesize(card.say || card.title, { showErrors: true });
+}
+
+function advanceLesson(delta) {
+  const cards = lessonCards();
+  if (!cards.length) return;
+  state.lessonIndex = (state.lessonIndex + delta + cards.length) % cards.length;
+  renderLessonView();
+  updatePlayBar();
+  speakLessonCard();
+}
+
 function chooseKanaRound() {
   const set = state.currentTrack === "katakana"
     ? { chars: state.kataChars, words: state.kataWords }
@@ -4839,6 +5578,17 @@ function startRound() {
   if (state.currentSection !== "game") return;
   state.roundNo = (state.roundNo || 0) + 1;
   if (state.currentGameType === "kana-alphabet" || state.currentGameType === "kana-alphabet-quiz") {
+    renderCurrentView();
+    return;
+  }
+  if (state.currentTrack === "prepositions") {
+    choosePrepRound();
+    renderCurrentView();
+    speakCurrent();
+    return;
+  }
+  if (state.currentTrack === "sentences") {
+    if (state.currentGameType !== "articles") buildSentenceRound();
     renderCurrentView();
     return;
   }
@@ -4889,6 +5639,12 @@ function renderCurrentView() {
     } else {
       renderDragCompleteView();
     }
+  } else if (state.currentTrack === "prepositions") {
+    if (state.currentGameType === "prep-drag") renderPrepDragView();
+    else renderPrepTapView();
+  } else if (state.currentTrack === "sentences") {
+    if (state.currentGameType === "articles") renderLessonView();
+    else renderSentenceView();
   } else if (state.currentTrack === "hiragana" || state.currentTrack === "katakana") {
     if (state.currentGameType === "kana-tap") {
       renderKanaTapView();
@@ -4931,11 +5687,21 @@ function updatePlayBar() {
       round = idx + 1;
       showBar = true;
     }
+  } else if (state.currentGameType === "articles") {
+    const cards = lessonCards();
+    if (cards.length) {
+      pct = ((state.lessonIndex + 1) / cards.length) * 100;
+      round = state.lessonIndex + 1;
+      showBar = true;
+    }
   }
 
   if (els.playProgress) els.playProgress.classList.toggle("hidden", !showBar);
   if (els.playProgressFill) els.playProgressFill.style.width = `${Math.max(0, Math.min(100, pct))}%`;
   if (els.playRoundNum) els.playRoundNum.textContent = String(round);
+  // The 👁 button only means something where a word is printed under a picture.
+  if (els.wordsPeek) els.wordsPeek.classList.toggle("hidden", !viewHasCardWords());
+
   // The live score replaces the track/category line once there is a score.
   const live = deck && state.flash.answered > 0;
   if (els.flashLiveScore) els.flashLiveScore.classList.toggle("hidden", !live);
@@ -4955,6 +5721,12 @@ function hideAllGameViews() {
   if (els.alphabetSection) els.alphabetSection.classList.add("hidden");
   if (els.alphabetQuizSection) els.alphabetQuizSection.classList.add("hidden");
   if (els.flashBar) els.flashBar.classList.add("hidden");
+  if (els.prepDragSection) els.prepDragSection.classList.add("hidden");
+  if (els.sentenceSection) els.sentenceSection.classList.add("hidden");
+  if (els.lessonSection) els.lessonSection.classList.add("hidden");
+  // Only the sentence builder puts a whole sentence in the prompt; every other
+  // mode puts one word there and wants the big type back.
+  if (els.promptWord) els.promptWord.classList.remove("compact");
 }
 
 function renderTapView() {
@@ -5548,6 +6320,7 @@ function advanceQuizAuto() {
 }
 
 function renderCards(items) {
+  applyCardColumns(items.length);
   els.cards.innerHTML = "";
   items.forEach((item) => {
     const card = document.createElement("div");
@@ -5559,15 +6332,17 @@ function renderCards(items) {
     img.alt = item.en;
     card.appendChild(img);
 
-    const ja = document.createElement("div");
-    ja.className = "label-ja";
-    ja.textContent = wordText(item);
-    card.appendChild(ja);
+    if (!state.hideCardWords) {
+      const ja = document.createElement("div");
+      ja.className = "label-ja";
+      ja.textContent = wordText(item);
+      card.appendChild(ja);
 
-    const label = document.createElement("div");
-    label.className = "label-en";
-    label.textContent = wordSubLabel(item);
-    card.appendChild(label);
+      const label = document.createElement("div");
+      label.className = "label-en";
+      label.textContent = wordSubLabel(item);
+      card.appendChild(label);
+    }
 
     // Memory mode: a flip-over back that hides the picture once the cards turn.
     if (state.currentGameType === "memory") {
@@ -5584,6 +6359,7 @@ function renderCards(items) {
 }
 
 function renderKanaCards(items) {
+  applyCardColumns(items.length);
   els.cards.innerHTML = "";
   items.forEach((item) => {
     const card = document.createElement("div");
@@ -5920,7 +6696,26 @@ function onDropZonePointerUp() {
 }
 
 function speakCurrent() {
+  // The grammar tracks don't have a single "word" to say: the lesson reads its
+  // own card, and a half-built sentence should only say the part that's there.
+  if (state.currentTrack === "sentences") {
+    if (state.currentGameType === "articles") { speakLessonCard(); return; }
+    const r = state.sentenceRound;
+    if (!r) return;
+    const said = r.filled.filter(Boolean).join(" ");
+    synthesize(said || t("sent_prompt"), { showErrors: true });
+    return;
+  }
   if (!state.currentTarget) return;
+  if (state.currentTrack === "prepositions") {
+    const p = state.currentTarget;
+    // "Where is it?" asks for the word; "Move the Ball" asks for the whole
+    // instruction, because the word alone isn't a thing you can do.
+    const phrase =
+      state.currentGameType === "prep-drag" ? t("prep_put_ball", { word: p.en }) : p.en;
+    synthesize(phrase, { showErrors: true });
+    return;
+  }
 
   const phrase =
     state.currentTrack === "hiragana" || state.currentTrack === "katakana"

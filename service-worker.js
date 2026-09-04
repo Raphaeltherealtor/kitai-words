@@ -1,4 +1,4 @@
-const CACHE_NAME = "kitai-cache-v58";
+const CACHE_NAME = "kitai-cache-v60";
 const CORE_ASSETS = [
   "./",
   "./index.html",
@@ -7,6 +7,7 @@ const CORE_ASSETS = [
   "./data/vocab.json",
   "./data/hiragana.json",
   "./data/katakana.json",
+  "./data/grammar.json",
   "./pwa/manifest.json",
 ];
 

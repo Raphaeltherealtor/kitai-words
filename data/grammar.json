@@ -1,0 +1,401 @@
+{
+  "prepositions": [
+    {
+      "id": "prep-in",
+      "en": "in",
+      "sentence": "The ball is in the box.",
+      "imagePath": "assets/images/prep-in.svg",
+      "zone": "in"
+    },
+    {
+      "id": "prep-on",
+      "en": "on",
+      "sentence": "The ball is on the box.",
+      "imagePath": "assets/images/prep-on.svg",
+      "zone": "on"
+    },
+    {
+      "id": "prep-under",
+      "en": "under",
+      "sentence": "The ball is under the table.",
+      "imagePath": "assets/images/prep-under.svg",
+      "zone": "under"
+    },
+    {
+      "id": "prep-over",
+      "en": "over",
+      "sentence": "The ball goes over the box.",
+      "imagePath": "assets/images/prep-over.svg",
+      "zone": null
+    },
+    {
+      "id": "prep-next-to",
+      "en": "next to",
+      "sentence": "The ball is next to the box.",
+      "imagePath": "assets/images/prep-next-to.svg",
+      "zone": "next to"
+    },
+    {
+      "id": "prep-behind",
+      "en": "behind",
+      "sentence": "The ball is behind the box.",
+      "imagePath": "assets/images/prep-behind.svg",
+      "zone": "behind"
+    },
+    {
+      "id": "prep-in-front-of",
+      "en": "in front of",
+      "sentence": "The ball is in front of the box.",
+      "imagePath": "assets/images/prep-in-front-of.svg",
+      "zone": "in front of"
+    },
+    {
+      "id": "prep-between",
+      "en": "between",
+      "sentence": "The ball is between the boxes.",
+      "imagePath": "assets/images/prep-between.svg",
+      "zone": null
+    },
+    {
+      "id": "prep-up",
+      "en": "up",
+      "sentence": "The ball goes up.",
+      "imagePath": "assets/images/prep-up.svg",
+      "zone": null
+    },
+    {
+      "id": "prep-down",
+      "en": "down",
+      "sentence": "The ball goes down.",
+      "imagePath": "assets/images/prep-down.svg",
+      "zone": null
+    },
+    {
+      "id": "prep-through",
+      "en": "through",
+      "sentence": "The ball goes through the tunnel.",
+      "imagePath": "assets/images/prep-through.svg",
+      "zone": null
+    },
+    {
+      "id": "prep-around",
+      "en": "around",
+      "sentence": "The ball goes around the box.",
+      "imagePath": "assets/images/prep-around.svg",
+      "zone": null
+    }
+  ],
+  "sentence": {
+    "subjects": [
+      {
+        "id": "girl",
+        "en": "girl",
+        "emoji": "👧"
+      },
+      {
+        "id": "boy",
+        "en": "boy",
+        "emoji": "👦"
+      },
+      {
+        "id": "baby",
+        "en": "baby",
+        "emoji": "👶",
+        "plural": "babies"
+      },
+      {
+        "id": "mom",
+        "en": "mom",
+        "emoji": "👩"
+      },
+      {
+        "id": "dad",
+        "en": "dad",
+        "emoji": "👨"
+      },
+      {
+        "id": "cat",
+        "en": "cat",
+        "emoji": "🐱"
+      },
+      {
+        "id": "dog",
+        "en": "dog",
+        "emoji": "🐶"
+      },
+      {
+        "id": "bird",
+        "en": "bird",
+        "emoji": "🐦"
+      },
+      {
+        "id": "monkey",
+        "en": "monkey",
+        "emoji": "🐵"
+      },
+      {
+        "id": "elephant",
+        "en": "elephant",
+        "emoji": "🐘"
+      },
+      {
+        "id": "frog",
+        "en": "frog",
+        "emoji": "🐸"
+      },
+      {
+        "id": "robot",
+        "en": "robot",
+        "emoji": "🤖"
+      }
+    ],
+    "verbs": [
+      {
+        "id": "eat",
+        "base": "eat",
+        "third": "eats",
+        "emoji": "🍽️"
+      },
+      {
+        "id": "hold",
+        "base": "hold",
+        "third": "holds",
+        "emoji": "🤲"
+      },
+      {
+        "id": "see",
+        "base": "see",
+        "third": "sees",
+        "emoji": "👀"
+      },
+      {
+        "id": "want",
+        "base": "want",
+        "third": "wants",
+        "emoji": "🙌"
+      },
+      {
+        "id": "draw",
+        "base": "draw",
+        "third": "draws",
+        "emoji": "🎨"
+      },
+      {
+        "id": "wash",
+        "base": "wash",
+        "third": "washes",
+        "emoji": "🧼"
+      },
+      {
+        "id": "throw",
+        "base": "throw",
+        "third": "throws",
+        "emoji": "🤾"
+      },
+      {
+        "id": "kick",
+        "base": "kick",
+        "third": "kicks",
+        "emoji": "🦵"
+      },
+      {
+        "id": "ride",
+        "base": "ride",
+        "third": "rides",
+        "emoji": "🚲"
+      },
+      {
+        "id": "find",
+        "base": "find",
+        "third": "finds",
+        "emoji": "🔍"
+      },
+      {
+        "id": "like",
+        "base": "like",
+        "third": "likes",
+        "emoji": "❤️"
+      },
+      {
+        "id": "hug",
+        "base": "hug",
+        "third": "hugs",
+        "emoji": "🫂"
+      },
+      {
+        "id": "carry",
+        "base": "carry",
+        "third": "carries",
+        "emoji": "🎒"
+      },
+      {
+        "id": "paint",
+        "base": "paint",
+        "third": "paints",
+        "emoji": "🖌️"
+      },
+      {
+        "id": "count",
+        "base": "count",
+        "third": "counts",
+        "emoji": "🔢"
+      },
+      {
+        "id": "push",
+        "base": "push",
+        "third": "pushes",
+        "emoji": "👐"
+      }
+    ],
+    "skipCategories": [
+      "colors",
+      "numbers",
+      "verbs"
+    ],
+    "uniqueNouns": [
+      "sun",
+      "moon",
+      "sky",
+      "ground",
+      "world",
+      "rain"
+    ],
+    "irregularPlurals": {
+      "child": "children",
+      "person": "people",
+      "man": "men",
+      "woman": "women",
+      "foot": "feet",
+      "tooth": "teeth",
+      "mouse": "mice",
+      "goose": "geese",
+      "fish": "fish",
+      "sheep": "sheep",
+      "deer": "deer",
+      "knife": "knives",
+      "leaf": "leaves",
+      "wolf": "wolves",
+      "shelf": "shelves",
+      "loaf": "loaves",
+      "potato": "potatoes",
+      "tomato": "tomatoes",
+      "mango": "mangoes",
+      "hero": "heroes",
+      "life": "lives",
+      "wife": "wives",
+      "half": "halves",
+      "calf": "calves",
+      "thief": "thieves"
+    },
+    "articleExceptions": {
+      "hour": "an",
+      "honest": "an",
+      "honey": "a",
+      "uniform": "a",
+      "unicorn": "a",
+      "university": "a",
+      "one": "a",
+      "european": "a"
+    },
+    "massNouns": [
+      "rice",
+      "bread",
+      "milk",
+      "water",
+      "juice",
+      "soup",
+      "corn",
+      "cheese",
+      "hair",
+      "money"
+    ],
+    "pluralNouns": {
+      "eyes": "eye",
+      "ears": "ear",
+      "hands": "hand",
+      "feet": "foot",
+      "shoes": "shoe",
+      "teeth": "tooth",
+      "children": "child",
+      "people": "person"
+    },
+    "skipNouns": [
+      "okaasan",
+      "otousan"
+    ]
+  },
+  "articles": [
+    {
+      "emoji": "🔤",
+      "title": "Two little words",
+      "lines": [
+        "English puts a tiny word in front of most things.",
+        "a  ·  an  ·  the"
+      ],
+      "say": "a. an. the."
+    },
+    {
+      "emoji": "1️⃣",
+      "title": "a = one of them",
+      "lines": [
+        "\"I see a dog.\"",
+        "Any dog. You don't know which one yet — it's the first time I've said it."
+      ],
+      "say": "I see a dog."
+    },
+    {
+      "emoji": "🍎",
+      "title": "an before a vowel sound",
+      "lines": [
+        "an apple · an egg · an umbrella",
+        "Say \"a apple\" out loud — your mouth trips over it. That's the whole reason for an."
+      ],
+      "say": "an apple. an egg. an umbrella."
+    },
+    {
+      "emoji": "🤝",
+      "title": "the = we both know which one",
+      "lines": [
+        "\"The dog is barking.\"",
+        "Not any dog — our dog. When I say the, I'm telling you: you already know the one I mean."
+      ],
+      "say": "The dog is barking."
+    },
+    {
+      "emoji": "☀️",
+      "title": "the = there is only one",
+      "lines": [
+        "the sun · the moon · the sky",
+        "There is only one of each in the whole world, so there is nothing to pick between."
+      ],
+      "say": "the sun. the moon. the sky."
+    },
+    {
+      "emoji": "👧",
+      "title": "\"the girl\"",
+      "lines": [
+        "\"A girl is here\" — a new girl, you don't know her yet.",
+        "\"The girl is here\" — you know which girl. I'm pointing you at one we've already talked about."
+      ],
+      "say": "A girl is here. The girl is here."
+    },
+    {
+      "emoji": "🐶",
+      "title": "More than one → add s",
+      "lines": [
+        "one dog → a dog",
+        "two dogs → dogs  (never \"a dogs\")"
+      ],
+      "say": "a dog. two dogs."
+    },
+    {
+      "emoji": "🥛",
+      "title": "Some things take no word at all",
+      "lines": [
+        "milk · water · rice",
+        "You can't count them one, two, three — so they go bare: \"I want milk.\""
+      ],
+      "say": "I want milk."
+    }
+  ]
+}

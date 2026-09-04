@@ -17,7 +17,7 @@
       <div id="onboarding-langs" class="onboarding-langs">
         <button class="onboarding-lang" data-lang="ja"><span class="ob-flag">🇯🇵</span><span class="ob-name">日本語<br>Japanese</span></button>
         <button class="onboarding-lang" data-lang="ko"><span class="ob-flag">🇰🇷</span><span class="ob-name">한국어<br>Korean</span></button>
-        <button class="onboarding-lang" data-lang="en"><span class="ob-flag">🔤</span><span class="ob-name">English</span></button>
+        <button class="onboarding-lang" data-lang="en"><span class="ob-flag">🔤</span><span class="ob-name">ABC<br>English</span></button>
         <button class="onboarding-lang" data-lang="es"><span class="ob-flag">🇪🇸</span><span class="ob-name">Español<br>Spanish</span></button>
         <button class="onboarding-lang" data-lang="pt"><span class="ob-flag">🇧🇷</span><span class="ob-name">Português<br>Portuguese</span></button>
       </div>
@@ -66,6 +66,16 @@
           <div class="tile-emoji">カ</div>
           <div class="tile-title" data-i18n="track_katakana">Katakana</div>
           <div class="tile-sub" data-i18n="track_kana_sub">Sound & pick, complete</div>
+        </button>
+        <button class="tile hidden" data-track="prepositions">
+          <div class="tile-emoji">📦</div>
+          <div class="tile-title" data-i18n="track_prep">Prepositions</div>
+          <div class="tile-sub" data-i18n="track_prep_sub">Where is the ball?</div>
+        </button>
+        <button class="tile hidden" data-track="sentences">
+          <div class="tile-emoji">💬</div>
+          <div class="tile-title" data-i18n="track_sentences">Sentences</div>
+          <div class="tile-sub" data-i18n="track_sentences_sub">a, an, the &amp; adding s</div>
         </button>
         <button class="tile disabled" data-track="kanji" aria-disabled="true">
           <div class="tile-emoji">漢</div>
@@ -128,6 +138,49 @@
         <div id="quiz-progress"></div>
       </section>
 
+      <!-- Prepositions, active mode: one box, one ball, and the places a ball
+           can be. The child drags the ball where the word says. -->
+      <section id="prep-drag-section" class="hidden">
+        <div id="prep-stage" class="prep-stage">
+          <div class="prep-zone" data-zone="behind"><span>behind</span></div>
+          <div class="prep-zone prep-zone-left" data-zone="next to"><span>next to</span></div>
+          <div class="prep-zone prep-zone-right" data-zone="next to"><span>next to</span></div>
+          <div class="prep-zone" data-zone="on"><span>on</span></div>
+          <div class="prep-zone" data-zone="in"><span>in</span></div>
+          <div class="prep-zone" data-zone="under"><span>under</span></div>
+          <div class="prep-zone" data-zone="in front of"><span>in front of</span></div>
+          <div class="prep-box" aria-hidden="true">
+            <div class="prep-box-mouth"></div>
+            <div class="prep-box-front"></div>
+            <div class="prep-box-leg prep-box-leg-l"></div>
+            <div class="prep-box-leg prep-box-leg-r"></div>
+          </div>
+          <div id="prep-ball" class="prep-ball" role="button" aria-label="Drag the ball"></div>
+        </div>
+      </section>
+
+      <!-- Sentences: a picture to describe, three slots, and word chips. -->
+      <section id="sentence-section" class="hidden">
+        <div id="sentence-scene" class="sentence-scene"></div>
+        <div id="sentence-slots" class="sentence-slots"></div>
+        <div id="sentence-choices" class="sentence-choices"></div>
+      </section>
+
+      <!-- A read-together lesson (Articles). Cards, not a quiz. -->
+      <section id="lesson-section" class="hidden">
+        <div class="lesson-card">
+          <div id="lesson-emoji" class="lesson-emoji"></div>
+          <div id="lesson-title" class="lesson-title"></div>
+          <div id="lesson-lines" class="lesson-lines"></div>
+        </div>
+        <div class="alphabet-controls">
+          <button id="lesson-prev" aria-label="Previous">⬅️</button>
+          <button id="lesson-speak" aria-label="Read it out loud">🔊</button>
+          <button id="lesson-next" aria-label="Next">➡️</button>
+        </div>
+        <div id="lesson-progress"></div>
+      </section>
+
       <section id="alphabet-section" class="hidden">
         <div class="alphabet-card">
           <div id="alphabet-emoji" class="alphabet-emoji"></div>
@@ -159,6 +212,7 @@
     <div id="flash-bar" class="hidden">
       <button id="flash-finish" class="flash-finish" data-i18n="flash_finish">Finish ✓</button>
     </div>
+    <button id="words-peek" class="words-peek hidden" aria-label="Show or hide the words on the pictures" data-i18n-aria="aria_peek">👁</button>
   </div>
 
   <div id="flash-complete" class="hidden">
@@ -484,6 +538,14 @@
                 <select id="category-select"></select>
               </label>
             </div>
+            <label class="bp-toggle">
+              <span class="bp-row-text">
+                <span class="bp-row-title" data-i18n="s_hide_words">Hide the word on the pictures</span>
+                <span class="bp-row-sub" data-i18n="s_hide_words_sub">A child who can read shouldn't be able to match the letters instead of the picture. There's an 👁 button on the play screen too.</span>
+              </span>
+              <input type="checkbox" id="hide-words-toggle" />
+              <span class="bp-switch" aria-hidden="true"></span>
+            </label>
           </div>
 
           <div class="bp-group">

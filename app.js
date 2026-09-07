@@ -3428,9 +3428,19 @@ function bindUI() {
   });
 
   if (els.categoryQuickBtn) {
-    onTap(els.categoryQuickBtn, toggleCategoryMenu);
+    onTap(els.categoryQuickBtn, (e) => {
+      // Suppress the compatibility mouse events this touch would replay onto
+      // whatever ends up under the finger once the menu is open.
+      if (e && e.cancelable) e.preventDefault();
+      toggleCategoryMenu();
+    });
   }
-  if (els.catMenuBackdrop) els.catMenuBackdrop.addEventListener("click", () => closeCategoryMenu());
+  if (els.catMenuBackdrop) {
+    els.catMenuBackdrop.addEventListener("click", () => {
+      if (Date.now() - catMenuOpenedAt < 400) return; // the opening tap's echo
+      closeCategoryMenu();
+    });
+  }
   if (els.catMenuAll) {
     els.catMenuAll.addEventListener("click", () => {
       setWordsInPlay(state.items.map((i) => i.id), true);
@@ -4713,6 +4723,10 @@ function refreshCategoryChip() {
 // nothing else, which is what a toddler's finger can safely reach.
 
 let catMenuOpenGroup = null; // only one group's words are unfolded at a time
+// When the menu opened. A touch tap fires pointerup, and then — a beat later —
+// a compatibility mousedown/mouseup/click at the same spot, where the backdrop
+// now is. Without this the menu blinked open and shut on every phone tap.
+let catMenuOpenedAt = 0;
 
 function catMenuIsOpen() {
   return !!(els.catMenu && !els.catMenu.classList.contains("hidden"));
@@ -4721,6 +4735,7 @@ function catMenuIsOpen() {
 function openCategoryMenu() {
   if (!els.catMenu) return;
   catMenuOpenGroup = null;
+  catMenuOpenedAt = Date.now();
   els.catMenu.classList.remove("hidden");
   if (els.catMenuBackdrop) els.catMenuBackdrop.classList.remove("hidden");
   if (els.categoryQuickBtn) els.categoryQuickBtn.setAttribute("aria-expanded", "true");

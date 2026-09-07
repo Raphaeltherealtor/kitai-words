@@ -40,8 +40,10 @@ Open parent settings → **Words in play** (also on the **Game** screen). Every 
 
 Unchecked words are **not deleted**. They stop being dealt into every vocab game — Listen & Tap, Find It, Drag to Complete, Flash Cards, Memory, and the English Sentences track — and the Words screen dims them and marks them "sitting out". Check them back on any time.
 
+**During a game**, tap the category chip in the play bar (the "🎲 Mixed ▾" pill next to the mode name). The menu that opens is the same list with the same checkboxes: pick a group to play by tapping its name, tick a group in or out with its checkbox, or tap the **›** to unfold that group's words and tick them one by one. Picks apply when you close the menu, so the board is re-dealt once rather than under the child's finger. Tapping the name of a group you had switched off turns it back on — asking to play it says you want it. Under **child lock** the menu shows the plain category list with no checkboxes, so a toddler's finger can't empty the game.
+
 Notes:
-- Changes apply when you close settings, so the round on screen is re-dealt from the new selection (deck modes start a fresh deck).
+- Changes apply when you close settings (or the in-game menu), so the round on screen is re-dealt from the new selection (deck modes start a fresh deck).
 - The picks live in the same manifest as your words, so they sync through the Shared Library like everything else — last change wins.
 - A word you add to a group that is entirely switched off starts switched off too, so it doesn't sneak into a game on its own.
 - Switch everything off and the games say so instead of showing an empty board.

@@ -638,6 +638,12 @@ const els = {
   choiceCount: document.getElementById("choice-count"),
   categorySelect: document.getElementById("category-select"),
   categoryQuick: document.getElementById("category-quick"),
+  categoryQuickBtn: document.getElementById("category-quick-btn"),
+  catMenu: document.getElementById("cat-menu"),
+  catMenuBackdrop: document.getElementById("cat-menu-backdrop"),
+  catMenuList: document.getElementById("cat-menu-list"),
+  catMenuCount: document.getElementById("cat-menu-count"),
+  catMenuAll: document.getElementById("cat-menu-all"),
   voiceSelect: document.getElementById("voice-select"),
   romajiToggle: document.getElementById("romaji-toggle"),
   hideWordsToggle: document.getElementById("hide-words-toggle"),
@@ -3421,6 +3427,25 @@ function bindUI() {
     else startRound();
   });
 
+  if (els.categoryQuickBtn) {
+    onTap(els.categoryQuickBtn, toggleCategoryMenu);
+  }
+  if (els.catMenuBackdrop) els.catMenuBackdrop.addEventListener("click", () => closeCategoryMenu());
+  if (els.catMenuAll) {
+    els.catMenuAll.addEventListener("click", () => {
+      setWordsInPlay(state.items.map((i) => i.id), true);
+      renderCategoryMenu();
+    });
+  }
+  window.addEventListener("resize", () => { if (catMenuIsOpen()) positionCategoryMenu(); });
+  // The panel hangs off the chip; if the screen scrolls out from under it,
+  // close rather than leave it floating over nothing.
+  const mainEl = document.querySelector("main");
+  if (mainEl) mainEl.addEventListener("scroll", () => { if (catMenuIsOpen()) closeCategoryMenu(); }, { passive: true });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && catMenuIsOpen()) closeCategoryMenu();
+  });
+
   if (els.categoryQuick) {
     els.categoryQuick.addEventListener("change", (e) => {
       state.categoryId = e.target.value;
@@ -4667,14 +4692,230 @@ async function addStockPhotoByUrl() {
 
 // What the category chip in the play bar reads. The emoji does the work on a
 // phone: "🐾 Animals" is findable at a glance where plain small text was not.
+const MIXED_LABEL = "🎲 Mixed";
 function categoryChipLabel() {
-  if (state.categoryId === "mixed") return "🎲 Mixed";
+  if (state.categoryId === "mixed") return MIXED_LABEL;
   const cat = state.categories.find((c) => c.id === state.categoryId);
-  return cat ? `${cat.emoji} ${cat.label_en}` : "🎲 Mixed";
+  return cat ? `${cat.emoji} ${cat.label_en}` : MIXED_LABEL;
 }
 
 function refreshCategoryChip() {
   if (els.categoryLabel) els.categoryLabel.textContent = categoryChipLabel();
+}
+
+// ---- The in-game category menu --------------------------------------------
+// Tapping the chip in the play bar used to open a plain list of categories to
+// switch to. It now opens this: the same list, plus a checkbox on every group
+// and, one tap deeper, on every word — so a parent standing next to the child
+// can drop Numbers, or just the three words she keeps getting wrong, without
+// leaving the round. Picks apply when the menu closes, never mid-tap.
+// Under child lock the checkboxes stay away: the list switches categories and
+// nothing else, which is what a toddler's finger can safely reach.
+
+let catMenuOpenGroup = null; // only one group's words are unfolded at a time
+
+function catMenuIsOpen() {
+  return !!(els.catMenu && !els.catMenu.classList.contains("hidden"));
+}
+
+function openCategoryMenu() {
+  if (!els.catMenu) return;
+  catMenuOpenGroup = null;
+  els.catMenu.classList.remove("hidden");
+  if (els.catMenuBackdrop) els.catMenuBackdrop.classList.remove("hidden");
+  if (els.categoryQuickBtn) els.categoryQuickBtn.setAttribute("aria-expanded", "true");
+  renderCategoryMenu();
+  positionCategoryMenu();
+}
+
+function closeCategoryMenu(skipApply) {
+  if (!els.catMenu) return;
+  els.catMenu.classList.add("hidden");
+  if (els.catMenuBackdrop) els.catMenuBackdrop.classList.add("hidden");
+  if (els.categoryQuickBtn) els.categoryQuickBtn.setAttribute("aria-expanded", "false");
+  if (!skipApply && state.picksDirty) {
+    state.picksDirty = false;
+    restartCurrentSession();
+  }
+}
+
+function toggleCategoryMenu() {
+  if (catMenuIsOpen()) closeCategoryMenu();
+  else openCategoryMenu();
+}
+
+// Hang the panel under the chip, kept inside the screen on a narrow phone.
+function positionCategoryMenu() {
+  if (!els.catMenu || !els.playContext) return;
+  const anchor = els.playContext.getBoundingClientRect();
+  const w = els.catMenu.offsetWidth;
+  const left = Math.min(Math.max(8, anchor.left), window.innerWidth - w - 8);
+  els.catMenu.style.left = `${Math.round(left)}px`;
+  els.catMenu.style.top = `${Math.round(anchor.bottom + 8)}px`;
+  els.catMenu.style.maxHeight = `${Math.round(window.innerHeight - anchor.bottom - 24)}px`;
+}
+
+// Choosing what to play is the menu's first job — hand it to the select that
+// already owns that change, then get out of the way.
+function chooseCategoryFromMenu(id) {
+  state.picksDirty = false; // the change handler re-deals for us
+  closeCategoryMenu(true);
+  if (!els.categoryQuick) return;
+  els.categoryQuick.value = id;
+  els.categoryQuick.dispatchEvent(new Event("change"));
+}
+
+function catMenuRow(cls) {
+  const el = document.createElement("div");
+  el.className = cls;
+  return el;
+}
+
+function renderCategoryMenu() {
+  const list = els.catMenuList;
+  if (!list) return;
+  const locked = state.locked;
+  list.innerHTML = "";
+
+  const addBox = (row, checked, indeterminate, label, onChange) => {
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.className = "cat-menu-box";
+    box.checked = checked;
+    box.indeterminate = !!indeterminate;
+    box.setAttribute("aria-label", label);
+    box.addEventListener("click", (e) => e.stopPropagation());
+    box.addEventListener("change", () => onChange(box.checked));
+    row.appendChild(box);
+    return box;
+  };
+
+  // Mixed: every word that is in play, whatever group it sits in.
+  const mixed = catMenuRow("cat-menu-row cat-menu-mixed");
+  if (state.categoryId === "mixed") mixed.classList.add("active");
+  const mixedName = document.createElement("button");
+  mixedName.type = "button";
+  mixedName.className = "cat-menu-name";
+  mixedName.textContent = MIXED_LABEL;
+  mixedName.addEventListener("click", () => chooseCategoryFromMenu("mixed"));
+  mixed.appendChild(mixedName);
+  list.appendChild(mixed);
+
+  state.categories.forEach((cat) => {
+    const items = state.items.filter((i) => i.categoryId === cat.id);
+    if (!items.length) return;
+    const c = { total: items.length, on: items.filter(isWordInPlay).length };
+
+    const row = catMenuRow("cat-menu-row");
+    row.dataset.catRow = cat.id;
+    if (state.categoryId === cat.id) row.classList.add("active");
+    if (!c.on) row.classList.add("off");
+
+    if (!locked) {
+      addBox(row, c.on > 0, c.on > 0 && c.on < c.total, cat.label_en, (on) => {
+        setWordsInPlay(items.map((i) => i.id), on);
+        syncCatMenuUI();
+      });
+    }
+
+    const name = document.createElement("button");
+    name.type = "button";
+    name.className = "cat-menu-name";
+    name.innerHTML = '<span class="cat-menu-emoji"></span><span class="cat-menu-label"></span><span class="cat-menu-count"></span>';
+    name.querySelector(".cat-menu-emoji").textContent = cat.emoji || "📦";
+    name.querySelector(".cat-menu-label").textContent = cat.label_en;
+    if (!locked && c.on < c.total) {
+      name.querySelector(".cat-menu-count").textContent = t("s_picks_count", { on: c.on, total: c.total });
+    }
+    name.addEventListener("click", () => {
+      // Asking to play a group that is switched off means you want it back.
+      if (!c.on && !locked) setWordsInPlay(items.map((i) => i.id), true);
+      chooseCategoryFromMenu(cat.id);
+    });
+    row.appendChild(name);
+
+    if (!locked) {
+      const caret = document.createElement("button");
+      caret.type = "button";
+      caret.className = "cat-menu-caret";
+      caret.textContent = "›";
+      caret.setAttribute("aria-label", `${cat.label_en} — ${t("s_picks")}`);
+      caret.setAttribute("aria-expanded", String(catMenuOpenGroup === cat.id));
+      caret.addEventListener("click", () => {
+        const opening = catMenuOpenGroup !== cat.id;
+        catMenuOpenGroup = opening ? cat.id : null;
+        renderCategoryMenu();
+        // The list is rebuilt, so a group opened halfway down would scroll away
+        // from under the finger that opened it.
+        if (opening) {
+          const row = list.querySelector(`[data-cat-row="${cat.id}"]`);
+          if (row) list.scrollTop = row.offsetTop - list.offsetTop;
+        }
+      });
+      row.appendChild(caret);
+    }
+    list.appendChild(row);
+
+    if (!locked && catMenuOpenGroup === cat.id) {
+      const words = document.createElement("div");
+      words.className = "cat-menu-words";
+      items.forEach((item) => {
+        const wrow = document.createElement("label");
+        wrow.className = "cat-menu-word";
+        if (!isWordInPlay(item)) wrow.classList.add("off");
+        const box = addBox(wrow, isWordInPlay(item), false, item.en, (on) => {
+          setWordsInPlay([item.id], on);
+          syncCatMenuUI();
+        });
+        box.dataset.catWord = item.id;
+        const img = document.createElement("img");
+        img.className = "cat-menu-thumb";
+        img.alt = "";
+        const arr = getOverrideEntries(item.id);
+        if (arr.length > 0) img.src = arr[0].url;
+        else applyDefaultImage(img, item);
+        wrow.appendChild(img);
+        const label = document.createElement("span");
+        label.className = "cat-menu-word-text";
+        label.textContent = wordText(item) || item.en;
+        wrow.appendChild(label);
+        words.appendChild(wrow);
+      });
+      list.appendChild(words);
+    }
+  });
+
+  syncCatMenuUI();
+}
+
+// Counts and boxes move on every tap; the rows don't. Same trick as the
+// settings picker — update in place so the list never jumps under a finger.
+function syncCatMenuUI() {
+  if (!els.catMenuList) return;
+  const total = state.items.length;
+  const on = state.items.filter(isWordInPlay).length;
+  if (els.catMenuCount) els.catMenuCount.textContent = t("s_picks_count", { on, total });
+  if (els.catMenuAll) els.catMenuAll.classList.toggle("hidden", on === total || state.locked);
+
+  els.catMenuList.querySelectorAll("[data-cat-word]").forEach((box) => {
+    const item = state.items.find((i) => i.id === box.dataset.catWord);
+    const inPlay = item ? isWordInPlay(item) : true;
+    box.checked = inPlay;
+    const row = box.closest(".cat-menu-word");
+    if (row) row.classList.toggle("off", !inPlay);
+  });
+
+  els.catMenuList.querySelectorAll("[data-cat-row]").forEach((row) => {
+    const c = categoryPickCount(row.dataset.catRow);
+    const box = row.querySelector(".cat-menu-box");
+    if (box) {
+      box.checked = c.on > 0;
+      box.indeterminate = c.on > 0 && c.on < c.total;
+    }
+    const count = row.querySelector(".cat-menu-count");
+    if (count) count.textContent = c.on < c.total ? t("s_picks_count", { on: c.on, total: c.total }) : "";
+    row.classList.toggle("off", c.on === 0);
+  });
 }
 
 function setActiveModeButton(type) {
@@ -4688,6 +4929,7 @@ function setActiveModeButton(type) {
 }
 
 function updateModeButtonsForTrack(track) {
+  closeCategoryMenu(true);
   const [btn1, btn2, btn3, btn4, btn5] = els.modeButtons;
   // The grammar tracks have nothing to say in the context slot, and a bar that
   // narrow turns "Prepositions" into "P.".
@@ -4695,7 +4937,7 @@ function updateModeButtonsForTrack(track) {
     els.playBar.classList.toggle("no-context", track === "prepositions" || track === "sentences");
   }
   if (track === "vocab") {
-    if (els.categoryQuick) els.categoryQuick.parentElement.classList.remove("hidden");
+    if (els.categoryQuickBtn) els.categoryQuickBtn.classList.remove("hidden");
     if (els.playContext) els.playContext.classList.add("pickable");
     btn1.dataset.gametype = "tap";
     btn1.textContent = t("mode_tap");
@@ -4726,7 +4968,7 @@ function updateModeButtonsForTrack(track) {
     state.currentGameType = "tap";
     setActiveModeButton("tap");
   } else if (track === "hiragana" || track === "katakana") {
-    if (els.categoryQuick) els.categoryQuick.parentElement.classList.add("hidden");
+    if (els.categoryQuickBtn) els.categoryQuickBtn.classList.add("hidden");
     if (els.playContext) els.playContext.classList.remove("pickable");
     btn1.dataset.gametype = "kana-tap";
     btn1.textContent = t("mode_kana_tap");
@@ -4754,7 +4996,7 @@ function updateModeButtonsForTrack(track) {
   } else if (track === "prepositions" || track === "sentences") {
     // Two modes each: one that names what is already there, one that makes the
     // child do it. The category picker means nothing here, so it stays away.
-    if (els.categoryQuick) els.categoryQuick.parentElement.classList.add("hidden");
+    if (els.categoryQuickBtn) els.categoryQuickBtn.classList.add("hidden");
     if (els.playContext) els.playContext.classList.remove("pickable");
     const first = track === "prepositions" ? "prep-tap" : "sentence-build";
     const second = track === "prepositions" ? "prep-drag" : "articles";
@@ -4770,7 +5012,7 @@ function updateModeButtonsForTrack(track) {
     state.currentGameType = first;
     setActiveModeButton(first);
   } else {
-    if (els.categoryQuick) els.categoryQuick.parentElement.classList.add("hidden");
+    if (els.categoryQuickBtn) els.categoryQuickBtn.classList.add("hidden");
     els.modeButtons.forEach((b) => (b.disabled = true));
   }
 }
@@ -4785,6 +5027,7 @@ function cancelLongPress() {
 
 function showSettings() {
   if (state.locked) return; // child lock hides the gear, but never open it while locked
+  closeCategoryMenu();
   if (els.quickAddCategory && state.imageCategoryId && state.imageCategoryId !== "all") {
     els.quickAddCategory.value = state.imageCategoryId;
   }
@@ -4815,6 +5058,7 @@ function restartCurrentSession() {
 
 function goHome() {
   if (state.locked) return;
+  closeCategoryMenu(true);
   clearTimeout(state.memoryFlipTimer);
   state.memoryArmed = false;
   hideFlashComplete();
@@ -4830,6 +5074,7 @@ function goHome() {
 // but it keeps them inside the activity. Unlock = press-and-hold the badge 3s.
 
 async function lockApp() {
+  closeCategoryMenu();
   state.locked = true;
   document.body.classList.add("locked");
   if (els.lockBadge) els.lockBadge.classList.remove("hidden");

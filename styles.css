@@ -2912,16 +2912,155 @@ body.playing main { padding-bottom: 12px; }
    lies invisibly over it, so the native list opens where the words are named. */
 #play-context { position: relative; }
 #play-context.pickable::after { content: " ▾"; opacity: 0.8; }
-#category-quick-wrapper { position: absolute; inset: -6px; }
-#category-quick-wrapper.hidden { display: none; }
-#category-quick {
-  width: 100%;
-  height: 100%;
+/* The chip *is* the button: an invisible target laid over the words, so the
+   menu opens exactly where the category is named. */
+#category-quick-btn {
+  position: absolute;
+  inset: -6px;
+  width: auto;
+  height: auto;
   opacity: 0;
   border: none;
+  background: none;
   font: inherit;
   cursor: pointer;
 }
+#category-quick-btn.hidden { display: none; }
+
+/* ---- The in-game category menu -------------------------------------------
+   A dark sheet hanging off the chip: pick what to play, and tick groups (or
+   single words, one tap deeper) in and out without leaving the round. */
+#cat-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: rgba(7, 14, 26, 0.35);
+}
+#cat-menu-backdrop.hidden { display: none; }
+
+#cat-menu {
+  position: fixed;
+  z-index: 31;
+  width: min(320px, calc(100vw - 24px));
+  display: flex;
+  flex-direction: column;
+  background: #1a2438;
+  color: #f2f6ff;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  box-shadow: 0 18px 40px rgba(4, 10, 20, 0.45);
+  overflow: hidden;
+}
+#cat-menu.hidden { display: none; }
+.cat-menu-list { flex: 1; min-height: 0; overflow-y: auto; padding: 6px; }
+
+.cat-menu-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 6px 2px 10px;
+  border-radius: 14px;
+}
+.cat-menu-row.active { background: rgba(47, 224, 192, 0.14); }
+.cat-menu-row.off .cat-menu-label { color: #8fa2c4; }
+.cat-menu-row.off .cat-menu-emoji { opacity: 0.45; }
+.cat-menu-mixed { border-bottom: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px 14px 0 0; margin-bottom: 4px; }
+
+.cat-menu-name {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 13px 4px;
+  border: none;
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.98rem;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.cat-menu-emoji { flex: none; }
+.cat-menu-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cat-menu-count { flex: none; font-size: 0.78rem; font-weight: 700; color: #8fa2c4; }
+.cat-menu-count:empty { display: none; }
+
+.cat-menu-caret {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: none;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #8fa2c4;
+  font: inherit;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.cat-menu-caret[aria-expanded="true"] { transform: rotate(90deg); color: #2fe0c0; }
+
+.cat-menu-words {
+  display: flex;
+  flex-direction: column;
+  margin: 2px 6px 8px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
+.cat-menu-word { display: flex; align-items: center; gap: 9px; padding: 7px 10px; cursor: pointer; }
+.cat-menu-word + .cat-menu-word { border-top: 1px solid rgba(255, 255, 255, 0.05); }
+.cat-menu-word.off .cat-menu-thumb { opacity: 0.3; }
+.cat-menu-word.off .cat-menu-word-text { color: #8fa2c4; }
+.cat-menu-thumb { width: 30px; height: 30px; flex: none; border-radius: 9px; object-fit: cover; background: #f4f6fb; }
+.cat-menu-word-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Big enough for the parent's thumb over the child's shoulder. */
+.cat-menu-box {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  accent-color: #2fe0c0;
+  cursor: pointer;
+}
+
+.cat-menu-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #8fa2c4;
+}
+#cat-menu-count { flex: 1; }
+.cat-menu-all {
+  flex: none;
+  border: none;
+  border-radius: 999px;
+  padding: 9px 14px;
+  background: rgba(47, 224, 192, 0.16);
+  color: #2fe0c0;
+  font: inherit;
+  font-weight: 800;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.cat-menu-all.hidden { display: none; }
 
 #voice-warning {
   font-size: 0.85rem;

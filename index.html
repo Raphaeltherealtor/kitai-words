@@ -92,7 +92,7 @@
         <div class="play-bar-main">
           <div class="play-bar-line">
             <span id="mode-label">Listen &amp; Tap</span>
-            <span id="play-context"><span id="track-label">Vocabulary</span><span class="play-dot"> · </span><span id="category-label">Mixed</span><label id="category-quick-wrapper" class="hidden"><select id="category-quick" aria-label="Category"></select></label></span>
+            <span id="play-context"><span id="track-label">Vocabulary</span><span class="play-dot"> · </span><span id="category-label">Mixed</span><button type="button" id="category-quick-btn" class="hidden" aria-haspopup="dialog" aria-expanded="false" aria-label="Category and words in play"></button><select id="category-quick" class="bp-shadow-control" aria-hidden="true" tabindex="-1"></select></span>
             <span id="flash-live-score" class="flash-live-score hidden" data-i18n="flash_live_default">Tap the right picture</span>
           </div>
           <div id="play-progress" class="play-progress hidden"><div id="play-progress-fill"></div></div>
@@ -198,6 +198,17 @@
         </div>
         <div id="alphabet-progress"></div>
       </section>
+
+      <!-- Tapping the category chip mid-game opens this: pick what to play, and
+           tick groups or single words in or out without leaving the round. -->
+      <div id="cat-menu-backdrop" class="hidden"></div>
+      <div id="cat-menu" class="hidden" role="dialog" aria-label="Category and words in play">
+        <div id="cat-menu-list" class="cat-menu-list om-scroll"></div>
+        <div class="cat-menu-foot">
+          <span id="cat-menu-count"></span>
+          <button type="button" id="cat-menu-all" class="cat-menu-all" data-i18n="s_picks_all">All on</button>
+        </div>
+      </div>
     </section>
   </main>
 

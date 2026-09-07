@@ -309,6 +309,14 @@
               </span>
               <span class="bp-chev" aria-hidden="true">›</span>
             </button>
+            <button class="bp-row" data-bp-go="picks">
+              <span class="bp-ico bp-ico-teal">☑️</span>
+              <span class="bp-row-text">
+                <span class="bp-row-title" data-i18n="s_picks">Words in play</span>
+                <span class="bp-row-sub" id="sum-picks"></span>
+              </span>
+              <span class="bp-chev" aria-hidden="true">›</span>
+            </button>
             <button class="bp-row" data-bp-go="lock">
               <span class="bp-ico bp-ico-plain">🔒</span>
               <span class="bp-row-text">
@@ -383,6 +391,35 @@
           </div>
           <select id="quick-add-category" class="bp-shadow-control" aria-hidden="true" tabindex="-1"></select>
           <div id="quick-add-status" class="library-status"></div>
+        </div>
+      </section>
+
+      <!-- ===== WORDS IN PLAY ===== -->
+      <section class="bp-screen hidden" data-screen="picks">
+        <div class="bp-head">
+          <button class="bp-back" data-bp-go="hub" aria-label="Back">‹</button>
+          <div class="bp-head-text">
+            <h2 class="bp-title" data-i18n="s_picks">Words in play</h2>
+            <span class="bp-head-sub" id="picks-count-line"></span>
+          </div>
+          <div class="bp-saved" data-bp-saved>Saved ✓</div>
+        </div>
+
+        <div class="bp-fixed">
+          <div class="bp-note bp-note-quiet" data-i18n="s_picks_note">Unchecked words sit out of every game. Nothing is deleted — check them back on any time.</div>
+          <div id="picks-warning" class="bp-note bp-note-warn hidden" data-i18n="s_picks_warn">Every word is switched off, so the games have nothing to show.</div>
+          <div class="bp-search">
+            <span class="bp-search-ico" aria-hidden="true">🔍</span>
+            <input type="search" id="picks-search" placeholder="Search words" data-i18n-ph="s_picks_search_ph" aria-label="Search words" />
+          </div>
+          <div class="bp-inline">
+            <button id="picks-all" class="bp-btn bp-btn-soft" data-i18n="s_picks_all">All on</button>
+            <button id="picks-none" class="bp-btn bp-btn-soft" data-i18n="s_picks_none">All off</button>
+          </div>
+        </div>
+
+        <div class="bp-body om-scroll">
+          <div id="picks-list" class="picks-list"></div>
         </div>
       </section>
 
@@ -538,6 +575,14 @@
                 <select id="category-select"></select>
               </label>
             </div>
+            <button class="bp-row" data-bp-go="picks">
+              <span class="bp-ico bp-ico-teal">☑️</span>
+              <span class="bp-row-text">
+                <span class="bp-row-title" data-i18n="s_picks">Words in play</span>
+                <span class="bp-row-sub" data-i18n="s_picks_sub">Pick the groups and words the games use</span>
+              </span>
+              <span class="bp-chev" aria-hidden="true">›</span>
+            </button>
             <label class="bp-toggle">
               <span class="bp-row-text">
                 <span class="bp-row-title" data-i18n="s_hide_words">Hide the word on the pictures</span>

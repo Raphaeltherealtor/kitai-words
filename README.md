@@ -31,6 +31,21 @@ Open parent settings → **Words** → **＋ Add a word**. You can now:
 - **Fix a wrong reading/pronunciation:** tap any word tile → **✏️ Edit word**. Change the kana that the app shows and speaks (or tap **✨ Suggest** for other readings), then **Save word**. Works for your own words and the built-in ones; the change syncs through the Shared Library.
 - **Fix the pitch accent (箸 vs 橋):** the same kana can be two words with different pitch — 箸 (chopsticks, *HA‑shi*) vs 橋 (bridge, *ha‑SHI*), 桃 vs 腿 for もも. Bare kana carries no accent, and the Web Speech API has no per‑syllable pitch control. The lever is the **spoken form**: in **✏️ Edit word** fill **"🔊 Say it as"** with the kanji (箸/橋/桃). The tile still shows the kana, but the voice is handed the kanji so a good Japanese voice applies the right accent from its dictionary. Stored as the word's optional `jaSpeech`; leave blank to just speak the kana. Suggestions auto‑fill it from the kanji they generate. (Accent fidelity depends on the voice — high‑quality Japanese voices honor it; robotic/VoiceRSS voices may flatten it.)
 
+## Choose which words the games use (parents)
+Open parent settings → **Words in play** (also on the **Game** screen). Every category is one row — Animals, Numbers, Things, and any category you made — with a checkbox that summarises it:
+
+- **Tap a group's checkbox** to switch that whole group on or off in one go. The box shows a dash when only some of its words are on.
+- **Open a group** (tap its name) to see its words, each with its own checkbox — so you can rest the ten words she already knows and keep the rest.
+- **All on / All off** at the top, plus a search box for finding one word fast.
+
+Unchecked words are **not deleted**. They stop being dealt into every vocab game — Listen & Tap, Find It, Drag to Complete, Flash Cards, Memory, and the English Sentences track — and the Words screen dims them and marks them "sitting out". Check them back on any time.
+
+Notes:
+- Changes apply when you close settings, so the round on screen is re-dealt from the new selection (deck modes start a fresh deck).
+- The picks live in the same manifest as your words, so they sync through the Shared Library like everything else — last change wins.
+- A word you add to a group that is entirely switched off starts switched off too, so it doesn't sneak into a game on its own.
+- Switch everything off and the games say so instead of showing an empty board.
+
 Translation uses a free, no-key endpoint (`translate.googleapis.com`), matching the app's zero-setup philosophy; swap `translateWord()` in `app.js` if you prefer another source.
 
 ## Real photos

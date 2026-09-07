@@ -65,6 +65,10 @@ const state = {
   theme: "ocean",
   imageOverrides: {},
   imageCategoryId: "all",
+  // Set when a parent checks/unchecks words while settings are open, so the
+  // round on screen is rebuilt from the new selection when they close it.
+  picksDirty: false,
+  picksOpenGroups: null, // Set of category ids expanded in the picker
   imageModalItemId: null,
   alphabetIndex: { hiragana: 0, katakana: 0 },
   libraryConfig: { libraryId: "", pin: "" },
@@ -218,7 +222,7 @@ const I18N = {
     flash_finish: "Finish ✓", flash_live_default: "Tap the right picture",
     find_count_q: "How many pictures?", quiz_prompt: "Pick the picture for this sound",
     fb_great: "Great!", fb_try_again: "Try again!", fb_see_again: "We'll see it again!",
-    fb_no_words: "No words here yet. Add or restore some in Parent Settings.",
+    fb_no_words: "No words here right now. Switch some back on — or add new ones — in Parent Settings.",
     mem_look_listen: "Look and listen…", mem_where: "Where was it? Tap the card!",
     mem_remembered: "You remembered! 🎉", mem_was_here: "It was here! We'll see it again.",
     mem_watch: "Watch closely!",
@@ -238,6 +242,14 @@ const I18N = {
     s_add_word: "Add a word", s_add_word_btn: "Add word",
     s_add_word_note: "Saved on this device and in your shared library. It shows up in the games right away.",
     s_photo_blank: "Leave it blank and we'll find photos for you after saving.",
+    s_picks: "Words in play", s_picks_sub: "Pick the groups and words the games use",
+    s_picks_note: "Unchecked words sit out of every game. Nothing is deleted — check them back on any time.",
+    s_picks_all: "All on", s_picks_none: "All off",
+    s_picks_count: "{on} of {total}", s_picks_headline: "{on} of {total} words in play",
+    s_picks_warn: "Every word is switched off, so the games have nothing to show.",
+    s_picks_none_found: "No words match that search.",
+    s_picks_out: "sitting out", s_picks_out_title: "Not in play right now",
+    s_picks_search_ph: "Search words",
     s_words_unit: "words", s_need_photo: "need a photo", s_add_photo: "add photo",
     s_add_more_options: "Add with more options",
     im_photos: "Photos", im_word_sound: "Word & sound",
@@ -283,7 +295,7 @@ const I18N = {
     flash_finish: "Terminar ✓", flash_live_default: "Toca la imagen correcta",
     find_count_q: "¿Cuántas imágenes?", quiz_prompt: "Elige la imagen de este sonido",
     fb_great: "¡Muy bien!", fb_try_again: "¡Inténtalo otra vez!", fb_see_again: "¡La veremos de nuevo!",
-    fb_no_words: "Aún no hay palabras aquí. Agrégalas o restáuralas en Ajustes.",
+    fb_no_words: "Aquí no hay palabras ahora. Vuelve a activarlas o agrega nuevas en Ajustes.",
     mem_look_listen: "Mira y escucha…", mem_where: "¿Dónde estaba? ¡Toca la tarjeta!",
     mem_remembered: "¡Lo recordaste! 🎉", mem_was_here: "¡Estaba aquí! La veremos de nuevo.",
     mem_watch: "¡Fíjate bien!",
@@ -303,6 +315,14 @@ const I18N = {
     s_add_word: "Añadir palabra", s_add_word_btn: "Añadir palabra",
     s_add_word_note: "Se guarda en este dispositivo y en tu biblioteca compartida. Aparece en los juegos al instante.",
     s_photo_blank: "Déjalo vacío y buscaremos fotos después de guardar.",
+    s_picks: "Palabras en juego", s_picks_sub: "Elige los grupos y las palabras que usan los juegos",
+    s_picks_note: "Las palabras sin marcar no salen en los juegos. No se borra nada: vuelve a marcarlas cuando quieras.",
+    s_picks_all: "Todas", s_picks_none: "Ninguna",
+    s_picks_count: "{on} de {total}", s_picks_headline: "{on} de {total} palabras en juego",
+    s_picks_warn: "Todas las palabras están apagadas, así que los juegos no tienen nada que mostrar.",
+    s_picks_none_found: "Ninguna palabra coincide con esa búsqueda.",
+    s_picks_out: "fuera de juego", s_picks_out_title: "Ahora mismo no está en juego",
+    s_picks_search_ph: "Buscar palabras",
     s_words_unit: "palabras", s_need_photo: "sin foto", s_add_photo: "añadir foto",
     s_add_more_options: "Añadir con más opciones",
     im_photos: "Fotos", im_word_sound: "Palabra y sonido",
@@ -348,7 +368,7 @@ const I18N = {
     flash_finish: "Terminar ✓", flash_live_default: "Toque na imagem certa",
     find_count_q: "Quantas imagens?", quiz_prompt: "Escolha a imagem deste som",
     fb_great: "Muito bem!", fb_try_again: "Tente de novo!", fb_see_again: "Vamos ver de novo!",
-    fb_no_words: "Ainda não há palavras aqui. Adicione ou restaure nas Configurações.",
+    fb_no_words: "Nenhuma palavra aqui agora. Ative-as de novo ou adicione novas nas Configurações.",
     mem_look_listen: "Olhe e ouça…", mem_where: "Onde estava? Toque no cartão!",
     mem_remembered: "Você lembrou! 🎉", mem_was_here: "Estava aqui! Vamos ver de novo.",
     mem_watch: "Preste atenção!",
@@ -368,6 +388,14 @@ const I18N = {
     s_add_word: "Adicionar palavra", s_add_word_btn: "Adicionar palavra",
     s_add_word_note: "Salvo neste aparelho e na sua biblioteca compartilhada. Aparece nos jogos na hora.",
     s_photo_blank: "Deixe em branco e procuramos fotos depois de salvar.",
+    s_picks: "Palavras em jogo", s_picks_sub: "Escolha os grupos e as palavras que os jogos usam",
+    s_picks_note: "As palavras desmarcadas ficam fora dos jogos. Nada é apagado — marque de novo quando quiser.",
+    s_picks_all: "Todas", s_picks_none: "Nenhuma",
+    s_picks_count: "{on} de {total}", s_picks_headline: "{on} de {total} palavras em jogo",
+    s_picks_warn: "Todas as palavras estão desligadas, então os jogos não têm o que mostrar.",
+    s_picks_none_found: "Nenhuma palavra corresponde a essa busca.",
+    s_picks_out: "fora de jogo", s_picks_out_title: "Agora não está em jogo",
+    s_picks_search_ph: "Buscar palavras",
     s_words_unit: "palavras", s_need_photo: "sem foto", s_add_photo: "adicionar foto",
     s_add_more_options: "Adicionar com mais opções",
     im_photos: "Fotos", im_word_sound: "Palavra e som",
@@ -413,7 +441,7 @@ const I18N = {
     flash_finish: "おわり ✓", flash_live_default: "ただしい えを タッチ",
     find_count_q: "えは いくつ？", quiz_prompt: "この おとの えを えらんで",
     fb_great: "せいかい！", fb_try_again: "もう いちど！", fb_see_again: "また でてくるよ！",
-    fb_no_words: "ここには まだ ことばが ありません。せっていで ついか してね。",
+    fb_no_words: "ここには いま ことばが ありません。せっていで オンに するか ついか してね。",
     mem_look_listen: "みて きいてね…", mem_where: "どこ だった？ カードを タッチ！",
     mem_remembered: "おぼえてたね！ 🎉", mem_was_here: "ここ だったよ！また でてくるよ。",
     mem_watch: "よく みてね！",
@@ -433,6 +461,14 @@ const I18N = {
     s_add_word: "ことばを ついか", s_add_word_btn: "ついかする",
     s_add_word_note: "このデバイスと きょうゆうライブラリに ほぞんされ、すぐ ゲームに でてきます。",
     s_photo_blank: "からのままでも OK。ほぞんの あとに しゃしんを さがします。",
+    s_picks: "つかう ことば", s_picks_sub: "ゲームで つかう グループと ことばを えらぶ",
+    s_picks_note: "チェックを はずした ことばは ゲームに でません。けしては いないので いつでも もどせます。",
+    s_picks_all: "ぜんぶ オン", s_picks_none: "ぜんぶ オフ",
+    s_picks_count: "{total}この うち {on}こ", s_picks_headline: "ことば {total}この うち {on}こを つかいます",
+    s_picks_warn: "ことばが ぜんぶ オフです。ゲームに だせる ことばが ありません。",
+    s_picks_none_found: "みつかりませんでした。",
+    s_picks_out: "おやすみちゅう", s_picks_out_title: "いまは つかいません",
+    s_picks_search_ph: "ことばを さがす",
     s_words_unit: "ことば", s_need_photo: "しゃしん なし", s_add_photo: "しゃしんを ついか",
     s_add_more_options: "くわしく ついか",
     im_photos: "しゃしん", im_word_sound: "ことばと おと",
@@ -478,7 +514,7 @@ const I18N = {
     flash_finish: "끝내기 ✓", flash_live_default: "맞는 그림을 터치",
     find_count_q: "그림은 몇 개?", quiz_prompt: "이 소리의 그림을 골라요",
     fb_great: "잘했어요!", fb_try_again: "다시 해봐요!", fb_see_again: "또 나올 거예요!",
-    fb_no_words: "아직 낱말이 없어요. 부모 설정에서 추가하세요.",
+    fb_no_words: "지금 여기에는 낱말이 없어요. 부모 설정에서 다시 켜거나 추가하세요.",
     mem_look_listen: "보고 들어요…", mem_where: "어디였을까? 카드를 터치!",
     mem_remembered: "기억했어요! 🎉", mem_was_here: "여기였어요! 또 나올 거예요.",
     mem_watch: "잘 보세요!",
@@ -498,6 +534,14 @@ const I18N = {
     s_add_word: "단어 추가", s_add_word_btn: "단어 추가",
     s_add_word_note: "이 기기와 공유 라이브러리에 저장되고 게임에 바로 나옵니다.",
     s_photo_blank: "비워 두면 저장한 뒤에 사진을 찾아드려요.",
+    s_picks: "사용할 단어", s_picks_sub: "게임에 쓸 묶음과 단어를 고르세요",
+    s_picks_note: "체크를 푼 단어는 게임에 나오지 않아요. 지워지는 건 아니니 언제든 다시 켤 수 있어요.",
+    s_picks_all: "모두 켜기", s_picks_none: "모두 끄기",
+    s_picks_count: "{total}개 중 {on}개", s_picks_headline: "단어 {total}개 중 {on}개 사용",
+    s_picks_warn: "단어가 모두 꺼져 있어서 게임에 보여줄 것이 없어요.",
+    s_picks_none_found: "검색 결과가 없어요.",
+    s_picks_out: "쉬는 중", s_picks_out_title: "지금은 사용하지 않아요",
+    s_picks_search_ph: "단어 검색",
     s_words_unit: "단어", s_need_photo: "사진 없음", s_add_photo: "사진 추가",
     s_add_more_options: "옵션 더보기로 추가",
     im_photos: "사진", im_word_sound: "단어와 소리",
@@ -617,6 +661,12 @@ const els = {
   closeSettings: document.getElementById("close-settings"),
   wordsEditToggle: document.getElementById("words-edit-toggle"),
   wordsCountLine: document.getElementById("words-count-line"),
+  picksList: document.getElementById("picks-list"),
+  picksSearch: document.getElementById("picks-search"),
+  picksCountLine: document.getElementById("picks-count-line"),
+  picksWarning: document.getElementById("picks-warning"),
+  picksAllBtn: document.getElementById("picks-all"),
+  picksNoneBtn: document.getElementById("picks-none"),
   addWordForm: document.getElementById("add-word-form"),
   speakBtn: document.getElementById("speak-btn"),
   dropzoneSection: document.getElementById("dropzone-section"),
@@ -1208,7 +1258,21 @@ const WORD_MANIFEST_KEY = "kitai-words-manifest";
 const LEGACY_CUSTOM_KEY = "kitai-custom-items";
 
 function emptyManifest() {
-  return { items: {}, deleted: {}, categories: {}, deletedCategories: {} };
+  return { items: {}, deleted: {}, categories: {}, deletedCategories: {}, picks: {} };
+}
+
+// Keep every key a stored manifest carries. Reading it key-by-key means each
+// new key (custom categories, and now the in-play picks) silently vanishes on
+// the next load, so normalize in one place instead.
+function normalizeManifest(m) {
+  if (!m || typeof m !== "object") return emptyManifest();
+  return {
+    items: m.items || {},
+    deleted: m.deleted || {},
+    categories: m.categories || {},
+    deletedCategories: m.deletedCategories || {},
+    picks: m.picks || {},
+  };
 }
 
 function loadWordManifest() {
@@ -1216,7 +1280,7 @@ function loadWordManifest() {
     const raw = localStorage.getItem(WORD_MANIFEST_KEY);
     if (raw) {
       const m = JSON.parse(raw);
-      if (m && typeof m === "object") return { items: m.items || {}, deleted: m.deleted || {} };
+      if (m && typeof m === "object") return normalizeManifest(m);
     }
   } catch (_) {}
   // Migrate the earlier device-only array form, if present.
@@ -1335,6 +1399,55 @@ function applyWordManifestToState() {
   state.items = base.concat(extras);
 }
 
+// ---- Which words are in play ----------------------------------------------
+// A word can sit out of the games without being deleted. Settings → Words in
+// play has a checkbox per group (Animals, Numbers, …) and per word, so a parent
+// can park the ten words she already knows, or a whole group, and check them
+// back on next week. Stored per word as {off, ts} in the same manifest the
+// words live in, so it merges last-write-wins and syncs like everything else.
+// No entry = in play, which is what a word added later should be.
+
+function wordPicks() {
+  if (!state.wordManifest) state.wordManifest = emptyManifest();
+  if (!state.wordManifest.picks) state.wordManifest.picks = {};
+  return state.wordManifest.picks;
+}
+
+function isWordInPlay(item) {
+  const p = wordPicks()[item && item.id];
+  return !(p && p.off);
+}
+
+// One write for a whole group (or every word), so "All off" is a single save.
+function setWordsInPlay(ids, on) {
+  const picks = wordPicks();
+  const ts = Date.now();
+  ids.forEach((id) => {
+    picks[id] = { off: !on, ts };
+  });
+  saveWordManifest(state.wordManifest);
+  // The round on screen may be built from words that just went away.
+  state.picksDirty = true;
+  if (bpCurrent === "words") renderImageList();
+  syncWordsWithCloud().catch(() => {});
+}
+
+// How many of a group's words are switched on, and how many there are.
+function categoryPickCount(catId) {
+  const items = state.items.filter((i) => i.categoryId === catId);
+  return { total: items.length, on: items.filter(isWordInPlay).length };
+}
+
+// A word added to a group that is entirely switched off would otherwise walk
+// straight into the games on its own. Let it match the group it lands in.
+// Call before applyWordManifestToState() — state.items is still the old set.
+function inheritPickForNewWord(categoryId, id) {
+  const siblings = state.items.filter((i) => i.categoryId === categoryId);
+  if (siblings.length && !siblings.some(isWordInPlay)) {
+    wordPicks()[id] = { off: true, ts: Date.now() };
+  }
+}
+
 function mergeManifests(a, b) {
   const out = emptyManifest();
   const ids = new Set([
@@ -1374,6 +1487,15 @@ function mergeManifests(a, b) {
       out.categories[id] = cat;
     }
   });
+  // Which words are in play: {id: {off, ts}}. Newest timestamp wins, so a word
+  // switched back on here beats an older "off" that arrives from another phone.
+  const pickIds = new Set([...Object.keys(a.picks || {}), ...Object.keys(b.picks || {})]);
+  pickIds.forEach((id) => {
+    const ap = (a.picks || {})[id];
+    const bp = (b.picks || {})[id];
+    const pick = ap && bp ? ((ap.ts || 0) >= (bp.ts || 0) ? ap : bp) : ap || bp;
+    if (pick) out.picks[id] = pick;
+  });
   return out;
 }
 
@@ -1392,7 +1514,7 @@ async function fetchCloudWordManifest() {
     });
     if (!res.ok) return emptyManifest();
     const m = await res.json();
-    return { items: m.items || {}, deleted: m.deleted || {} };
+    return normalizeManifest(m);
   } catch (_) {
     return emptyManifest();
   }
@@ -1451,8 +1573,12 @@ function updateWordSyncIndicator() {
 }
 
 let wordSyncInFlight = false;
+let wordSyncQueued = false;
 async function syncWordsWithCloud() {
-  if (wordSyncInFlight) return;
+  // A run of taps (checking a group off word by word) calls this many times.
+  // Remember that something changed mid-flight and run once more at the end,
+  // so the state that lands in the cloud is the last one, not the first.
+  if (wordSyncInFlight) { wordSyncQueued = true; return; }
   wordSyncInFlight = true;
   state.wordSync = "syncing";
   updateWordSyncIndicator();
@@ -1472,6 +1598,10 @@ async function syncWordsWithCloud() {
   } finally {
     wordSyncInFlight = false;
     updateWordSyncIndicator();
+    if (wordSyncQueued) {
+      wordSyncQueued = false;
+      syncWordsWithCloud().catch(() => {});
+    }
   }
 }
 
@@ -1504,7 +1634,7 @@ function setNewWordStatus(msg, isError) {
 // one drives the original <select>, which stays in the DOM (hidden) so every
 // existing load/save/change path keeps working untouched.
 
-const BP_SCREENS = ["hub", "words", "wordadd", "lang", "game", "lock", "library", "advanced"];
+const BP_SCREENS = ["hub", "words", "wordadd", "picks", "lang", "game", "lock", "library", "advanced"];
 let bpCurrent = "hub";
 
 function bpScreenEl(name) {
@@ -1513,6 +1643,12 @@ function bpScreenEl(name) {
 
 function bpGo(name) {
   if (!BP_SCREENS.includes(name)) name = "hub";
+  // The picker is reachable from the hub and from the Game screen; its back
+  // arrow should return to whichever one opened it.
+  if (name === "picks") {
+    const back = bpScreenEl("picks") && bpScreenEl("picks").querySelector(".bp-back");
+    if (back) back.dataset.bpGo = bpCurrent === "game" ? "game" : "hub";
+  }
   bpCurrent = name;
   BP_SCREENS.forEach((s) => {
     const el = bpScreenEl(s);
@@ -1520,6 +1656,8 @@ function bpGo(name) {
   });
   const body = bpScreenEl(name) && bpScreenEl(name).querySelector(".bp-body");
   if (body) body.scrollTop = 0;
+  if (name === "picks") renderPicksScreen();
+  if (name === "words") renderImageList();
   bpRefresh();
 }
 
@@ -1588,6 +1726,12 @@ function bpRefresh() {
   const missing = bpWordsNeedingPhotos();
   bpText("sum-words", `${total} words${missing ? ` · ${missing} need a photo` : ""}`);
 
+  const inPlay = (state.items || []).filter(isWordInPlay).length;
+  bpText(
+    "sum-picks",
+    inPlay === total ? `All ${total} words` : `${inPlay} of ${total} words`
+  );
+
   const libId = (state.libraryConfig && state.libraryConfig.libraryId || "").trim();
   bpText("sum-library", libId ? `On · ${libId}` : "Off · this device only");
   const heroTitle = document.getElementById("bp-library-hero-title");
@@ -1634,6 +1778,7 @@ const BP_SEARCH_INDEX = [
   { screen: "lang", title: "Show romaji", sub: "neko under ねこ", keys: "romaji romanisation romanization reading latin" },
   { screen: "game", title: "Pictures to choose from", sub: "2, 3 or 4", keys: "choices difficulty pictures easy hard number" },
   { screen: "game", title: "Categories in play", sub: "Which words come up", keys: "category categories mixed animals fruit play" },
+  { screen: "picks", title: "Words in play", sub: "Tick the groups and words the games use", keys: "words in play pick choose select tick check checkbox include exclude off on group groups animals numbers things colors verbs body food fruit skip hide remove temporarily" },
   { screen: "game", title: "Sounds & vibration", sub: "Chime, buzz, vibrate", keys: "sound sounds chime buzz vibrate vibration haptic feedback mute" },
   { screen: "game", title: "Hide the word on the pictures", sub: "So a reader can't match the letters", keys: "hide word words label text secret reading reader cheat give away answer spoil" },
   { screen: "game", title: "Theme", sub: "Ocean, Galaxy, Sky, Sunshine", keys: "theme colour color ocean galaxy sky sunshine look" },
@@ -2104,6 +2249,7 @@ function addCustomItemFromForm() {
   if (!state.wordManifest) state.wordManifest = emptyManifest();
   state.wordManifest.items[id] = word;
   delete state.wordManifest.deleted[id];
+  inheritPickForNewWord(categoryId, id);
   saveWordManifest(state.wordManifest);
   applyWordManifestToState();
 
@@ -2352,6 +2498,7 @@ async function addSuggestedWord(en, categoryId) {
   if (!state.wordManifest) state.wordManifest = emptyManifest();
   state.wordManifest.items[id] = word;
   delete state.wordManifest.deleted[id];
+  inheritPickForNewWord(categoryId, id);
   saveWordManifest(state.wordManifest);
   applyWordManifestToState();
   renderImageList();
@@ -2371,7 +2518,7 @@ function promptPhotosForItem(itemId) {
 function removeCustomItem(id) {
   const removed = state.items.find((i) => i.id === id);
   if (!removed) return;
-  if (!confirm(`Remove the word "${removed.en}" from the games?`)) return;
+  if (!confirm(`Delete "${removed.en}" from the library?\n\nTo rest it for a while instead, uncheck it in Settings \u2192 Words in play.`)) return;
   if (!state.wordManifest) state.wordManifest = emptyManifest();
   delete state.wordManifest.items[id]; // no-op for built-in words
   state.wordManifest.deleted[id] = Date.now();
@@ -3539,6 +3686,10 @@ function bindUI() {
 
   if (els.catAddClose) els.catAddClose.addEventListener("click", toggleCategoryForm);
   if (els.wordsEditToggle) els.wordsEditToggle.addEventListener("click", toggleWordsEditing);
+
+  if (els.picksSearch) els.picksSearch.addEventListener("input", renderPicksScreen);
+  if (els.picksAllBtn) els.picksAllBtn.addEventListener("click", () => setAllWordsInPlay(true));
+  if (els.picksNoneBtn) els.picksNoneBtn.addEventListener("click", () => setAllWordsInPlay(false));
   if (els.catAddBtn) els.catAddBtn.addEventListener("click", addCategoryFromForm);
   if (els.catAddName) {
     els.catAddName.addEventListener("keydown", (e) => {
@@ -3773,14 +3924,22 @@ function renderImageList() {
       (i) => i.custom && !i.photoUrl && getOverrideEntries(i.id).length === 0
     ).length;
     const total = inCategory.length;
-    els.wordsCountLine.textContent = missing
-      ? `${total} ${t("s_words_unit")} · ${missing} ${t("s_need_photo")}`
-      : `${total} ${t("s_words_unit")}`;
+    const out = inCategory.filter((i) => !isWordInPlay(i)).length;
+    els.wordsCountLine.textContent = [
+      `${total} ${t("s_words_unit")}`,
+      missing ? `${missing} ${t("s_need_photo")}` : null,
+      out ? `${out} ${t("s_picks_out")}` : null,
+    ].filter(Boolean).join(" · ");
   }
 
   filteredItems.forEach((item) => {
     const card = document.createElement("div");
     card.className = "image-card";
+    // Unchecked in the picker: still in the library, just not dealt into games.
+    if (!isWordInPlay(item)) {
+      card.classList.add("out-of-play");
+      card.title = t("s_picks_out_title");
+    }
     const preview = document.createElement("div");
     preview.className = "image-preview";
     const arr = getOverrideEntries(item.id);
@@ -3869,6 +4028,171 @@ function toggleWordsEditing() {
     els.wordsEditToggle.textContent = editing ? t("s_done") : t("s_edit");
     els.wordsEditToggle.classList.toggle("active", editing);
   }
+}
+
+// ---- The word picker -------------------------------------------------------
+// Settings → Words in play. Every group (Animals, Numbers, Things…) is one
+// collapsible block with a checkbox that summarises its words: on, off, or a
+// dash when only some are on. Tapping a group's box flips all of its words at
+// once; each word underneath has its own box. Nothing here deletes anything —
+// an unchecked word simply stops being drawn by the games.
+
+function picksOpenSet() {
+  if (!state.picksOpenGroups) state.picksOpenGroups = new Set();
+  return state.picksOpenGroups;
+}
+
+function picksMatch(item, term) {
+  if (!term) return true;
+  const hay = `${item.en} ${item.jaKana || ""} ${item.jaRomaji || ""} ${item.ko || ""} ${item.koRomaji || ""}`;
+  return hay.toLowerCase().includes(term);
+}
+
+// Counts and checkbox states change on every tap; the rows themselves don't.
+// Walk the rendered DOM instead of rebuilding it, so the list never jumps.
+function syncPicksUI() {
+  const list = els.picksList;
+  if (!list) return;
+  const total = state.items.length;
+  const on = state.items.filter(isWordInPlay).length;
+  if (els.picksCountLine) {
+    els.picksCountLine.textContent = t("s_picks_headline", { on, total });
+  }
+  if (els.picksWarning) els.picksWarning.classList.toggle("hidden", on > 0);
+
+  list.querySelectorAll("[data-pick-word]").forEach((box) => {
+    const item = state.items.find((i) => i.id === box.dataset.pickWord);
+    const inPlay = item ? isWordInPlay(item) : true;
+    box.checked = inPlay;
+    const row = box.closest(".picks-word");
+    if (row) row.classList.toggle("off", !inPlay);
+  });
+
+  list.querySelectorAll("[data-pick-group]").forEach((group) => {
+    const c = categoryPickCount(group.dataset.pickGroup);
+    const box = group.querySelector(".picks-group-box");
+    if (box) {
+      box.checked = c.on > 0;
+      box.indeterminate = c.on > 0 && c.on < c.total;
+    }
+    const count = group.querySelector(".picks-group-count");
+    if (count) count.textContent = t("s_picks_count", { on: c.on, total: c.total });
+    group.classList.toggle("off", c.on === 0);
+  });
+}
+
+function renderPicksScreen() {
+  const list = els.picksList;
+  if (!list) return;
+  const term = (els.picksSearch && els.picksSearch.value || "").toLowerCase().trim();
+  const open = picksOpenSet();
+  list.innerHTML = "";
+
+  state.categories.forEach((cat) => {
+    const items = state.items.filter((i) => i.categoryId === cat.id);
+    if (!items.length) return;
+    const shown = items.filter((i) => picksMatch(i, term));
+    if (!shown.length) return;
+
+    const group = document.createElement("div");
+    group.className = "picks-group";
+    group.dataset.pickGroup = cat.id;
+
+    const head = document.createElement("div");
+    head.className = "picks-group-head";
+
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.className = "picks-box picks-group-box";
+    box.setAttribute("aria-label", `${cat.label_en} — ${t("s_picks")}`);
+    box.addEventListener("change", () => {
+      setWordsInPlay(items.map((i) => i.id), box.checked);
+      syncPicksUI();
+      bpSaved();
+    });
+    head.appendChild(box);
+
+    // The rest of the header is the open/close handle — a big tap target that
+    // never fights with the checkbox next to it.
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "picks-group-toggle";
+    const expanded = term ? true : open.has(cat.id);
+    toggle.innerHTML =
+      '<span class="picks-emoji"></span>' +
+      '<span class="picks-group-text"><span class="picks-group-name"></span>' +
+      '<span class="picks-group-count"></span></span>' +
+      '<span class="picks-caret" aria-hidden="true">›</span>';
+    toggle.querySelector(".picks-emoji").textContent = cat.emoji || "📦";
+    toggle.querySelector(".picks-group-name").textContent = cat.label_en;
+    toggle.setAttribute("aria-expanded", String(expanded));
+    toggle.addEventListener("click", () => {
+      if (open.has(cat.id)) open.delete(cat.id);
+      else open.add(cat.id);
+      renderPicksScreen();
+    });
+    head.appendChild(toggle);
+    group.appendChild(head);
+
+    const words = document.createElement("div");
+    words.className = "picks-words";
+    if (!expanded) words.classList.add("hidden");
+    if (expanded) {
+      shown.forEach((item) => {
+        const row = document.createElement("label");
+        row.className = "picks-word";
+
+        const wbox = document.createElement("input");
+        wbox.type = "checkbox";
+        wbox.className = "picks-box";
+        wbox.dataset.pickWord = item.id;
+        wbox.addEventListener("change", () => {
+          setWordsInPlay([item.id], wbox.checked);
+          syncPicksUI(); // the counts above are the receipt; no toast per tap
+        });
+        row.appendChild(wbox);
+
+        const img = document.createElement("img");
+        img.className = "picks-thumb";
+        img.alt = "";
+        const arr = getOverrideEntries(item.id);
+        if (arr.length > 0) img.src = arr[0].url;
+        else applyDefaultImage(img, item);
+        row.appendChild(img);
+
+        const text = document.createElement("span");
+        text.className = "picks-word-text";
+        const main = document.createElement("span");
+        main.className = "picks-word-main";
+        main.textContent = wordText(item) || item.en;
+        const sub = document.createElement("span");
+        sub.className = "picks-word-sub";
+        sub.textContent = [item.en, wordRomaji(item)].filter(Boolean).join(" · ");
+        text.appendChild(main);
+        text.appendChild(sub);
+        row.appendChild(text);
+
+        words.appendChild(row);
+      });
+    }
+    group.appendChild(words);
+    list.appendChild(group);
+  });
+
+  if (!list.children.length) {
+    const empty = document.createElement("div");
+    empty.className = "bp-hint";
+    empty.textContent = t("s_picks_none_found");
+    list.appendChild(empty);
+  }
+
+  syncPicksUI();
+}
+
+function setAllWordsInPlay(on) {
+  setWordsInPlay(state.items.map((i) => i.id), on);
+  syncPicksUI();
+  bpSaved();
 }
 
 function setImageModalTitle(item) {
@@ -4472,6 +4796,21 @@ function showSettings() {
 
 function hideSettings() {
   els.overlay.classList.add("hidden");
+  // Checking words is a run of taps; rebuilding the round after each one would
+  // be noise. Apply the new selection once, on the way back to play.
+  if (state.picksDirty) {
+    state.picksDirty = false;
+    restartCurrentSession();
+  }
+}
+
+// Re-deal from the words that are in play now. Deck modes start over (their
+// deck was built from the old selection); the endless modes just re-draw.
+function restartCurrentSession() {
+  if (state.currentSection !== "game" || state.currentTrack !== "vocab") return;
+  if (state.currentGameType === "flash") startFlashSession();
+  else if (state.currentGameType === "memory") startMemorySession();
+  else startRound();
 }
 
 function goHome() {
@@ -4603,6 +4942,7 @@ async function quickAddWord() {
   if (!state.wordManifest) state.wordManifest = emptyManifest();
   state.wordManifest.items[id] = word;
   delete state.wordManifest.deleted[id];
+  inheritPickForNewWord(categoryId, id);
   saveWordManifest(state.wordManifest);
   applyWordManifestToState();
 
@@ -4631,8 +4971,9 @@ function setPlayChrome(playing) {
 }
 
 function pickPool() {
-  if (state.categoryId === "mixed") return [...state.items];
-  return state.items.filter((i) => i.categoryId === state.categoryId);
+  const inPlay = state.items.filter(isWordInPlay);
+  if (state.categoryId === "mixed") return inPlay;
+  return inPlay.filter((i) => i.categoryId === state.categoryId);
 }
 
 function chooseRoundItems() {
@@ -5327,7 +5668,10 @@ function buildSentenceRound() {
   const skip = g.skipCategories || [];
   const skipNouns = g.skipNouns || [];
   const pool = state.items.filter(
-    (i) => !skip.includes(i.categoryId) && !skipNouns.includes(String(i.en).toLowerCase())
+    (i) =>
+      isWordInPlay(i) &&
+      !skip.includes(i.categoryId) &&
+      !skipNouns.includes(String(i.en).toLowerCase())
   );
   const object = pool.length
     ? pool[Math.floor(Math.random() * pool.length)]

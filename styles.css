@@ -2749,6 +2749,103 @@ body.playing main { padding-bottom: 12px; }
 #settings .image-list.editing .image-card .word-delete { display: block; }
 #settings .image-list.editing .image-card-add { display: none; }
 
+/* A word that is checked out of the games is still in the library — dim it and
+   dash its edge so the grid says so without a second badge fighting the photo. */
+#settings .image-card.out-of-play { opacity: 0.42; border-style: dashed; }
+
+/* ---- Words in play -------------------------------------------------------
+   One block per group, collapsed by default: 11 groups fit on a phone screen,
+   124 words do not. The group's checkbox summarises its words (on / off / a
+   dash for some), and opening it reveals a row per word. */
+.picks-list { display: flex; flex-direction: column; gap: 10px; }
+
+.picks-group {
+  border: 1px solid var(--bp-line);
+  background: var(--bp-card);
+  border-radius: 18px;
+  overflow: hidden;
+}
+.picks-group.off { border-style: dashed; background: transparent; }
+.picks-group.off .picks-group-name { color: var(--bp-mut); }
+
+.picks-group-head { display: flex; align-items: center; gap: 4px; padding-left: 14px; }
+
+/* The checkbox and the open/close handle are separate targets: a thumb aiming
+   for one must never hit the other. */
+.picks-group-toggle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px 14px 15px 10px;
+  border: none;
+  background: transparent;
+  font: inherit;
+  color: var(--bp-text);
+  text-align: left;
+  cursor: pointer;
+}
+.picks-emoji { flex: none; font-size: 1.3rem; }
+.picks-group-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.picks-group-name { font-size: 1.05rem; font-weight: 800; line-height: 1.15; }
+.picks-group-count { font-size: 0.8rem; font-weight: 600; color: var(--bp-mut); }
+.picks-caret { flex: none; font-size: 1.3rem; color: var(--bp-chev); transition: transform 0.15s ease; }
+.picks-group-toggle[aria-expanded="true"] .picks-caret { transform: rotate(90deg); }
+
+.picks-words {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--bp-line);
+}
+.picks-words.hidden { display: none; }
+
+.picks-word {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+.picks-word + .picks-word { border-top: 1px solid rgba(255, 255, 255, 0.05); }
+.picks-word.off .picks-thumb { opacity: 0.35; }
+.picks-word.off .picks-word-main { color: var(--bp-mut); }
+.picks-thumb {
+  width: 42px;
+  height: 42px;
+  flex: none;
+  border-radius: 12px;
+  object-fit: cover;
+  background: #f4f6fb;
+}
+.picks-word-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.picks-word-main { font-size: 1rem; font-weight: 700; line-height: 1.15; }
+.picks-word-sub {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--bp-mut);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Big enough for a thumb, and drawn in the app's accent instead of the OS blue. */
+#settings .picks-box {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  margin: 0;
+  accent-color: var(--bp-ac);
+  cursor: pointer;
+}
+
+.bp-note-warn {
+  border-color: rgba(255, 143, 171, 0.4);
+  background: rgba(255, 143, 171, 0.1);
+  color: #ffc3d2;
+}
+.bp-note-warn.hidden { display: none; }
+
 /* ---- Word detail: photos and words are two jobs, not one long scroll ---- */
 .image-modal-header { align-items: center; gap: 10px; }
 #image-modal-title { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }

@@ -1282,12 +1282,41 @@ function normalizeManifest(m) {
   };
 }
 
+// Words added before the kana/kanji split kept the translator's kanji in the
+// *kana* field, so a child learning hiragana met 蝶 on the card and the voice
+// was handed a spelling whose reading it had to guess. Move the kanji to
+// `jaSpeech` — where it still earns the right pitch accent — and put the
+// reading back on the tile. Nothing is thrown away, and a word whose romaji
+// doesn't convert is left exactly as it was. Idempotent: the second pass over
+// an already-repaired word finds no kanji in `jaKana` and does nothing.
+// `updatedAt` is deliberately NOT bumped — this is a repair, not an edit, and
+// it must not win a last-write-wins merge against a real change from another
+// device. Every device repairs its own copy on load, so they converge anyway.
+function repairKanjiReadings(m) {
+  let changed = 0;
+  Object.values((m && m.items) || {}).forEach((w) => {
+    if (!w || !w.jaKana || scriptTag(w.jaKana) !== "Kanji") return;
+    const hira = romajiToHiragana(w.jaRomaji || "");
+    if (!hira) return;
+    if (!w.jaSpeech) w.jaSpeech = w.jaKana;
+    w.jaKana = hira;
+    changed++;
+  });
+  return changed;
+}
+
 function loadWordManifest() {
   try {
     const raw = localStorage.getItem(WORD_MANIFEST_KEY);
     if (raw) {
       const m = JSON.parse(raw);
-      if (m && typeof m === "object") return normalizeManifest(m);
+      if (m && typeof m === "object") {
+        const manifest = normalizeManifest(m);
+        // Write the repair back, so the word's own card shows the reading too
+        // and the next device to sync gets the fixed copy.
+        if (repairKanjiReadings(manifest)) saveWordManifest(manifest);
+        return manifest;
+      }
     }
   } catch (_) {}
   // Migrate the earlier device-only array form, if present.
@@ -1521,7 +1550,9 @@ async function fetchCloudWordManifest() {
     });
     if (!res.ok) return emptyManifest();
     const m = await res.json();
-    return normalizeManifest(m);
+    const manifest = normalizeManifest(m);
+    repairKanjiReadings(manifest); // a device without the fix can still send kanji
+    return manifest;
   } catch (_) {
     return emptyManifest();
   }
@@ -2024,6 +2055,35 @@ async function fetchWordSuggestions(english, lang) {
   return { candidates, romaji, speech };
 }
 
+// Which candidate belongs on the tile when nobody picks one by hand. The
+// translator answers a kanji word with kanji (Butterfly → 蝶), and that used to
+// be stored as the word's *kana*: a child learning hiragana got a rare kanji on
+// the card, and the voice was handed a spelling whose reading it has to guess.
+// The kana form is the one to show and the safe one to say — the kanji is kept
+// as `jaSpeech`, so a voice that does know it still gets the pitch accent.
+function pickDisplayCandidate(candidates) {
+  const first = candidates[0];
+  if (!first || scriptTag(first.value) !== "Kanji") return first;
+  return candidates.find((c) => c.tag === "Hiragana" || c.tag === "Katakana") || first;
+}
+
+// Write an auto-suggestion onto a new word, for whichever language is being
+// taught. `fallback` is used when the translator gave us nothing back.
+// Returns the chosen candidate so the caller can tell the parent about it.
+function applySuggestionToWord(word, fallback, candidates, romaji, speech) {
+  const best = pickDisplayCandidate(candidates);
+  if (state.lang === "ko") {
+    word.ko = best ? best.value : fallback;
+    if (romaji) word.koRomaji = romaji;
+  } else {
+    word.jaKana = best ? best.value : fallback;
+    if (romaji) word.jaRomaji = romaji;
+    // Kanji spoken form — only worth keeping when it isn't what's displayed.
+    if (speech && best && speech !== best.value) word.jaSpeech = speech;
+  }
+  return best;
+}
+
 // Render suggestion chips into `container`; `onPick(value, romaji)` fires on tap.
 async function renderWordSuggestions(container, english, lang, onPick, statusEl) {
   if (!container) return;
@@ -2491,15 +2551,7 @@ async function addSuggestedWord(en, categoryId) {
   if (state.lang !== "en") {
     try {
       const { candidates, romaji, speech } = await fetchWordSuggestions(en, suggestLang());
-      const best = candidates[0];
-      if (state.lang === "ko") {
-        word.ko = best ? best.value : en;
-        if (romaji) word.koRomaji = romaji;
-      } else {
-        word.jaKana = best ? best.value : en;
-        if (romaji) word.jaRomaji = romaji;
-        if (speech && best && speech !== best.value) word.jaSpeech = speech;
-      }
+      applySuggestionToWord(word, en, candidates, romaji, speech);
     } catch (_) { /* keep English-only; parent can fix the reading later */ }
   }
   if (!state.wordManifest) state.wordManifest = emptyManifest();
@@ -5184,15 +5236,7 @@ async function quickAddWord() {
     if (els.quickAddBtn) els.quickAddBtn.disabled = true;
     try {
       const { candidates, romaji, speech } = await fetchWordSuggestions(raw, suggestLang());
-      const best = candidates[0];
-      if (state.lang === "ko") {
-        word.ko = best ? best.value : raw;
-        if (romaji) word.koRomaji = romaji;
-      } else {
-        word.jaKana = best ? best.value : raw;
-        if (romaji) word.jaRomaji = romaji;
-        if (speech && best && speech !== best.value) word.jaSpeech = speech;
-      }
+      const best = applySuggestionToWord(word, raw, candidates, romaji, speech);
       if (!best) readingNote = " (couldn't auto-fill the reading — fix it in the word's card)";
     } catch (_) {
       word[state.lang === "ko" ? "ko" : "jaKana"] = raw;

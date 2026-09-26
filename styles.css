@@ -181,9 +181,10 @@ main {
 }
 
 /* ---- Play chrome ---------------------------------------------------------
-   One row at the top (leave · what we're playing · how far in) and one dock at
-   the bottom (which mode · finish). The old status line, mode tabs, flash bar
-   and count bar were four stacked rows before a single picture appeared. */
+   Two rows at the top: the dock (which mode · finish · peek · gear) and under
+   it the play bar (leave · what we're playing · how far in). The old status
+   line, mode tabs, flash bar and count bar were four stacked rows before a
+   single picture appeared. */
 #play-bar {
   display: flex;
   align-items: center;
@@ -267,14 +268,16 @@ main {
   opacity: 0.7;
 }
 
-/* The dock sits in thumb reach and stays put while the round changes. */
+/* The dock caps the screen and stays put while the round changes. It is the
+   topmost element during a game (the app header hides), so it clears the
+   status bar / notch itself. */
 #mode-dock {
   flex: none;
   display: flex;
   align-items: center;
   gap: 8px;
   background: #17202f;
-  padding: 12px 14px max(14px, env(safe-area-inset-bottom));
+  padding: max(12px, env(safe-area-inset-top)) 14px 12px;
 }
 #mode-dock.hidden { display: none; }
 
@@ -1651,7 +1654,8 @@ main {
 /* ---- Child lock ---- */
 body.locked .header-actions #home-button,
 body.locked .header-actions #parent-button,
-body.locked .header-actions #lock-button {
+body.locked .header-actions #lock-button,
+body.locked #dock-settings {
   display: none;
 }
 body.locked {
@@ -2642,7 +2646,7 @@ body.locked {
 .modal-photo-wrap { background: #f4f6fb; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 14px; }
 
 /* The dock owns the bottom edge while a game is on, so main stops short. */
-body.playing main { padding-bottom: 12px; }
+body.playing main { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
 
 /* ---- Words manager -------------------------------------------------------
    The library became a screen of its own: a fixed head (search + categories),
@@ -3164,7 +3168,7 @@ body.playing .card img {
   #prompt-word { font-size: clamp(1.5rem, 6.5vw, 2.2rem); padding: 9px 12px; }
   #speak-btn { width: 54px; height: 54px; font-size: 1.6rem; }
   #feedback { min-height: 20px; font-size: 1.05rem; }
-  #mode-dock { padding: 9px 10px max(10px, env(safe-area-inset-bottom)); }
+  #mode-dock { padding: max(9px, env(safe-area-inset-top)) 10px 9px; }
   .mode-btn { padding: 11px 13px; font-size: 0.8rem; }
 }
 
@@ -3467,4 +3471,26 @@ body.playing .card img {
 .words-peek.off { background: #fff; }
 @media (max-width: 420px) {
   .words-peek { width: 40px; height: 40px; font-size: 1.05rem; }
+}
+
+/* ---- Parent gear, in the dock ---------------------------------------------
+   The app header carries a gear, but the header is hidden during a game, so
+   settings used to be behind "close the round first". Same shape as the peek
+   button beside it; dimmed, because it isn't part of the game. */
+.dock-settings {
+  flex: none;
+  width: 46px;
+  height: 46px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #cbd6ea;
+  font-size: 1.2rem;
+  line-height: 1;
+  padding: 0;
+  opacity: 0.75;
+  cursor: pointer;
+}
+@media (max-width: 420px) {
+  .dock-settings { width: 40px; height: 40px; font-size: 1.05rem; }
 }

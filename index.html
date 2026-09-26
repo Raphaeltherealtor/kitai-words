@@ -48,6 +48,25 @@
     </div>
   </header>
 
+  <!-- The dock sits above the play area, not under it: at the bottom its
+       buttons shared an edge with Android's own back/home bar, and a finger
+       reaching for a picture kept landing on "Finish". It carries the gear
+       too, because the header (and its gear) is hidden while a game is on. -->
+  <div id="mode-dock" class="hidden">
+    <div id="mode-switcher" class="om-scroll">
+      <button data-gametype="tap" class="mode-btn active">Listen &amp; Tap</button>
+      <button data-gametype="drag-complete" class="mode-btn">Drag to Complete</button>
+      <button data-gametype="kana-alphabet" class="mode-btn hidden">Alphabet</button>
+      <button data-gametype="kana-alphabet-quiz" class="mode-btn hidden">Quiz</button>
+      <button data-gametype="memory" class="mode-btn hidden">Memory 🧠</button>
+    </div>
+    <div id="flash-bar" class="hidden">
+      <button id="flash-finish" class="flash-finish" data-i18n="flash_finish">Finish ✓</button>
+    </div>
+    <button id="words-peek" class="words-peek hidden" aria-label="Show or hide the words on the pictures" data-i18n-aria="aria_peek">👁</button>
+    <button id="dock-settings" class="dock-settings" aria-label="Parent settings" data-i18n-aria="aria_parent">⚙️</button>
+  </div>
+
   <main>
     <section id="home-screen">
       <h1 data-i18n="home_title">Choose a track</h1>
@@ -211,20 +230,6 @@
       </div>
     </section>
   </main>
-
-  <div id="mode-dock" class="hidden">
-    <div id="mode-switcher" class="om-scroll">
-      <button data-gametype="tap" class="mode-btn active">Listen &amp; Tap</button>
-      <button data-gametype="drag-complete" class="mode-btn">Drag to Complete</button>
-      <button data-gametype="kana-alphabet" class="mode-btn hidden">Alphabet</button>
-      <button data-gametype="kana-alphabet-quiz" class="mode-btn hidden">Quiz</button>
-      <button data-gametype="memory" class="mode-btn hidden">Memory 🧠</button>
-    </div>
-    <div id="flash-bar" class="hidden">
-      <button id="flash-finish" class="flash-finish" data-i18n="flash_finish">Finish ✓</button>
-    </div>
-    <button id="words-peek" class="words-peek hidden" aria-label="Show or hide the words on the pictures" data-i18n-aria="aria_peek">👁</button>
-  </div>
 
   <div id="flash-complete" class="hidden">
     <div class="flash-fireworks" aria-hidden="true"></div>

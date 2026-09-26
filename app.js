@@ -648,6 +648,7 @@ const els = {
   romajiToggle: document.getElementById("romaji-toggle"),
   hideWordsToggle: document.getElementById("hide-words-toggle"),
   wordsPeek: document.getElementById("words-peek"),
+  dockSettings: document.getElementById("dock-settings"),
   vibrationToggle: document.getElementById("vibration-toggle"),
   soundToggle: document.getElementById("sound-toggle"),
   themeSelect: document.getElementById("theme-select"),
@@ -3478,6 +3479,8 @@ function bindUI() {
     els.hideWordsToggle.addEventListener("change", (e) => setHideCardWords(e.target.checked));
   }
   if (els.wordsPeek) onTap(els.wordsPeek, () => setHideCardWords(!state.hideCardWords));
+  // The gear in the dock: the header one is out of reach mid-game.
+  if (els.dockSettings) onTap(els.dockSettings, showSettings);
 
   els.romajiToggle.addEventListener("change", (e) => {
     state.romaji = e.target.checked;

@@ -456,6 +456,16 @@ main {
 .card.kana .label-ja {
   font-size: 2rem;
 }
+/* Colour Practice puts a two-word phrase where every other mode puts one word
+   — "むらさきのまる", "Círculo vermelho". At one word's size that wraps mid-word
+   on a narrow phone, so the phrase cards get their own smaller step. */
+.cards.phrase .label-ja {
+  font-size: 1.15rem;
+  line-height: 1.2;
+}
+.cards.phrase .label-en {
+  font-size: 0.85rem;
+}
 
 .card .label-en {
   font-size: 1rem;
@@ -3164,6 +3174,8 @@ body.playing .card img {
   .card { padding: 7px 7px 10px; gap: 5px; border-radius: 18px; }
   .card img { border-radius: 14px; }
   .card .label-ja { font-size: 1.15rem; }
+  .cards.phrase .label-ja { font-size: 0.9rem; }
+  .cards.phrase .label-en { font-size: 0.75rem; }
   .card .label-en { font-size: 0.82rem; }
   #prompt-word { font-size: clamp(1.5rem, 6.5vw, 2.2rem); padding: 9px 12px; }
   #speak-btn { width: 54px; height: 54px; font-size: 1.6rem; }
@@ -3380,6 +3392,14 @@ body.playing .card img {
 .sent-slot.active { border-color: var(--accent-2); background: rgba(46, 196, 182, 0.12); }
 /* The full stop lives outside the slots so it never looks like an answer. */
 .sent-stop { font-size: clamp(1rem, 4.4vw, 1.35rem); font-weight: 800; color: #9aa6bd; }
+
+/* Colour Practice asks for two words — between the one word every other vocab
+   mode shows and the whole sentence the builder shows, so it gets its own step
+   rather than shrinking all the way down to sentence size. */
+#prompt-word.phrase {
+  font-size: clamp(1.3rem, 5.2vw, 2rem);
+  line-height: 1.25;
+}
 
 /* The sentence builder puts a whole sentence where other modes put one word. */
 #prompt-word.compact {

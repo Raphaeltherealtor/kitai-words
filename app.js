@@ -202,6 +202,8 @@ const I18N = {
     track_vocab: "Vocabulary", track_vocab_sub: "Listen & match pictures",
     track_hiragana: "Hiragana", track_katakana: "Katakana", track_kana_sub: "Sound & pick, complete",
     track_kanji: "Kanji", track_kanji_sub: "Coming soon",
+    track_colors: "Colors", track_colors_sub: "Red circle, blue star",
+    mode_color_only: "Just the Color 🎨", mode_color_shape: "Color & Shape 🔷",
     track_prep: "Prepositions", track_prep_sub: "Where is the ball?",
     track_sentences: "Sentences", track_sentences_sub: "a, an, the & adding s",
     mode_prep_tap: "Where is it?", mode_prep_drag: "Move the Ball 🖐",
@@ -289,6 +291,8 @@ const I18N = {
     track_vocab: "Vocabulario", track_vocab_sub: "Escucha y empareja imágenes",
     track_hiragana: "Hiragana", track_katakana: "Katakana", track_kana_sub: "Escucha, elige y completa",
     track_kanji: "Kanji", track_kanji_sub: "Muy pronto",
+    track_colors: "Colores", track_colors_sub: "Círculo rojo, estrella azul",
+    mode_color_only: "Solo el Color 🎨", mode_color_shape: "Color y Forma 🔷",
     mode_tap: "Escucha y Toca", mode_drag: "Arrastra y Completa", mode_find: "Encuéntralo 🔍",
     mode_flash: "Tarjetas 🎴", mode_memory: "Memoria 🧠",
     mode_kana_tap: "Sonido y Elige", mode_alphabet: "Alfabeto", mode_quiz: "Prueba",
@@ -362,6 +366,8 @@ const I18N = {
     track_vocab: "Vocabulário", track_vocab_sub: "Ouça e combine as imagens",
     track_hiragana: "Hiragana", track_katakana: "Katakana", track_kana_sub: "Ouça, escolha e complete",
     track_kanji: "Kanji", track_kanji_sub: "Em breve",
+    track_colors: "Cores", track_colors_sub: "Círculo vermelho, estrela azul",
+    mode_color_only: "Só a Cor 🎨", mode_color_shape: "Cor e Forma 🔷",
     mode_tap: "Ouça e Toque", mode_drag: "Arraste e Complete", mode_find: "Encontre 🔍",
     mode_flash: "Cartões 🎴", mode_memory: "Memória 🧠",
     mode_kana_tap: "Som e Escolha", mode_alphabet: "Alfabeto", mode_quiz: "Quiz",
@@ -435,6 +441,8 @@ const I18N = {
     track_vocab: "たんご", track_vocab_sub: "きいて えを えらぼう",
     track_hiragana: "ひらがな", track_katakana: "カタカナ", track_kana_sub: "きいて えらぶ・かんせい",
     track_kanji: "かんじ", track_kanji_sub: "ちか日 こうかい",
+    track_colors: "いろ", track_colors_sub: "あかいまる、あおいほし",
+    mode_color_only: "いろだけ 🎨", mode_color_shape: "いろとかたち 🔷",
     mode_tap: "きいて タッチ", mode_drag: "ドラッグで かんせい", mode_find: "さがそう 🔍",
     mode_flash: "フラッシュカード 🎴", mode_memory: "きおくゲーム 🧠",
     mode_kana_tap: "おと で えらぶ", mode_alphabet: "あいうえお", mode_quiz: "クイズ",
@@ -508,6 +516,8 @@ const I18N = {
     track_vocab: "낱말", track_vocab_sub: "듣고 그림 맞추기",
     track_hiragana: "히라가나", track_katakana: "가타카나", track_kana_sub: "듣고 고르기·완성",
     track_kanji: "한자", track_kanji_sub: "곧 나와요",
+    track_colors: "색깔", track_colors_sub: "빨간 동그라미, 파란 별",
+    mode_color_only: "색깔만 🎨", mode_color_shape: "색과 모양 🔷",
     mode_tap: "듣고 터치", mode_drag: "끌어서 완성", mode_find: "찾아봐 🔍",
     mode_flash: "플래시 카드 🎴", mode_memory: "기억 게임 🧠",
     mode_kana_tap: "소리로 고르기", mode_alphabet: "글자", mode_quiz: "퀴즈",
@@ -985,6 +995,7 @@ function viewHasCardWords() {
   if (state.currentTrack === "vocab") {
     return ["tap", "find", "flash", "memory"].includes(state.currentGameType);
   }
+  if (state.currentTrack === "colors") return true;
   if (state.currentTrack === "prepositions") return state.currentGameType === "prep-tap";
   return false;
 }
@@ -3759,6 +3770,7 @@ function bindUI() {
       const TRACK_LABELS = {
         vocab: t("track_vocab"), hiragana: "Hiragana", katakana: "Katakana",
         prepositions: t("track_prep"), sentences: t("track_sentences"),
+        colors: t("track_colors"),
       };
       els.trackLabel.textContent = TRACK_LABELS[track] || track;
       if (track === "vocab") refreshCategoryChip();
@@ -5052,7 +5064,10 @@ function updateModeButtonsForTrack(track) {
   // The grammar tracks have nothing to say in the context slot, and a bar that
   // narrow turns "Prepositions" into "P.".
   if (els.playBar) {
-    els.playBar.classList.toggle("no-context", track === "prepositions" || track === "sentences");
+    els.playBar.classList.toggle(
+      "no-context",
+      track === "prepositions" || track === "sentences" || track === "colors"
+    );
   }
   if (track === "vocab") {
     if (els.categoryQuickBtn) els.categoryQuickBtn.classList.remove("hidden");
@@ -5111,6 +5126,22 @@ function updateModeButtonsForTrack(track) {
     if (btn5) btn5.classList.add("hidden");
     state.currentGameType = "kana-tap";
     setActiveModeButton("kana-tap");
+  } else if (track === "colors") {
+    // Colour alone first — every card the same shape, so only the colour can
+    // tell them apart — then both at once.
+    if (els.categoryQuickBtn) els.categoryQuickBtn.classList.add("hidden");
+    if (els.playContext) els.playContext.classList.remove("pickable");
+    btn1.dataset.gametype = "color-only";
+    btn1.textContent = t("mode_color_only");
+    btn1.classList.remove("hidden");
+    btn1.disabled = false;
+    btn2.dataset.gametype = "color-shape";
+    btn2.textContent = t("mode_color_shape");
+    btn2.classList.remove("hidden");
+    btn2.disabled = false;
+    [btn3, btn4, btn5].forEach((b) => b && b.classList.add("hidden"));
+    state.currentGameType = "color-only";
+    setActiveModeButton("color-only");
   } else if (track === "prepositions" || track === "sentences") {
     // Two modes each: one that names what is already there, one that makes the
     // child do it. The category picker means nothing here, so it stays away.
@@ -6291,6 +6322,12 @@ function startRound() {
     renderCurrentView();
     return;
   }
+  if (state.currentTrack === "colors") {
+    chooseColorRound();
+    renderCurrentView();
+    if (state.currentTarget) speakCurrent();
+    return;
+  }
   if (state.currentTrack === "vocab") {
     if (!pickPool().length) {
       // Parent removed every word in this category — don't crash, just guide.
@@ -6338,6 +6375,8 @@ function renderCurrentView() {
     } else {
       renderDragCompleteView();
     }
+  } else if (state.currentTrack === "colors") {
+    renderColorView();
   } else if (state.currentTrack === "prepositions") {
     if (state.currentGameType === "prep-drag") renderPrepDragView();
     else renderPrepTapView();
@@ -6414,6 +6453,7 @@ function showPromptArea(show) {
 
 function hideAllGameViews() {
   els.cards.classList.add("hidden");
+  els.cards.classList.remove("phrase");
   els.dropzoneSection.classList.add("hidden");
   els.completeWordSection.classList.add("hidden");
   if (els.findCountBar) els.findCountBar.classList.add("hidden");
@@ -6425,7 +6465,149 @@ function hideAllGameViews() {
   if (els.lessonSection) els.lessonSection.classList.add("hidden");
   // Only the sentence builder puts a whole sentence in the prompt; every other
   // mode puts one word there and wants the big type back.
-  if (els.promptWord) els.promptWord.classList.remove("compact");
+  if (els.promptWord) els.promptWord.classList.remove("compact", "phrase");
+}
+
+// ---- Colour Practice -------------------------------------------------------
+//
+// "Red circle" is two words about one picture, and that is the whole point: the
+// child has to hold both. Shapes are the only vocabulary that allows it — the
+// same outline filled twice is still honestly the same noun, where a red
+// elephant would just be a wrong picture of an elephant.
+//
+// Each card is a (shape, colour) pair wearing the costume of an ordinary word,
+// so renderCards, handleTap, the hide-the-words eye and the voice all work on
+// it unchanged. The pair's id is "<shapeId>|<colorId>", which is what makes the
+// right answer comparable the way every other mode compares one.
+
+// Colours and shapes both honour "words in play", so a parent who switches off
+// purple, or every shape but three, narrows this track too.
+function colorPalette() {
+  return state.items.filter((i) => i.categoryId === "colors" && i.hex && isWordInPlay(i));
+}
+function shapeSet() {
+  return state.items.filter((i) => i.shapeId && isWordInPlay(i));
+}
+
+// The form a colour takes in front of a noun. Japanese splits the ten colours
+// in two — あか is "red", but a red circle is あかいまる (i-adjective) while a
+// green one is みどりのまる (noun + の) — and Korean does the same. Falls back
+// to the plain word so a colour added by hand still says something.
+function colorAttr(color, lang) {
+  if (lang === "ja") return color.jaAttr || color.jaKana || "";
+  if (lang === "ko") return color.koAttr || color.ko || "";
+  return langWordField(color, lang);
+}
+
+// Spanish and Portuguese put the colour after the noun and agree with its
+// gender: círculo rojo, but estrella roja.
+function colorAgreeing(color, shape, lang) {
+  const fem = !!shape.fem;
+  if (lang === "es") return (fem && color.esF) || color.es || color.en;
+  return (fem && color.ptF) || color.pt || color.en;
+}
+
+// Only the first word of the phrase is capitalised — "Red circle", "Círculo
+// rojo" — so a card reads as a phrase and not as two separate labels.
+function joinPhrase(first, second) {
+  const tail = (second || "").toLocaleLowerCase();
+  return tail ? `${first} ${tail}` : first;
+}
+
+function colorPhrase(color, shape, lang) {
+  if (lang === "ja" || lang === "ko") {
+    const attr = colorAttr(color, lang);
+    const noun = langWordField(shape, lang);
+    return lang === "ja" ? attr + noun : `${attr} ${noun}`; // Japanese takes no space
+  }
+  if (lang === "es" || lang === "pt") {
+    return joinPhrase(langWordField(shape, lang), colorAgreeing(color, shape, lang));
+  }
+  return joinPhrase(colorAttr(color, lang), langWordField(shape, lang));
+}
+
+// One card: a shape in a colour, dressed as a word in every language the app
+// can show, so the tile, the gloss underneath and the voice all read it the
+// same way they read a real one.
+function makeColorItem(shape, color) {
+  const item = {
+    id: `${shape.id}|${color.id}`,
+    categoryId: "shapes",
+    shapeId: shape.shapeId,
+    colorId: color.id,
+    imagePath: shapeImage(shape.shapeId, color.hex),
+    aliases: [],
+    jaRomaji: `${color.jaAttrRomaji || color.jaRomaji || ""} ${shape.jaRomaji || ""}`.trim(),
+    koRomaji: `${color.koAttrRomaji || color.koRomaji || ""} ${shape.koRomaji || ""}`.trim(),
+  };
+  ["en", "es", "pt"].forEach((l) => { item[l] = colorPhrase(color, shape, l); });
+  item.jaKana = colorPhrase(color, shape, "ja");
+  item.ko = colorPhrase(color, shape, "ko");
+  return item;
+}
+
+// Build a round. "Just the Colour" holds the shape still so only the colour can
+// tell the cards apart; "Colour & Shape" makes every wrong card a near miss —
+// the right shape in the wrong colour, or the right colour in the wrong shape —
+// because a card that differs in both can be ruled out without reading either.
+function chooseColorRound() {
+  const colors = colorPalette();
+  const shapes = shapeSet();
+  if (colors.length < 2 || !shapes.length) {
+    state.currentChoices = [];
+    state.currentTarget = null;
+    return;
+  }
+  const count = Math.min(state.choiceCount, colors.length);
+  const shape = shapes[Math.floor(Math.random() * shapes.length)];
+  const color = colors[Math.floor(Math.random() * colors.length)];
+  const target = makeColorItem(shape, color);
+  const others = [];
+
+  if (state.currentGameType === "color-only" || shapes.length < 2) {
+    shuffle(colors.filter((c) => c.id !== color.id))
+      .slice(0, count - 1)
+      .forEach((c) => others.push(makeColorItem(shape, c)));
+  } else {
+    // Same shape, wrong colour — then same colour, wrong shape — alternating,
+    // so the near misses stay balanced however many choices are asked for.
+    const wanted = count - 1;
+    const pool = [];
+    const otherColors = shuffle(colors.filter((c) => c.id !== color.id));
+    const otherShapes = shuffle(shapes.filter((sh) => sh.id !== shape.id));
+    for (let i = 0; i < Math.max(otherColors.length, otherShapes.length); i++) {
+      if (otherColors[i]) pool.push(makeColorItem(shape, otherColors[i]));
+      if (otherShapes[i]) pool.push(makeColorItem(otherShapes[i], color));
+    }
+    // With only two colours and two shapes there are just two near misses, so
+    // top up from the both-wrong pairs rather than dealing the same card twice.
+    for (let i = 0; pool.length < wanted && i < otherShapes.length; i++) {
+      otherColors.forEach((c) => pool.push(makeColorItem(otherShapes[i], c)));
+    }
+    pool.slice(0, wanted).forEach((it) => others.push(it));
+  }
+
+  state.currentTarget = target;
+  state.currentChoices = shuffle([target, ...others]);
+}
+
+function renderColorView() {
+  els.modeLabel.textContent = t(state.currentGameType === "color-only" ? "mode_color_only" : "mode_color_shape");
+  hideAllGameViews();
+  showPromptArea(true);
+  if (!state.currentTarget) {
+    // Every colour but one switched off, or every shape — say so instead of
+    // dealing a round the child cannot get wrong.
+    els.cards.innerHTML = "";
+    els.promptWord.textContent = "—";
+    els.feedback.textContent = t("fb_no_words");
+    return;
+  }
+  els.cards.classList.remove("hidden");
+  els.cards.classList.add("phrase"); // two words per card, so a smaller label
+  if (els.promptWord) els.promptWord.classList.add("phrase");
+  renderCards(state.currentChoices);
+  els.promptWord.textContent = wordText(state.currentTarget);
 }
 
 function renderTapView() {

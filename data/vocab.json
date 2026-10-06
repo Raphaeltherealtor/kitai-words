@@ -1017,7 +1017,14 @@
         "aka"
       ],
       "es": "Rojo",
-      "pt": "Vermelho"
+      "pt": "Vermelho",
+      "hex": "#f94144",
+      "jaAttr": "あかい",
+      "jaAttrRomaji": "akai",
+      "koAttr": "빨간",
+      "koAttrRomaji": "ppalgan",
+      "esF": "Roja",
+      "ptF": "Vermelha"
     },
     {
       "id": "color-blue",
@@ -1032,7 +1039,14 @@
         "ao"
       ],
       "es": "Azul",
-      "pt": "Azul"
+      "pt": "Azul",
+      "hex": "#277da1",
+      "jaAttr": "あおい",
+      "jaAttrRomaji": "aoi",
+      "koAttr": "파란",
+      "koAttrRomaji": "paran",
+      "esF": "Azul",
+      "ptF": "Azul"
     },
     {
       "id": "color-yellow",
@@ -1047,7 +1061,14 @@
         "kiiro"
       ],
       "es": "Amarillo",
-      "pt": "Amarelo"
+      "pt": "Amarelo",
+      "hex": "#f9c74f",
+      "jaAttr": "きいろい",
+      "jaAttrRomaji": "kiiroi",
+      "koAttr": "노란",
+      "koAttrRomaji": "noran",
+      "esF": "Amarilla",
+      "ptF": "Amarela"
     },
     {
       "id": "color-green",
@@ -1062,7 +1083,14 @@
         "midori"
       ],
       "es": "Verde",
-      "pt": "Verde"
+      "pt": "Verde",
+      "hex": "#43aa8b",
+      "jaAttr": "みどりの",
+      "jaAttrRomaji": "midori no",
+      "koAttr": "초록색",
+      "koAttrRomaji": "choroksaek",
+      "esF": "Verde",
+      "ptF": "Verde"
     },
     {
       "id": "color-white",
@@ -1077,7 +1105,14 @@
         "shiro"
       ],
       "es": "Blanco",
-      "pt": "Branco"
+      "pt": "Branco",
+      "hex": "#ffffff",
+      "jaAttr": "しろい",
+      "jaAttrRomaji": "shiroi",
+      "koAttr": "하얀",
+      "koAttrRomaji": "hayan",
+      "esF": "Blanca",
+      "ptF": "Branca"
     },
     {
       "id": "color-black",
@@ -1092,7 +1127,14 @@
         "kuro"
       ],
       "es": "Negro",
-      "pt": "Preto"
+      "pt": "Preto",
+      "hex": "#2d2a32",
+      "jaAttr": "くろい",
+      "jaAttrRomaji": "kuroi",
+      "koAttr": "검은",
+      "koAttrRomaji": "geomeun",
+      "esF": "Negra",
+      "ptF": "Preta"
     },
     {
       "id": "color-pink",
@@ -1107,7 +1149,14 @@
         "pinku"
       ],
       "es": "Rosa",
-      "pt": "Rosa"
+      "pt": "Rosa",
+      "hex": "#ff8fab",
+      "jaAttr": "ピンクの",
+      "jaAttrRomaji": "pinku no",
+      "koAttr": "분홍색",
+      "koAttrRomaji": "bunhongsaek",
+      "esF": "Rosa",
+      "ptF": "Rosa"
     },
     {
       "id": "color-orange",
@@ -1122,7 +1171,14 @@
         "orenji"
       ],
       "es": "Naranja",
-      "pt": "Laranja"
+      "pt": "Laranja",
+      "hex": "#f8961e",
+      "jaAttr": "オレンジの",
+      "jaAttrRomaji": "orenji no",
+      "koAttr": "주황색",
+      "koAttrRomaji": "juhwangsaek",
+      "esF": "Naranja",
+      "ptF": "Laranja"
     },
     {
       "id": "color-purple",
@@ -1137,7 +1193,14 @@
         "murasaki"
       ],
       "es": "Morado",
-      "pt": "Roxo"
+      "pt": "Roxo",
+      "hex": "#9b5de5",
+      "jaAttr": "むらさきの",
+      "jaAttrRomaji": "murasaki no",
+      "koAttr": "보라색",
+      "koAttrRomaji": "borasaek",
+      "esF": "Morada",
+      "ptF": "Roxa"
     },
     {
       "id": "color-brown",
@@ -1152,7 +1215,14 @@
         "chairo"
       ],
       "es": "Marrón",
-      "pt": "Marrom"
+      "pt": "Marrom",
+      "hex": "#9c6b4a",
+      "jaAttr": "ちゃいろい",
+      "jaAttrRomaji": "chairoi",
+      "koAttr": "갈색",
+      "koAttrRomaji": "galsaek",
+      "esF": "Marrón",
+      "ptF": "Marrom"
     },
     {
       "id": "num-1",

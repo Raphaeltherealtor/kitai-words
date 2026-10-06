@@ -98,6 +98,15 @@
       "emoji": "🏃",
       "label_es": "Verbos",
       "label_pt": "Verbos"
+    },
+    {
+      "id": "shapes",
+      "label_en": "Shapes",
+      "label_ja": "かたち",
+      "label_ko": "모양",
+      "emoji": "🔷",
+      "label_es": "Formas",
+      "label_pt": "Formas"
     }
   ],
   "items": [
@@ -1768,6 +1777,135 @@
       "aliases": [],
       "es": "Reír",
       "pt": "Rir"
+    },
+    {
+      "id": "shape-circle",
+      "categoryId": "shapes",
+      "en": "Circle",
+      "jaKana": "まる",
+      "jaRomaji": "maru",
+      "ko": "동그라미",
+      "koRomaji": "donggeurami",
+      "shapeId": "circle",
+      "aliases": [
+        "maru",
+        "circle"
+      ],
+      "es": "Círculo",
+      "pt": "Círculo"
+    },
+    {
+      "id": "shape-square",
+      "categoryId": "shapes",
+      "en": "Square",
+      "jaKana": "しかく",
+      "jaRomaji": "shikaku",
+      "ko": "네모",
+      "koRomaji": "nemo",
+      "shapeId": "square",
+      "aliases": [
+        "shikaku",
+        "square"
+      ],
+      "es": "Cuadrado",
+      "pt": "Quadrado"
+    },
+    {
+      "id": "shape-triangle",
+      "categoryId": "shapes",
+      "en": "Triangle",
+      "jaKana": "さんかく",
+      "jaRomaji": "sankaku",
+      "ko": "세모",
+      "koRomaji": "semo",
+      "shapeId": "triangle",
+      "aliases": [
+        "sankaku",
+        "triangle"
+      ],
+      "es": "Triángulo",
+      "pt": "Triângulo"
+    },
+    {
+      "id": "shape-star",
+      "categoryId": "shapes",
+      "en": "Star",
+      "jaKana": "ほし",
+      "jaRomaji": "hoshi",
+      "ko": "별",
+      "koRomaji": "byeol",
+      "shapeId": "star",
+      "aliases": [
+        "hoshi",
+        "star"
+      ],
+      "es": "Estrella",
+      "pt": "Estrela",
+      "fem": true
+    },
+    {
+      "id": "shape-heart",
+      "categoryId": "shapes",
+      "en": "Heart",
+      "jaKana": "ハート",
+      "jaRomaji": "haato",
+      "ko": "하트",
+      "koRomaji": "hateu",
+      "shapeId": "heart",
+      "aliases": [
+        "haato",
+        "heart"
+      ],
+      "es": "Corazón",
+      "pt": "Coração"
+    },
+    {
+      "id": "shape-rectangle",
+      "categoryId": "shapes",
+      "en": "Rectangle",
+      "jaKana": "ながしかく",
+      "jaRomaji": "nagashikaku",
+      "ko": "직사각형",
+      "koRomaji": "jiksagakhyeong",
+      "shapeId": "rectangle",
+      "aliases": [
+        "nagashikaku",
+        "rectangle"
+      ],
+      "es": "Rectángulo",
+      "pt": "Retângulo"
+    },
+    {
+      "id": "shape-diamond",
+      "categoryId": "shapes",
+      "en": "Diamond",
+      "jaKana": "ひしがた",
+      "jaRomaji": "hishigata",
+      "ko": "마름모",
+      "koRomaji": "mareummo",
+      "shapeId": "diamond",
+      "aliases": [
+        "hishigata",
+        "diamond"
+      ],
+      "es": "Rombo",
+      "pt": "Losango"
+    },
+    {
+      "id": "shape-oval",
+      "categoryId": "shapes",
+      "en": "Oval",
+      "jaKana": "だえん",
+      "jaRomaji": "daen",
+      "ko": "타원",
+      "koRomaji": "tawon",
+      "shapeId": "oval",
+      "aliases": [
+        "daen",
+        "oval"
+      ],
+      "es": "Óvalo",
+      "pt": "Oval"
     }
   ]
 }

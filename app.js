@@ -869,11 +869,15 @@ async function loadData() {
   const res = await fetch("data/vocab.json");
   state.data = await res.json();
   state.builtinCategories = state.data.categories;
-  // Items with no image file but an `emoji`/glyph (e.g. numbers) get a
-  // generated picture so they render like any other word.
-  state.builtinItems = state.data.items.map((it) =>
-    !it.imagePath && !it.photoUrl && it.emoji ? { ...it, imagePath: placeholderImage(it.emoji) } : it
-  );
+  // Items with no image file of their own get a generated picture, so they
+  // render like any other word: a `shapeId` is drawn, an `emoji`/glyph (e.g.
+  // numbers) is set in a tile.
+  state.builtinItems = state.data.items.map((it) => {
+    if (it.imagePath || it.photoUrl) return it;
+    if (it.shapeId) return { ...it, imagePath: shapeImage(it.shapeId, SHAPE_DEFAULT_FILL[it.shapeId]) };
+    if (it.emoji) return { ...it, imagePath: placeholderImage(it.emoji) };
+    return it;
+  });
   state.wordManifest = loadWordManifest();
   applyWordManifestToState(); // also builds state.categories (built-in + custom)
   updateWordSyncIndicator();
@@ -1645,6 +1649,50 @@ async function syncWordsWithCloud() {
 
 // A simple emoji-on-color placeholder (data URI) so a new word always has art
 // even before a photo is added — matches the bundled SVG style.
+// --- Shapes, drawn rather than photographed --------------------------------
+//
+// A shape is the one kind of word whose picture can be any colour without
+// becoming a different thing — a red circle and a blue circle are both circles.
+// That is what makes Colour Practice possible at all: the same outline, filled
+// twice, asks the child to attend to the colour and nothing else. (It is also
+// why this doesn't generalize to animals: there is no red elephant to show.)
+//
+// So the outline lives here as geometry, not as a file in assets/images, and
+// one function serves both the plain Shapes cards and the tinted ones.
+const SHAPE_ART = {
+  circle: '<circle cx="100" cy="100" r="68"/>',
+  square: '<rect x="33" y="33" width="134" height="134" rx="12"/>',
+  triangle: '<polygon points="100,27 171,166 29,166"/>',
+  star: '<polygon points="100,28 118,76 168,78 129,109 142,158 100,130 58,158 71,109 32,78 82,76"/>',
+  heart:
+    '<path d="M100 170 C 40 128, 22 94, 22 70 A 34 34 0 0 1 100 50 ' +
+    'A 34 34 0 0 1 178 70 C 178 94, 160 128, 100 170 Z"/>',
+  rectangle: '<rect x="16" y="52" width="168" height="96" rx="12"/>',
+  diamond: '<polygon points="100,24 172,100 100,176 28,100"/>',
+  oval: '<ellipse cx="100" cy="100" rx="80" ry="56"/>',
+};
+
+// The colour each shape wears in the plain Shapes category. They differ on
+// purpose: when the lesson is the *form*, a row of shapes that are all one
+// colour invites the child to sort by colour instead.
+const SHAPE_DEFAULT_FILL = {
+  circle: "#f94144", square: "#277da1", triangle: "#f9c74f", star: "#f8961e",
+  heart: "#ff8fab", rectangle: "#43aa8b", diamond: "#9b5de5", oval: "#9c6b4a",
+};
+
+// Every shape gets the same outline, so a white or yellow fill still has an
+// edge against the card. Pure black keeps it too — it just doesn't show.
+function shapeImage(shapeId, fill) {
+  const body = SHAPE_ART[shapeId];
+  if (!body) return placeholderImage("🔷");
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">' +
+    '<rect width="200" height="200" rx="32" fill="#f3f6fb"/>' +
+    '<g fill="' + (fill || "#888") + '" stroke="rgba(20,30,50,0.38)" stroke-width="4" ' +
+    'stroke-linejoin="round">' + body + "</g></svg>";
+  return "data:image/svg+xml," + encodeURIComponent(svg);
+}
+
 function placeholderImage(emoji) {
   const svg =
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">' +

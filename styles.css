@@ -3230,6 +3230,251 @@ body.playing .card img {
    One box on legs in the middle and a labelled place on every side of it. The
    zones are dashed on purpose: a two-year-old needs to see where a thing may
    be dropped, and the labels give the parent the word to say. */
+/* ---- Pack the Box --------------------------------------------------------
+   Pictures on top, a cardboard box at the bottom with its flaps open. The box
+   is drawn rather than loaded: it has to recolour with the theme and scale to
+   any phone, and a photo of a box would do neither. */
+#pack-section {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+#pack-section.hidden { display: none; }
+
+.pack-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--pack-cols, 3), 1fr);
+  grid-auto-rows: 1fr; /* rows share the height left over; the box must stay put */
+  gap: 10px;
+  align-content: stretch;
+  overflow: hidden;
+}
+
+.pack-card {
+  position: relative;
+  background: var(--card);
+  border: 3px solid transparent;
+  border-radius: 20px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.14);
+  padding: 8px 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  cursor: grab;
+  touch-action: none; /* the card is dragged, so the page must not pan with it */
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 0.14s ease, box-shadow 0.14s ease, opacity 0.2s ease;
+}
+.pack-card img {
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  object-fit: contain;
+  border-radius: 14px;
+  pointer-events: none;
+}
+.pack-card-label {
+  flex: none;
+  text-align: center;
+  font-weight: 800;
+  font-size: 0.95rem;
+  line-height: 1.1;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pack-card.dragging {
+  z-index: 20;
+  cursor: grabbing;
+  box-shadow: 0 18px 30px rgba(0, 0, 0, 0.3);
+  transition: none;
+}
+/* Wrong picture: a shake, then it stays where it was. Nothing is lost. */
+.pack-card.reject { animation: pack-reject 0.4s ease; }
+@keyframes pack-reject {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-9px) rotate(-3deg); }
+  50% { transform: translateX(9px) rotate(3deg); }
+  80% { transform: translateX(-5px); }
+}
+.pack-card.packed-away { opacity: 0; transform: scale(0.5) translateY(40px); }
+
+/* The box itself. Two flaps leaning open, a dark mouth between them, and a
+   front panel that carries what has gone in so far. */
+.pack-box {
+  position: relative;
+  flex: none;
+  align-self: center;
+  width: min(300px, 82%);
+  padding-top: 18px;
+  transition: transform 0.18s ease;
+}
+.pack-box.hidden { display: none; }
+.pack-flap {
+  position: absolute;
+  top: 0;
+  width: 44%;
+  height: 26px;
+  background: linear-gradient(180deg, #e9a765, #d88f45);
+  border: 3px solid #8a5a24;
+  border-radius: 6px;
+  transition: transform 0.2s ease;
+}
+.pack-flap-l { left: 4%; transform-origin: bottom right; transform: rotate(-16deg); }
+.pack-flap-r { right: 4%; transform-origin: bottom left; transform: rotate(16deg); }
+.pack-mouth {
+  position: absolute;
+  top: 20px;
+  left: 6%;
+  right: 6%;
+  height: 20px;
+  border-radius: 8px 8px 0 0;
+  background: #5e3410;
+  box-shadow: inset 0 5px 10px rgba(0, 0, 0, 0.45);
+}
+.pack-front {
+  position: relative;
+  margin-top: 26px;
+  min-height: 74px;
+  border: 3px solid #8a5a24;
+  border-radius: 6px 6px 12px 12px;
+  background: linear-gradient(180deg, #f3b878, #e09a4f);
+  padding: 10px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  /* the tape line down the middle */
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.35)),
+    linear-gradient(180deg, #f3b878, #e09a4f);
+  background-size: 34px 100%, 100% 100%;
+  background-position: center top, 0 0;
+  background-repeat: no-repeat;
+}
+.pack-packed {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 5px;
+  min-height: 34px;
+}
+.pack-chip {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: #fff;
+  border: 2px solid rgba(94, 52, 16, 0.5);
+  animation: pack-chip-in 0.3s ease;
+}
+@keyframes pack-chip-in {
+  from { transform: scale(0.3) translateY(-24px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+.pack-count {
+  font-weight: 900;
+  font-size: 0.9rem;
+  color: #5e3410;
+  letter-spacing: 0.04em;
+}
+
+/* Dragging a picture over the box: the flaps open wider and it lifts. */
+.pack-box.over { transform: scale(1.04); }
+.pack-box.over .pack-flap-l { transform: rotate(-34deg); }
+.pack-box.over .pack-flap-r { transform: rotate(34deg); }
+.pack-box.over .pack-front { border-color: #2fa98d; box-shadow: 0 0 0 4px rgba(47, 169, 141, 0.35); }
+.pack-box.gulp { animation: pack-gulp 0.45s ease; }
+@keyframes pack-gulp {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.08, 0.92); }
+  70% { transform: scale(0.97, 1.05); }
+  100% { transform: scale(1); }
+}
+
+/* The box is full: the six words line up and are read as one sentence. */
+.pack-sentence {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start; /* centring a scroller clips its top */
+  gap: 12px;
+  text-align: center;
+  padding: 4px 4px 16px;
+}
+.pack-sentence.hidden { display: none; }
+.pack-sentence-words {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.pack-word {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 74px;
+  padding: 8px 6px;
+  border: none;
+  border-radius: 16px;
+  background: var(--card);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.14);
+  font: inherit;
+  color: var(--text);
+  cursor: pointer;
+}
+.pack-word img { width: 48px; height: 48px; object-fit: contain; border-radius: 12px; }
+.pack-word span {
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.15;
+  max-width: 100%;
+  /* Two lines rather than "おかあ…": the word is the point of the screen. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.pack-sentence-text {
+  font-size: 1.15rem;
+  font-weight: 900;
+  line-height: 1.35;
+  color: var(--text);
+  background: var(--card);
+  border-radius: 20px;
+  padding: 14px 18px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.14);
+  text-wrap: pretty;
+}
+.pack-sentence-gloss { font-size: 0.95rem; font-weight: 700; color: var(--text); opacity: 0.75; }
+.pack-sentence-gloss:empty { display: none; }
+.pack-sentence-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.pack-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 14px 20px;
+  background: var(--card);
+  color: var(--text);
+  font: inherit;
+  font-weight: 800;
+  font-size: 1rem;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.16);
+  cursor: pointer;
+}
+.pack-btn-go { background: #2fe0c0; color: #072019; }
+
 #prep-drag-section {
   flex: 1;
   min-height: 0;

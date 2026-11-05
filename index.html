@@ -59,6 +59,7 @@
       <button data-gametype="kana-alphabet" class="mode-btn hidden">Alphabet</button>
       <button data-gametype="kana-alphabet-quiz" class="mode-btn hidden">Quiz</button>
       <button data-gametype="memory" class="mode-btn hidden">Memory 🧠</button>
+      <button data-gametype="pack" class="mode-btn hidden">Pack the Box 📦</button>
     </div>
     <div id="flash-bar" class="hidden">
       <button id="flash-finish" class="flash-finish" data-i18n="flash_finish">Finish ✓</button>
@@ -160,6 +161,31 @@
           <button id="quiz-skip" aria-label="Skip">➡️</button>
         </div>
         <div id="quiz-progress"></div>
+      </section>
+
+      <!-- Pack the Box: six pictures and a cardboard box. The app says one
+           word, the child drags that picture into the box, and when the box is
+           full the six words are read back as one sentence. -->
+      <section id="pack-section" class="hidden">
+        <div id="pack-grid" class="pack-grid"></div>
+        <div id="pack-box" class="pack-box">
+          <div class="pack-flap pack-flap-l" aria-hidden="true"></div>
+          <div class="pack-flap pack-flap-r" aria-hidden="true"></div>
+          <div class="pack-mouth" aria-hidden="true"></div>
+          <div class="pack-front">
+            <div id="pack-packed" class="pack-packed"></div>
+            <div id="pack-count" class="pack-count"></div>
+          </div>
+        </div>
+        <div id="pack-sentence" class="pack-sentence hidden">
+          <div id="pack-sentence-words" class="pack-sentence-words"></div>
+          <div id="pack-sentence-text" class="pack-sentence-text"></div>
+          <div id="pack-sentence-gloss" class="pack-sentence-gloss"></div>
+          <div class="pack-sentence-actions">
+            <button id="pack-say" class="pack-btn">🔊</button>
+            <button id="pack-again" class="pack-btn pack-btn-go" data-i18n="pack_again">📦 Pack another</button>
+          </div>
+        </div>
       </section>
 
       <!-- Prepositions, active mode: one box, one ball, and the places a ball

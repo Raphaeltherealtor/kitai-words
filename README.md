@@ -31,6 +31,15 @@ Open parent settings → **Words** → **＋ Add a word**. You can now:
 - **Fix a wrong reading/pronunciation:** tap any word tile → **✏️ Edit word**. Change the kana that the app shows and speaks (or tap **✨ Suggest** for other readings), then **Save word**. Works for your own words and the built-in ones; the change syncs through the Shared Library.
 - **Fix the pitch accent (箸 vs 橋):** the same kana can be two words with different pitch — 箸 (chopsticks, *HA‑shi*) vs 橋 (bridge, *ha‑SHI*), 桃 vs 腿 for もも. Bare kana carries no accent, and the Web Speech API has no per‑syllable pitch control. The lever is the **spoken form**: in **✏️ Edit word** fill **"🔊 Say it as"** with the kanji (箸/橋/桃). The tile still shows the kana, but the voice is handed the kanji so a good Japanese voice applies the right accent from its dictionary. Stored as the word's optional `jaSpeech`; leave blank to just speak the kana. Suggestions auto‑fill it from the kanji they generate. (Accent fidelity depends on the voice — high‑quality Japanese voices honor it; robotic/VoiceRSS voices may flatten it.)
 
+## Pack the Box (vocab mode)
+Six pictures and a cardboard box. The app says one word; the child drags that picture into the box. A wrong picture shakes and springs back and the word is said again, so a guess costs nothing. Each correct one leaves the grid, so the choice narrows as the box fills.
+
+When the box is full, the six words are read back as **one sentence**. The round does not pick its six at random: it reaches for someone (from **People**), somewhere (from **Places**) and four things, so the sentence has a subject, a location and objects — "Okaasan put the lemon, the corn, the milk and the rice in the box at school." Tap any picture on that screen to hear its word again, 🔊 to hear the whole sentence, or **📦 Pack another** for a fresh six.
+
+- The sentence is built in whichever language the words are in (Japanese, Korean, English, Spanish, Portuguese), each with its own particles or articles, and the English is shown underneath when the words are not English.
+- If **People** or **Places** are switched off in *Words in play* — or the category chip is set to one group — the sentence simply does without that part ("We put the ball and the book in the box at school").
+- It honours the same selection as every other mode, so a box only ever contains words that are in play.
+
 ## Choose which words the games use (parents)
 Open parent settings → **Words in play** (also on the **Game** screen). Every category is one row — Animals, Numbers, Things, and any category you made — with a checkbox that summarises it:
 

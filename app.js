@@ -2970,7 +2970,7 @@ function setupVoiceOptions() {
   state.voices = voices;
 
   if (!voices.length) {
-    els.voiceWarning.textContent = `No ${langCfg().label} voice found. Playing without speech.`;
+    els.voiceWarning.textContent = `No ${langCfg().label} voice on this device — using the free online voice (needs internet).`;
     els.voiceWarning.classList.remove("hidden");
     const opt = document.createElement("option");
     opt.value = "";
@@ -3437,7 +3437,7 @@ function refreshVoices() {
     el.textContent = `Found ${n} ${langCfg().label} voice${n > 1 ? "s" : ""}. Selected: ${cur ? cur.name : "default"}.`;
   } else {
     el.style.color = BP_BAD;
-    el.textContent = `No ${langCfg().label} voice found yet. Install that language's TTS in Android settings, then tap Refresh again.`;
+    el.textContent = `No ${langCfg().label} voice on this device — the free online voice is being used instead. For offline speech, install that language's TTS in Android settings, then tap Refresh.`;
   }
 }
 
@@ -6931,17 +6931,48 @@ function elevenSpeak(phrase, handlers) {
 // that reliably serves Japanese audio with a free API key. Played through an
 // <audio> element so the app speaks even when the device TTS engine is broken.
 function onlineTtsUrls(text) {
+  const urls = [];
   const key = (state.ttsApiKey || "").trim();
-  if (!key) return [];
-  const params = new URLSearchParams({
-    key,
-    hl: langCfg().hl,
-    c: "MP3",
-    f: "44khz_16bit_mono",
-    r: "0",
-    src: text,
-  });
-  return [`https://api.voicerss.org/?${params.toString()}`];
+  if (key) {
+    const params = new URLSearchParams({
+      key,
+      hl: langCfg().hl,
+      c: "MP3",
+      f: "44khz_16bit_mono",
+      r: "0",
+      src: text,
+    });
+    urls.push(`https://api.voicerss.org/?${params.toString()}`);
+  }
+  // A free, no-key voice in the right language — the same zero-setup endpoint
+  // family the translator already uses. This is the one that saves a device
+  // with no Japanese pack installed: without it the kana went to whatever
+  // engine was lying around (a Chinese one, on some phones) and ちょう came
+  // back as "chu". It caps out around 200 characters, which is longer than any
+  // word or sentence this app reads.
+  if (text && text.length <= 180) {
+    const q = new URLSearchParams({
+      ie: "UTF-8",
+      client: "tw-ob",
+      tl: langCfg().speech.split("-")[0],
+      q: text,
+    });
+    urls.push(`https://translate.googleapis.com/translate_tts?${q.toString()}`);
+  }
+  return urls;
+}
+
+// Does this device actually have a voice for the language being taught? When
+// it doesn't, SpeechSynthesis still "works" — it just hands the words to some
+// other language's engine, which mangles them. Better to go online.
+function hasDeviceVoiceForLang() {
+  if (!("speechSynthesis" in window)) return false;
+  try {
+    const prefix = langCfg().prefix;
+    return speechSynthesis.getVoices().some((v) => v.lang && v.lang.toLowerCase().startsWith(prefix));
+  } catch (_) {
+    return false;
+  }
 }
 
 let onlineAudio = null;
@@ -7032,7 +7063,7 @@ function synthesize(phrase, opts) {
     else if (showErrors) {
       els.feedback.textContent =
         err === "no-api-key"
-          ? `No voice available. Add a free online-voice key in Parent Settings (Voice → "Online voice key").`
+          ? `No voice available. Check your internet — or add an online-voice key in Parent Settings (Voice → "Online voice key").`
           : `Voice error (${err}). Check your internet, or add/verify the online-voice key in Parent Settings.`;
     }
   };
@@ -7040,8 +7071,20 @@ function synthesize(phrase, opts) {
     playOnlineTts(phrase, { onStart: () => succeed("online"), onFail: () => failFinal(origErr || "online-unavailable") });
 
   const freeVoices = (err) => {
-    if (state.preferOnlineVoice || !("speechSynthesis" in window)) goOnline(err);
-    else deviceSpeak(phrase, { onStart: () => succeed("device"), onFail: (e2) => goOnline(e2) });
+    // No voice for this language on the device? Don't let another language's
+    // engine have a go at it — that is what turns ちょう into "chu". Online
+    // first, and only fall back to the device if the network says no.
+    if (state.preferOnlineVoice || !("speechSynthesis" in window) || !hasDeviceVoiceForLang()) {
+      playOnlineTts(phrase, {
+        onStart: () => succeed("online"),
+        onFail: (e2) =>
+          "speechSynthesis" in window
+            ? deviceSpeak(phrase, { onStart: () => succeed("device"), onFail: () => failFinal(err || e2) })
+            : failFinal(err || e2),
+      });
+      return;
+    }
+    deviceSpeak(phrase, { onStart: () => succeed("device"), onFail: (e2) => goOnline(e2) });
   };
 
   // Premium voice wins when it's configured, but never at the cost of silence:

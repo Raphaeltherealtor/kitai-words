@@ -66,6 +66,7 @@
       <button id="flash-finish" class="flash-finish" data-i18n="flash_finish">Finish ✓</button>
     </div>
     <button id="words-peek" class="words-peek hidden" aria-label="Show or hide the words on the pictures" data-i18n-aria="aria_peek">👁</button>
+    <button id="dock-rotate" class="dock-settings hidden" aria-label="Rotate the screen" data-i18n-aria="aria_rotate">🔄</button>
     <button id="dock-lock" class="dock-settings" aria-label="Child lock" data-i18n-aria="aria_lock">🔓</button>
     <button id="dock-settings" class="dock-settings" aria-label="Parent settings" data-i18n-aria="aria_parent">⚙️</button>
   </div>
@@ -639,6 +640,24 @@
                 <option value="2">2</option>
                 <option value="3" selected>3</option>
                 <option value="4">4</option>
+              </select>
+              <div class="bp-field bp-field-divided">
+                <span class="bp-field-label" data-i18n="s_feed_meals">How many foods the animal eats</span>
+                <div class="bp-chips" id="bp-meal-chips">
+                  <button type="button" class="bp-chip" data-bp-meals="1">1</button>
+                  <button type="button" class="bp-chip" data-bp-meals="2">2</button>
+                  <button type="button" class="bp-chip" data-bp-meals="3">3</button>
+                  <button type="button" class="bp-chip" data-bp-meals="4">4</button>
+                  <button type="button" class="bp-chip" data-bp-meals="5">5</button>
+                </div>
+                <span class="bp-hint" data-i18n="s_feed_meals_hint">The tray always holds more than it eats, so most of what is on it is the wrong answer.</span>
+              </div>
+              <select id="feed-meals" class="bp-shadow-control" aria-hidden="true" tabindex="-1">
+                <option value="1" selected>1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
               </select>
               <label class="bp-field bp-field-divided">
                 <span class="bp-field-label" data-i18n="s_categories_in_play">Categories in play</span>

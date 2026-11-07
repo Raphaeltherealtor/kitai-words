@@ -43,11 +43,20 @@ When the box is full, the six words are read back as **one sentence**, and which
 ## Feed the Animal (vocab mode)
 An animal waits at the bottom with a tray of food above it. The voice asks for one — "the lion wants to eat the apple" — and the child drags that one down. The animal chews it and asks for the next; the wrong one makes it turn its head away, the food goes back and the request is repeated.
 
-When the tray is empty the animal says what it liked, built from everything it was actually fed: "The elephant likes the mango, the cheese and the tomato." Tap any picture to hear its word, 🔊 for the sentence, or **🦁 Feed another** for a new animal and a new tray.
+By default it eats **one** food, and the tray holds more than it eats, so most of what is on offer is the wrong answer. Parent settings → **Game** sets how many it eats (1–5); how many wrong choices sit alongside comes from the same "Pictures to choose from" setting the other modes use.
 
+When it has eaten its fill the animal says what it liked, built from what it was actually fed: "The elephant likes the mango and the cheese." Tap any picture to hear its word, 🔊 for the sentence, or **🦁 Feed another** for a new animal and a new tray.
+
+- The animal is drawn at random from the **Animals** category as it stands right now, so a word added there is in the hat the very next round — and the same animal never comes up twice in a row while another is available.
+- This mode needs two categories at once, so it ignores the category chip and draws from everything that is in play.
 - Needs at least one animal and two things to feed it among the words in play; it says so plainly if *Words in play* has switched those off.
 - With no food in play it falls back to whatever else is there, and asks for it with "wants" instead of "wants to eat".
 - The closing sentence is built in the language being taught, with its own grammar: 「ぞうは マンゴーと チーズが すきです。」, "Al elefante le gustan el mango y el queso.", "O elefante gosta da manga e do queijo."
+
+## Dragging, and which way up
+- **A drag lands the moment it touches.** In Pack the Box and Feed the Animal the drop fires as soon as the picture reaches the box or the animal — no need to let go. A finger that carries straight on and off the edge of the screen has already counted, and a swipe fast enough to jump the target between two touch samples is caught by testing the line between them. Letting go on the target still works for anyone who drags the careful way.
+- **🔄 in the dock** cycles the screen between *device decides*, *locked upright* and *locked sideways*, and remembers the choice. Locking the rotation needs the Screen Orientation API and, on Android, fullscreen — the app goes fullscreen on the way. Where the API is missing (iOS) the button doesn't appear and the device's own rotation lock is the answer.
+- **Sideways**, the two drag modes turn on their side: the pictures take the left and the box or animal stands at the right, where the dragging hand already is.
 
 ## Choose which words the games use (parents)
 Open parent settings → **Words in play** (also on the **Game** screen). Every category is one row — Animals, Numbers, Things, and any category you made — with a checkbox that summarises it:

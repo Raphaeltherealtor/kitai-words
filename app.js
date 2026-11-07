@@ -10,6 +10,13 @@ const state = {
   currentTrack: "vocab",
   currentGameType: "tap", // tap | drag-complete | find | kana-tap | kana-complete
   choiceCount: 3,
+  // Feed the Animal: how many foods the animal actually eats in a round. The
+  // tray always shows more than that, so most of what is on it is a wrong
+  // answer. One is the default — a round the child can finish in a breath.
+  feedMeals: 1,
+  // "auto" leaves it to the device; the other two pin the game the way the
+  // parent wants it, which a tablet propped on a table needs more than a phone.
+  orientation: "auto",
   findCount: 6,
   // Find It locks onto one word for several rounds (reshuffling distractors)
   // before moving on. findTarget = the locked item, findRepsTarget = how many
@@ -105,6 +112,8 @@ const state = {
     tray: [],
     queue: [],
     eaten: [],
+    meals: 1,
+    lastAnimalId: null,
     done: false,
   },
   // Pack the Box: six words chosen so they can make one sentence — someone,
@@ -255,6 +264,11 @@ const I18N = {
     mode_flash: "Flash Cards 🎴", mode_memory: "Memory 🧠",
     mode_pack: "Pack the Box 📦", pack_again: "📦 Pack another",
     mode_feed: "Feed the Animal 🦁", feed_again: "🦁 Feed another",
+    s_feed_meals: "How many foods the animal eats",
+    aria_rotate: "Rotate the screen", rot_auto: "Rotation: device decides",
+    rot_portrait: "Locked upright", rot_landscape: "Locked sideways",
+    rot_unsupported: "This device won't let the app set the rotation — use its own rotation lock.",
+    s_feed_meals_hint: "The tray always holds more than it eats, so most of what is on it is the wrong answer.",
     fb_yum: "Yum!", fb_feed_no_animal: "No animals in play — switch some on in Parent Settings.",
     fb_feed_no_food: "Nothing to feed it — switch on some food in Parent Settings.",
     pack_drag_hint: "Drag it into the box",
@@ -335,6 +349,11 @@ const I18N = {
     mode_flash: "Tarjetas 🎴", mode_memory: "Memoria 🧠",
     mode_pack: "Llena la Caja 📦", pack_again: "📦 Otra caja",
     mode_feed: "Alimenta al Animal 🦁", feed_again: "🦁 Otro animal",
+    s_feed_meals: "Cuántas comidas come el animal",
+    aria_rotate: "Girar la pantalla", rot_auto: "Rotación: decide el dispositivo",
+    rot_portrait: "Fijado vertical", rot_landscape: "Fijado horizontal",
+    rot_unsupported: "Este dispositivo no deja que la app fije la rotación — usa su propio bloqueo.",
+    s_feed_meals_hint: "La bandeja siempre tiene más de lo que come, así que la mayoría son respuestas incorrectas.",
     fb_yum: "¡Ñam!", fb_feed_no_animal: "No hay animales en juego — actívalos en Ajustes.",
     fb_feed_no_food: "No hay comida — activa comida en Ajustes.",
     pack_drag_hint: "Arrástralo a la caja",
@@ -415,6 +434,11 @@ const I18N = {
     mode_flash: "Cartões 🎴", mode_memory: "Memória 🧠",
     mode_pack: "Encha a Caixa 📦", pack_again: "📦 Outra caixa",
     mode_feed: "Alimente o Animal 🦁", feed_again: "🦁 Outro animal",
+    s_feed_meals: "Quantas comidas o animal come",
+    aria_rotate: "Girar a tela", rot_auto: "Rotação: o aparelho decide",
+    rot_portrait: "Travado em pé", rot_landscape: "Travado deitado",
+    rot_unsupported: "Este aparelho não deixa o app fixar a rotação — use o bloqueio dele.",
+    s_feed_meals_hint: "A bandeja sempre tem mais do que ele come, então a maioria é resposta errada.",
     fb_yum: "Nham!", fb_feed_no_animal: "Nenhum animal em jogo — ative nas Configurações.",
     fb_feed_no_food: "Nada para dar — ative comidas nas Configurações.",
     pack_drag_hint: "Arraste para a caixa",
@@ -495,6 +519,11 @@ const I18N = {
     mode_flash: "フラッシュカード 🎴", mode_memory: "きおくゲーム 🧠",
     mode_pack: "はこに いれよう 📦", pack_again: "📦 もういちど",
     mode_feed: "どうぶつに あげよう 🦁", feed_again: "🦁 つぎの どうぶつ",
+    s_feed_meals: "どうぶつが たべる かず",
+    aria_rotate: "がめんの むき", rot_auto: "むき: じどう",
+    rot_portrait: "たて に こてい", rot_landscape: "よこ に こてい",
+    rot_unsupported: "この きかいでは むきを こていできません。きかいの せっていを つかってね。",
+    s_feed_meals_hint: "トレイには たべる かずより おおく ならびます。ほとんどは ちがう こたえです。",
     fb_yum: "おいしい！", fb_feed_no_animal: "どうぶつが オフです。せっていで オンに してね。",
     fb_feed_no_food: "たべものが ありません。せっていで オンに してね。",
     pack_drag_hint: "はこに いれてね",
@@ -575,6 +604,11 @@ const I18N = {
     mode_flash: "플래시 카드 🎴", mode_memory: "기억 게임 🧠",
     mode_pack: "상자에 담기 📦", pack_again: "📦 한 번 더",
     mode_feed: "동물에게 주기 🦁", feed_again: "🦁 다른 동물",
+    s_feed_meals: "동물이 먹는 개수",
+    aria_rotate: "화면 회전", rot_auto: "회전: 기기가 결정",
+    rot_portrait: "세로 고정", rot_landscape: "가로 고정",
+    rot_unsupported: "이 기기에서는 앱이 회전을 고정할 수 없어요. 기기의 회전 잠금을 사용하세요.",
+    s_feed_meals_hint: "쟁반에는 먹는 것보다 많이 놓여요. 대부분은 틀린 답이에요.",
     fb_yum: "냠냠!", fb_feed_no_animal: "동물이 꺼져 있어요. 부모 설정에서 켜 주세요.",
     fb_feed_no_food: "줄 음식이 없어요. 부모 설정에서 켜 주세요.",
     pack_drag_hint: "상자에 넣어요",
@@ -704,6 +738,7 @@ const els = {
   homeWordsCount: document.getElementById("home-words-count"),
   overlay: document.getElementById("settings-overlay"),
   choiceCount: document.getElementById("choice-count"),
+  feedMealsSelect: document.getElementById("feed-meals"),
   categorySelect: document.getElementById("category-select"),
   categoryQuick: document.getElementById("category-quick"),
   categoryQuickBtn: document.getElementById("category-quick-btn"),
@@ -884,6 +919,7 @@ const els = {
   flashHome: document.getElementById("flash-home"),
   lockButton: document.getElementById("lock-button"),
   dockLock: document.getElementById("dock-lock"),
+  dockRotate: document.getElementById("dock-rotate"),
   lockBadge: document.getElementById("lock-badge"),
   lockRingFill: document.getElementById("lock-ring-fill"),
   catAddClose: document.getElementById("cat-add-close"),
@@ -926,6 +962,8 @@ document.addEventListener("DOMContentLoaded", init);
 async function init() {
   loadThemePref();
   loadHideWordsPref();
+  loadFeedMealsPref();
+  loadOrientationPref();
   loadLangPref();
   loadVoicePref();
   loadElevenPrefs();
@@ -943,6 +981,9 @@ async function init() {
   applyHideWordsUI();
   applyLangToUI();
   bindUI();
+  updateRotateButton();
+  // A lock the parent set last time is re-applied at the first tap, since the
+  // browser only allows fullscreen (and so the lock) from a gesture.
   registerServiceWorker();
   goHome();
   maybeShowOnboarding();
@@ -1868,6 +1909,9 @@ function bpSyncControls() {
   document.querySelectorAll("#bp-choice-chips .bp-chip").forEach((b) => {
     b.classList.toggle("active", Number(b.dataset.bpChoices) === state.choiceCount);
   });
+  document.querySelectorAll("#bp-meal-chips .bp-chip").forEach((b) => {
+    b.classList.toggle("active", Number(b.dataset.bpMeals) === state.feedMeals);
+  });
   document.querySelectorAll("#bp-theme-grid .bp-theme").forEach((b) => {
     b.classList.toggle("active", b.dataset.bpTheme === state.theme);
   });
@@ -1939,6 +1983,7 @@ function bpRefresh() {
     "sum-game",
     [
       `${state.choiceCount} choices`,
+      state.feedMeals > 1 ? `${state.feedMeals} foods` : null,
       state.hideCardWords ? "words hidden" : null,
       `${theme.charAt(0).toUpperCase()}${theme.slice(1)} theme`,
     ].filter(Boolean).join(" · ")
@@ -2033,6 +2078,14 @@ function setupSettingsNav() {
       return;
     }
     const ch = ev.target.closest("[data-bp-choices]");
+    const meal = ev.target.closest("[data-bp-meals]");
+    if (meal) {
+      setFeedMeals(meal.dataset.bpMeals);
+      bpSaved();
+      if (state.currentGameType === "feed") startFeedSession();
+      return;
+    }
+
     if (ch && els.choiceCount) {
       els.choiceCount.value = ch.dataset.bpChoices;
       els.choiceCount.dispatchEvent(new Event("change"));
@@ -3624,8 +3677,12 @@ function bindUI() {
 
   els.choiceCount.addEventListener("change", (e) => {
     state.choiceCount = Number(e.target.value);
-    startRound();
+    if (state.currentGameType === "feed") startFeedSession();
+    else startRound();
   });
+  if (els.feedMealsSelect) {
+    els.feedMealsSelect.addEventListener("change", (e) => setFeedMeals(e.target.value));
+  }
 
   els.categorySelect.addEventListener("change", (e) => {
     state.categoryId = e.target.value;
@@ -3875,6 +3932,7 @@ function bindUI() {
 
   els.tileButtons.forEach((btn) => {
     onTap(btn, () => {
+      if (state.orientation !== "auto") applyOrientation();
       const track = btn.dataset.track;
       if (track === "kanji") {
         alert("Kanji coming soon");
@@ -3991,6 +4049,7 @@ function bindUI() {
 
   if (els.lockButton) onTap(els.lockButton, () => lockApp());
   if (els.dockLock) onTap(els.dockLock, () => lockApp());
+  if (els.dockRotate) onTap(els.dockRotate, cycleOrientation);
   if (els.lockBadge) {
     els.lockBadge.addEventListener("pointerdown", beginUnlockHold);
     els.lockBadge.addEventListener("pointerup", endUnlockHold);
@@ -5350,6 +5409,78 @@ function goHome() {
   setPlayChrome(false);
 }
 
+// ---- Which way up ----------------------------------------------------------
+// A button in the dock that cycles auto → portrait → landscape. Locking the
+// orientation needs the Screen Orientation API, and on Android it only works
+// from fullscreen, so the lock takes the app fullscreen on the way. Where the
+// API is missing (iOS) the button never appears and the device decides, as it
+// always did.
+
+const ORIENT_KEY = "kitai-orientation";
+const ORIENT_MODES = ["auto", "portrait", "landscape"];
+
+function canLockOrientation() {
+  return !!(window.screen && screen.orientation && typeof screen.orientation.lock === "function");
+}
+
+function loadOrientationPref() {
+  try {
+    const v = localStorage.getItem(ORIENT_KEY);
+    if (ORIENT_MODES.includes(v)) state.orientation = v;
+  } catch (_) {}
+}
+
+function updateRotateButton() {
+  const btn = els.dockRotate;
+  if (!btn) return;
+  btn.classList.toggle("hidden", !canLockOrientation());
+  btn.textContent = state.orientation === "auto" ? "🔄" : "📱";
+  btn.classList.toggle("rotate-landscape", state.orientation === "landscape");
+  btn.classList.toggle("active", state.orientation !== "auto");
+  const label =
+    state.orientation === "auto" ? t("rot_auto") :
+    state.orientation === "portrait" ? t("rot_portrait") : t("rot_landscape");
+  btn.setAttribute("aria-label", `${t("aria_rotate")} — ${label}`);
+  btn.title = label;
+}
+
+async function applyOrientation() {
+  if (!canLockOrientation()) return false;
+  try {
+    if (state.orientation === "auto") {
+      if (screen.orientation.unlock) screen.orientation.unlock();
+      return true;
+    }
+    // Android refuses to lock unless something is fullscreen.
+    if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+      await document.documentElement.requestFullscreen().catch(() => {});
+    }
+    await screen.orientation.lock(state.orientation);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+async function setOrientation(mode) {
+  state.orientation = ORIENT_MODES.includes(mode) ? mode : "auto";
+  try { localStorage.setItem(ORIENT_KEY, state.orientation); } catch (_) {}
+  updateRotateButton();
+  const ok = await applyOrientation();
+  if (!ok && state.orientation !== "auto") {
+    // The device would not take the lock — say so instead of pretending.
+    state.orientation = "auto";
+    try { localStorage.setItem(ORIENT_KEY, "auto"); } catch (_) {}
+    updateRotateButton();
+    if (els.feedback) els.feedback.textContent = t("rot_unsupported");
+  }
+}
+
+function cycleOrientation() {
+  const i = ORIENT_MODES.indexOf(state.orientation);
+  setOrientation(ORIENT_MODES[(i + 1) % ORIENT_MODES.length]);
+}
+
 // ---- Child Lock ------------------------------------------------------------
 // A kiosk-ish lock: fullscreen + wake lock + hidden nav so a toddler stays put.
 // It can't block the OS home gesture (only Guided Access / Screen Pinning can),
@@ -5560,7 +5691,21 @@ function resetFindSession() {
 // Feeding it the wrong thing is harmless: the animal turns its head away, the
 // food goes back on the tray and the sentence is said again.
 
-const FEED_TRAY_SIZE = 5;
+const FEED_MEALS_KEY = "kitai-feed-meals";
+
+function loadFeedMealsPref() {
+  try {
+    const n = Number(localStorage.getItem(FEED_MEALS_KEY));
+    if (n >= 1 && n <= 5) state.feedMeals = n;
+  } catch (_) {}
+}
+
+function setFeedMeals(n) {
+  state.feedMeals = Math.max(1, Math.min(5, Number(n) || 1));
+  try { localStorage.setItem(FEED_MEALS_KEY, String(state.feedMeals)); } catch (_) {}
+  if (els.feedMealsSelect) els.feedMealsSelect.value = String(state.feedMeals);
+  bpSyncControls();
+}
 
 function feedFoodPool(pool) {
   return pool.filter((i) => PACK_FOOD_CATS.includes(i.categoryId));
@@ -5570,7 +5715,12 @@ function startFeedSession() {
   state.currentGameType = "feed";
   setActiveModeButton("feed");
   showGame();
-  const pool = pickPool();
+  // This mode needs two categories at once, so it draws from everything in
+  // play rather than from the category chip — picking "Fruits" to play would
+  // otherwise leave it with no animal, and picking "Animals" with nothing to
+  // feed one. The Animals category is read live, so a word the parent adds to
+  // it is in the hat the very next round.
+  const pool = state.items.filter(isWordInPlay);
   const animals = pool.filter((i) => i.categoryId === "animals");
   const foods = feedFoodPool(pool);
   // A hungry animal and at least two things to feed it. If the words in play
@@ -5585,13 +5735,27 @@ function startFeedSession() {
     state.feed.active = false;
     return;
   }
-  const animal = animals[Math.floor(Math.random() * animals.length)];
-  const tray = shuffle([...edible]).slice(0, Math.min(FEED_TRAY_SIZE, edible.length));
+  // Every animal on the list gets a turn, and never the same one twice running
+  // while there is another to pick.
+  const fresh = animals.filter((a) => a.id !== state.feed.lastAnimalId);
+  const hat = fresh.length ? fresh : animals;
+  const animal = hat[Math.floor(Math.random() * hat.length)];
+  state.feed.lastAnimalId = animal.id;
+  // What it eats, and what is merely on offer. The tray carries the meals plus
+  // enough wrong choices to make the asking worth listening to — how many of
+  // those comes from the same "pictures to choose from" setting as every other
+  // mode, so one knob still sets the difficulty everywhere.
+  const shuffled = shuffle([...edible]);
+  const meals = Math.max(1, Math.min(state.feedMeals, shuffled.length - 1));
+  const wanted = meals + Math.max(1, state.choiceCount - 1);
+  const tray = shuffled.slice(0, Math.min(wanted, shuffled.length));
+  const queue = shuffle(tray.slice(0, meals));
   state.feed.active = true;
   state.feed.done = false;
   state.feed.animal = animal;
-  state.feed.tray = tray;             // where the food sits
-  state.feed.queue = shuffle([...tray]); // the order it is asked for
+  state.feed.tray = shuffle(tray);  // where the food sits
+  state.feed.queue = queue;         // the few it will actually ask for
+  state.feed.meals = queue.length;
   state.feed.eaten = [];
   nextFeedTarget();
 }
@@ -5999,7 +6163,7 @@ function updatePackCount() {
 // that leaves the card still drags it, and hit-test on release.
 let cardDrag = {
   item: null, el: null, startX: 0, startY: 0, pointerId: null, moved: false,
-  targetEl: null, onDrop: null,
+  targetEl: null, onDrop: null, lastX: 0, lastY: 0, wasOutside: false, fired: false,
 };
 
 function startCardDrag(e, cardEl, item, targetEl, onDrop) {
@@ -6008,6 +6172,11 @@ function startCardDrag(e, cardEl, item, targetEl, onDrop) {
   cardDrag = {
     item, el: cardEl, startX: e.clientX, startY: e.clientY,
     pointerId: e.pointerId, moved: false, targetEl, onDrop,
+    lastX: e.clientX, lastY: e.clientY,
+    // A card can start inside the target's generous hit area when few are left
+    // and the grid sits close to it. Requiring the finger to be outside once
+    // first means picking one up is never mistaken for dropping it.
+    wasOutside: false, fired: false,
   };
   document.addEventListener("pointermove", cardDragMove);
   document.addEventListener("pointerup", cardDragEnd);
@@ -6016,17 +6185,30 @@ function startCardDrag(e, cardEl, item, targetEl, onDrop) {
 
 function cardDragHit(x, y) {
   const el = cardDrag.targetEl;
-  if (!el) return false;
+  if (!el || x == null || y == null) return false;
   const r = el.getBoundingClientRect();
   // Generous: a toddler aiming for the box should not need to be accurate.
   const pad = 36;
   return x >= r.left - pad && x <= r.right + pad && y >= r.top - pad && y <= r.bottom + pad;
 }
 
+// A fast swipe reports a handful of positions, and the one before the box can
+// be followed by one already past the bottom of the screen. Walk the line
+// between the last two points so a finger that flew across the target still
+// counts as having touched it.
+function cardDragCrossed(x0, y0, x1, y1) {
+  const steps = 10;
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    if (cardDragHit(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t)) return true;
+  }
+  return false;
+}
+
 function cardDragMove(e) {
   if (cardDrag.pointerId != null && e.pointerId !== cardDrag.pointerId) return;
   const el = cardDrag.el;
-  if (!el) return;
+  if (!el || cardDrag.fired) return;
   const dx = e.clientX - cardDrag.startX;
   const dy = e.clientY - cardDrag.startY;
   if (!cardDrag.moved) {
@@ -6035,36 +6217,49 @@ function cardDragMove(e) {
     el.classList.add("dragging");
   }
   el.style.transform = `translate(${dx}px, ${dy}px) scale(1.06)`;
-  if (cardDrag.targetEl) cardDrag.targetEl.classList.toggle("over", cardDragHit(e.clientX, e.clientY));
+
+  const inside = cardDragHit(e.clientX, e.clientY);
+  if (!inside) cardDrag.wasOutside = true;
+  // Carrying it there IS the drop: she does not have to let go, and a finger
+  // that carries on off the edge of the screen has already counted.
+  if (cardDrag.wasOutside && (inside || cardDragCrossed(cardDrag.lastX, cardDrag.lastY, e.clientX, e.clientY))) {
+    finishCardDrag(true);
+    return;
+  }
+  cardDrag.lastX = e.clientX;
+  cardDrag.lastY = e.clientY;
+  if (cardDrag.targetEl) cardDrag.targetEl.classList.toggle("over", inside);
 }
 
-function cardDragEnd(e) {
-  if (cardDrag.pointerId != null && e.pointerId !== cardDrag.pointerId) return;
+// Put the card back where it came from, stop listening, and hand the drop on.
+function finishCardDrag(dropped) {
   document.removeEventListener("pointermove", cardDragMove);
   document.removeEventListener("pointerup", cardDragEnd);
   document.removeEventListener("pointercancel", cardDragEnd);
   const { el, item, moved, onDrop, targetEl } = cardDrag;
   cardDrag = {
     item: null, el: null, startX: 0, startY: 0, pointerId: null, moved: false,
-    targetEl: null, onDrop: null,
+    targetEl: null, onDrop: null, lastX: 0, lastY: 0, wasOutside: false, fired: true,
   };
   if (targetEl) targetEl.classList.remove("over");
   if (!el) return;
   el.classList.remove("dragging");
   el.style.transform = "";
-  const r = targetEl ? targetEl.getBoundingClientRect() : null;
-  const pad = 36;
-  const dropped =
-    moved && e.clientX != null && r &&
-    e.clientX >= r.left - pad && e.clientX <= r.right + pad &&
-    e.clientY >= r.top - pad && e.clientY <= r.bottom + pad;
   if (!dropped) {
-    // A tap, or a drag that landed somewhere else: say the word again rather
+    // A tap, or a drag that ended somewhere else: say the word again rather
     // than leave the child wondering what to look for.
     if (!moved) speakCurrent();
     return;
   }
   if (onDrop) onDrop(item, el);
+}
+
+function cardDragEnd(e) {
+  if (cardDrag.pointerId != null && e.pointerId !== cardDrag.pointerId) return;
+  if (cardDrag.fired) return; // the move handler already dropped it
+  // Letting go on the target still works, for anyone who drags the careful way.
+  const dropped = cardDrag.moved && cardDragHit(e.clientX, e.clientY);
+  finishCardDrag(dropped);
 }
 
 function packDragStart(e, cardEl, item) {
@@ -7398,10 +7593,10 @@ function updatePlayBar() {
       round = idx + 1;
       showBar = true;
     }
-  } else if (state.currentGameType === "feed" && state.feed.active && state.feed.tray.length) {
+  } else if (state.currentGameType === "feed" && state.feed.active && state.feed.meals) {
     const eaten = state.feed.eaten.length;
-    pct = (eaten / state.feed.tray.length) * 100;
-    round = Math.min(eaten + 1, state.feed.tray.length);
+    pct = (eaten / state.feed.meals) * 100;
+    round = Math.min(eaten + 1, state.feed.meals);
     showBar = true;
   } else if (state.currentGameType === "pack" && state.pack.active && state.pack.size) {
     const packed = state.pack.packed.length;

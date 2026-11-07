@@ -3231,6 +3231,11 @@ body.playing .card img {
    One box on legs in the middle and a labelled place on every side of it. The
    zones are dashed on purpose: a two-year-old needs to see where a thing may
    be dropped, and the labels give the parent the word to say. */
+/* The rotate button shows the state it is in: a phone upright, the same phone
+   on its side, or the auto arrows. */
+#dock-rotate.rotate-landscape { transform: rotate(90deg); }
+#dock-rotate.active { opacity: 1; background: rgba(47, 224, 192, 0.18); color: #2fe0c0; }
+
 /* ---- Feed the Animal -----------------------------------------------------
    The tray of food sits above; the animal waits at the bottom, which is the
    drop target. Same drag the box mode uses, so a child who has played one
@@ -3847,4 +3852,59 @@ body.playing .card img {
 }
 @media (max-width: 420px) {
   .dock-settings { width: 40px; height: 40px; font-size: 1.05rem; }
+}
+
+/* ---- Sideways ------------------------------------------------------------
+   Landscape is short and wide, so the two drag modes turn on their side: the
+   pictures take the left, and the box or the animal stands at the right where
+   the dragging hand already is. */
+@media (orientation: landscape) {
+  #pack-section,
+  #feed-section {
+    flex-direction: row;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .pack-grid,
+  .feed-tray { flex: 1 1 auto; }
+  .pack-box,
+  .feed-animal {
+    flex: none;
+    align-self: center;
+    width: min(230px, 34%);
+  }
+  .feed-animal-img { width: 68px; height: 68px; }
+  /* The finish card is the whole stage, whichever way up. */
+  .pack-sentence,
+  .feed-sentence { flex: 1 1 auto; }
+  /* A short screen cannot afford the big type, the tall dock or a feedback
+     line of its own: every pixel the chrome gives up is one the game gets. */
+  #prompt-word { font-size: clamp(1.1rem, 3.4vw, 1.7rem); padding: 8px 14px; }
+  #prompt-word.phrase { font-size: clamp(0.95rem, 2.6vw, 1.3rem); }
+  #prompt-area {
+    grid-template-columns: 1fr auto auto;
+    gap: 8px;
+  }
+  #feedback {
+    grid-column: 3;
+    grid-row: 1;
+    max-width: 28vw;
+    font-size: 0.8rem;
+    line-height: 1.2;
+  }
+  #mode-dock { padding: max(6px, env(safe-area-inset-top)) 10px 6px; gap: 6px; }
+  #mode-dock .dock-settings { width: 38px; height: 38px; font-size: 1rem; }
+  .mode-btn { padding: 9px 13px; font-size: 0.82rem; }
+  #voice-warning { padding: 6px 10px; font-size: 0.78rem; }
+  main { padding: 8px 12px 10px; gap: 8px; }
+  #game-screen { gap: 8px; }
+  /* Short rows: trim the card's own padding so the picture keeps its size. */
+  .pack-card { padding: 5px 6px 7px; gap: 3px; border-radius: 16px; }
+  .pack-card img, .feed-card img { min-height: 40px; }
+  .pack-card-label { font-size: 0.85rem; }
+  .feed-animal { padding: 6px 10px 8px; }
+  .feed-animal-img { width: 56px; height: 56px; }
+  .feed-animal-name { font-size: 0.85rem; }
+  .pack-box { width: min(200px, 100%); padding-top: 14px; }
+  .pack-front { min-height: 56px; margin-top: 20px; }
 }

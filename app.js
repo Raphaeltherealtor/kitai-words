@@ -17,6 +17,13 @@ const state = {
   // "auto" leaves it to the device; the other two pin the game the way the
   // parent wants it, which a tablet propped on a table needs more than a phone.
   orientation: "auto",
+  // Feed the Animal: whether the animal wanders about instead of sitting
+  // still. A moving target turns feeding into a chase, which older toddlers
+  // want and younger ones do not, so it is a switch.
+  feedWalk: true,
+  // How loud the chime and the buzzer are. The buzzer at full volume in a
+  // quiet room is a fright, not feedback.
+  soundVolume: 0.6,
   findCount: 6,
   // Find It locks onto one word for several rounds (reshuffling distractors)
   // before moving on. findTarget = the locked item, findRepsTarget = how many
@@ -265,6 +272,9 @@ const I18N = {
     mode_pack: "Pack the Box 📦", pack_again: "📦 Pack another",
     mode_feed: "Feed the Animal 🦁", feed_again: "🦁 Feed another",
     s_feed_meals: "How many foods the animal eats",
+    s_feed_walk: "The animal walks around",
+    s_feed_walk_sub: "It wanders instead of sitting still, so the food has to catch it. Turn it off for a younger child.",
+    s_sound_volume: "Chime & buzzer volume", s_sound_test: "▶︎ Hear them",
     aria_rotate: "Rotate the screen", rot_auto: "Rotation: device decides",
     rot_portrait: "Locked upright", rot_landscape: "Locked sideways",
     rot_unsupported: "This device won't let the app set the rotation — use its own rotation lock.",
@@ -351,6 +361,9 @@ const I18N = {
     mode_pack: "Llena la Caja 📦", pack_again: "📦 Otra caja",
     mode_feed: "Alimenta al Animal 🦁", feed_again: "🦁 Otro animal",
     s_feed_meals: "Cuántas comidas come el animal",
+    s_feed_walk: "El animal se mueve",
+    s_feed_walk_sub: "Se pasea en vez de quedarse quieto, así la comida tiene que alcanzarlo. Desactívalo para los más pequeños.",
+    s_sound_volume: "Volumen del timbre y la alarma", s_sound_test: "▶︎ Escúchalos",
     aria_rotate: "Girar la pantalla", rot_auto: "Rotación: decide el dispositivo",
     rot_portrait: "Fijado vertical", rot_landscape: "Fijado horizontal",
     rot_unsupported: "Este dispositivo no deja que la app fije la rotación — usa su propio bloqueo.",
@@ -437,6 +450,9 @@ const I18N = {
     mode_pack: "Encha a Caixa 📦", pack_again: "📦 Outra caixa",
     mode_feed: "Alimente o Animal 🦁", feed_again: "🦁 Outro animal",
     s_feed_meals: "Quantas comidas o animal come",
+    s_feed_walk: "O animal anda por aí",
+    s_feed_walk_sub: "Ele passeia em vez de ficar parado, então a comida precisa alcançá-lo. Desligue para os menores.",
+    s_sound_volume: "Volume do sino e da buzina", s_sound_test: "▶︎ Ouvir",
     aria_rotate: "Girar a tela", rot_auto: "Rotação: o aparelho decide",
     rot_portrait: "Travado em pé", rot_landscape: "Travado deitado",
     rot_unsupported: "Este aparelho não deixa o app fixar a rotação — use o bloqueio dele.",
@@ -523,6 +539,9 @@ const I18N = {
     mode_pack: "はこに いれよう 📦", pack_again: "📦 もういちど",
     mode_feed: "どうぶつに あげよう 🦁", feed_again: "🦁 つぎの どうぶつ",
     s_feed_meals: "どうぶつが たべる かず",
+    s_feed_walk: "どうぶつが うごきまわる",
+    s_feed_walk_sub: "じっとしないで あるきます。おいかけて たべさせてね。ちいさい こには オフに。",
+    s_sound_volume: "チャイムと ブザーの おおきさ", s_sound_test: "▶︎ きいてみる",
     aria_rotate: "がめんの むき", rot_auto: "むき: じどう",
     rot_portrait: "たて に こてい", rot_landscape: "よこ に こてい",
     rot_unsupported: "この きかいでは むきを こていできません。きかいの せっていを つかってね。",
@@ -609,6 +628,9 @@ const I18N = {
     mode_pack: "상자에 담기 📦", pack_again: "📦 한 번 더",
     mode_feed: "동물에게 주기 🦁", feed_again: "🦁 다른 동물",
     s_feed_meals: "동물이 먹는 개수",
+    s_feed_walk: "동물이 돌아다녀요",
+    s_feed_walk_sub: "가만히 있지 않고 움직여요. 쫓아가서 먹여 주세요. 어린 아이에게는 꺼 두세요.",
+    s_sound_volume: "소리 크기 (종·버저)", s_sound_test: "▶︎ 들어보기",
     aria_rotate: "화면 회전", rot_auto: "회전: 기기가 결정",
     rot_portrait: "세로 고정", rot_landscape: "가로 고정",
     rot_unsupported: "이 기기에서는 앱이 회전을 고정할 수 없어요. 기기의 회전 잠금을 사용하세요.",
@@ -759,6 +781,10 @@ const els = {
   dockSettings: document.getElementById("dock-settings"),
   vibrationToggle: document.getElementById("vibration-toggle"),
   soundToggle: document.getElementById("sound-toggle"),
+  soundVolume: document.getElementById("sound-volume"),
+  soundVolumeValue: document.getElementById("sound-volume-value"),
+  soundTest: document.getElementById("sound-test"),
+  feedWalkToggle: document.getElementById("feed-walk-toggle"),
   themeSelect: document.getElementById("theme-select"),
   langSelect: document.getElementById("lang-select"),
   uiLangSelect: document.getElementById("ui-lang-select"),
@@ -969,6 +995,8 @@ async function init() {
   loadThemePref();
   loadHideWordsPref();
   loadFeedMealsPref();
+  loadFeedWalkPref();
+  loadSoundVolumePref();
   loadOrientationPref();
   loadLangPref();
   loadVoicePref();
@@ -1911,6 +1939,9 @@ function bpSaved() {
 // Mark the active option in each grid from whatever its <select> holds.
 function bpSyncControls() {
   applyHideWordsUI();
+  if (els.feedWalkToggle) els.feedWalkToggle.checked = state.feedWalk;
+  if (els.soundVolume) els.soundVolume.value = String(Math.round(state.soundVolume * 100));
+  if (els.soundVolumeValue) els.soundVolumeValue.textContent = `${Math.round(state.soundVolume * 100)}%`;
   document.querySelectorAll("#bp-lang-grid .bp-lang").forEach((b) => {
     b.classList.toggle("active", b.dataset.bpLang === state.lang);
   });
@@ -3691,6 +3722,21 @@ function bindUI() {
   if (els.feedMealsSelect) {
     els.feedMealsSelect.addEventListener("change", (e) => setFeedMeals(e.target.value));
   }
+  if (els.feedWalkToggle) {
+    els.feedWalkToggle.addEventListener("change", (e) => setFeedWalk(e.target.checked));
+  }
+  if (els.soundVolume) {
+    els.soundVolume.addEventListener("input", (e) => setSoundVolume(Number(e.target.value) / 100));
+    // Hearing it is the only way to judge it.
+    els.soundVolume.addEventListener("change", () => { primeSpeech(); playCorrect(); });
+  }
+  if (els.soundTest) {
+    onTap(els.soundTest, () => {
+      primeSpeech();
+      playCorrect();
+      setTimeout(() => buzz(), 900);
+    });
+  }
 
   els.categorySelect.addEventListener("change", (e) => {
     state.categoryId = e.target.value;
@@ -3726,7 +3772,10 @@ function bindUI() {
       renderCategoryMenu();
     });
   }
-  window.addEventListener("resize", () => { if (catMenuIsOpen()) positionCategoryMenu(); });
+  window.addEventListener("resize", () => {
+    if (catMenuIsOpen()) positionCategoryMenu();
+    if (state.currentGameType === "feed") sizeFeedAnimal();
+  });
   // The panel hangs off the chip; if the screen scrolls out from under it,
   // close rather than leave it floating over nothing.
   const mainEl = document.querySelector("main");
@@ -5742,6 +5791,56 @@ const ANIMAL_LOOKS = {
   tiger:    { fur: "#f2a03f", muzzle: "#fde7c7", nose: "#e8766b", ear: "round", inner: "#f3a0a8", stripes: "#3a2a22", whiskers: true },
   panda:    { fur: "#fbfbfd", muzzle: "#fbfbfd", nose: "#2f2f36", ear: "round", inner: "#2f2f36", earDark: "#2f2f36", eyePatch: "#2f2f36" },
   giraffe:  { fur: "#f0c56a", muzzle: "#f7e0ab", nose: "#8a6a3a", ear: "pointy", inner: "#d9a85a", spots: "#c08a3e", ossicones: "#8a6a3a" },
+
+  // Everything a parent is likely to add. A list this long is cheaper than one
+  // more animal coming out looking like a bear.
+  gorilla:   { fur: "#5f564f", muzzle: "#413b37", nose: "#211f1d", ear: "round", inner: "#413b37" },
+  zebra:     { fur: "#f6f5f3", muzzle: "#4a4447", nose: "#2d282b", ear: "pointy", inner: "#d9d4cd", stripes: "#2f2f36", crest: "#2f2f36" },
+  dolphin:   { fur: "#7fb6d6", ear: "none", fins: "#5a93b5", pout: true },
+  whale:     { fur: "#6f93c4", ear: "none", fins: "#527aad", pout: true },
+  shark:     { fur: "#93a6b8", ear: "none", fins: "#6d8296", pout: true },
+  seal:      { fur: "#9aacba", muzzle: "#c9d4dd", nose: "#39393f", ear: "none", whiskers: true },
+  octopus:   { fur: "#e8738f", ear: "none", pout: true },
+  crab:      { fur: "#e8574a", ear: "none", pout: true },
+  frog:      { fur: "#73c05b", muzzle: "#90d47a", nose: "#3f6a33", ear: "none" },
+  turtle:    { fur: "#6fa05a", muzzle: "#a9c99a", nose: "#3f6a33", ear: "none", spots: "#4a7a3a" },
+  snake:     { fur: "#7bbf5a", ear: "none", pout: true, spots: "#4a8a3a" },
+  crocodile: { fur: "#6f9a4a", muzzle: "#8fbf6a", nose: "#3f5f2a", ear: "none", snout: true },
+  dinosaur:  { fur: "#8fc46a", ear: "none", spots: "#6a9a4a", crest: "#e8a04a" },
+  duck:      { fur: "#f7f3e8", ear: "none", beak: true },
+  chicken:   { fur: "#f7f3e8", ear: "none", beak: true, crest: "#e8574a" },
+  penguin:   { fur: "#333a47", muzzle: "#fbfbfd", ear: "none", beak: true },
+  owl:       { fur: "#a98457", muzzle: "#e0c9a6", ear: "pointy", inner: "#8a6a45", beak: true },
+  mouse:     { fur: "#b9b2ad", muzzle: "#e8e3df", nose: "#e8859b", ear: "huge", inner: "#f3c4cf", whiskers: true },
+  rat:       { fur: "#a8a29c", muzzle: "#dcd7d2", nose: "#e8859b", ear: "huge", inner: "#eec0cb", whiskers: true },
+  fox:       { fur: "#e8793a", muzzle: "#fbfbfd", nose: "#3a2f2a", ear: "pointy", inner: "#2f2a27", whiskers: true },
+  wolf:      { fur: "#8d9299", muzzle: "#d7d9dc", nose: "#2f2f36", ear: "pointy", inner: "#6f757c" },
+  raccoon:   { fur: "#9aa0a8", muzzle: "#e8e3df", nose: "#2f2f36", ear: "pointy", inner: "#6f757c", eyePatch: "#3a3a40", whiskers: true },
+  deer:      { fur: "#c08a52", muzzle: "#e8c49a", nose: "#4a3a33", ear: "pointy", inner: "#a8713c", spots: "#e2c293" },
+  koala:     { fur: "#a7adb4", muzzle: "#c9ced4", nose: "#3a3a40", ear: "huge", inner: "#d9b7c4" },
+  hippo:     { fur: "#a98fb5", muzzle: "#c4a9cf", nose: "#6b5a75", ear: "round", inner: "#c4a9cf", snout: true },
+  rhino:     { fur: "#9aa3ad", muzzle: "#b6bec6", nose: "#5a626b", ear: "round", inner: "#7f8894", horns: "#e8e0cf" },
+  goat:      { fur: "#efe9e0", muzzle: "#d9d2c8", nose: "#4a4447", ear: "droopy", inner: "#cbc4b8", horns: "#cbbfa8" },
+  donkey:    { fur: "#9aa0a8", muzzle: "#d9d9dc", nose: "#3a3a40", ear: "long", inner: "#c0c4c9" },
+  camel:     { fur: "#d9b07a", muzzle: "#efd7b2", nose: "#6b4a33", ear: "round", inner: "#c09258" },
+  llama:     { fur: "#efe4d2", muzzle: "#d9ccb8", nose: "#4a4447", ear: "long", inner: "#cfc2ae", wool: "#f6f1e8" },
+  kangaroo:  { fur: "#c08a52", muzzle: "#e8c49a", nose: "#4a3a33", ear: "long", inner: "#d9a85a" },
+  squirrel:  { fur: "#b5793f", muzzle: "#f3dcc2", nose: "#4a3a33", ear: "pointy", inner: "#8d5630", whiskers: true },
+  hedgehog:  { fur: "#b08f6a", muzzle: "#e8d6bc", nose: "#3a2f2a", ear: "round", inner: "#8d6f4e", spots: "#7a6246" },
+  bat:       { fur: "#5f5668", muzzle: "#7a7085", nose: "#2f2a33", ear: "huge", inner: "#8a7a95" },
+  bee:       { fur: "#f2c23f", ear: "none", stripes: "#2f2a22", crest: "#2f2a22" },
+  unicorn:   { fur: "#fbfbfd", muzzle: "#fde7f1", nose: "#e8859b", ear: "pointy", inner: "#f6bdc8", ossicones: "#f0c56a", mane: "#c9a8f0" },
+  dragon:    { fur: "#8f6fd4", muzzle: "#a98fe0", nose: "#4a3a6a", ear: "pointy", inner: "#6f55a8", crest: "#e8a04a" },
+};
+
+// Younger words for the same animal, so a tile that says "Bunny" is a rabbit.
+const ANIMAL_ALIASES = {
+  kitty: "cat", kitten: "cat", puppy: "dog", doggy: "dog", bunny: "rabbit",
+  lamb: "sheep", piglet: "pig", calf: "cow", foal: "horse", pony: "horse",
+  cub: "bear", birdie: "bird", chick: "chicken", hen: "chicken", rooster: "chicken",
+  alpaca: "llama", tortoise: "turtle", gator: "crocodile", alligator: "crocodile",
+  orca: "whale", kangaroos: "kangaroo", teddy: "bear", "polar bear": "bear",
+  "guinea pig": "mouse", hamster: "mouse", gerbil: "mouse", donkeys: "donkey",
 };
 
 // A name with no entry still gets a creature, and the same creature every
@@ -5749,8 +5848,14 @@ const ANIMAL_LOOKS = {
 function animalLookFor(item) {
   const key = String((item && item.en) || "").trim().toLowerCase();
   if (ANIMAL_LOOKS[key]) return ANIMAL_LOOKS[key];
-  for (const k of Object.keys(ANIMAL_LOOKS)) {
-    if (key.includes(k)) return ANIMAL_LOOKS[k];
+  if (ANIMAL_ALIASES[key] && ANIMAL_LOOKS[ANIMAL_ALIASES[key]]) return ANIMAL_LOOKS[ANIMAL_ALIASES[key]];
+  // A plural, or a name with a word in front: "baby elephant", "sea turtle".
+  const words = key.split(/[^a-z]+/).filter(Boolean);
+  for (const w of words) {
+    const singular = w.replace(/(ies)$/, "y").replace(/(es|s)$/, "");
+    const hit = ANIMAL_LOOKS[w] || ANIMAL_LOOKS[singular] ||
+      ANIMAL_LOOKS[ANIMAL_ALIASES[w]] || ANIMAL_LOOKS[ANIMAL_ALIASES[singular]];
+    if (hit) return hit;
   }
   let h = 0;
   for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) % 360;
@@ -5960,6 +6065,38 @@ function animalFaceSVG(look) {
 
 const FEED_MEALS_KEY = "kitai-feed-meals";
 
+const FEED_WALK_KEY = "kitai-feed-walk";
+const SOUND_VOL_KEY = "kitai-sound-volume";
+
+function loadFeedWalkPref() {
+  try {
+    const v = localStorage.getItem(FEED_WALK_KEY);
+    if (v != null) state.feedWalk = v !== "0";
+  } catch (_) {}
+}
+
+function setFeedWalk(on) {
+  state.feedWalk = !!on;
+  try { localStorage.setItem(FEED_WALK_KEY, state.feedWalk ? "1" : "0"); } catch (_) {}
+  if (els.feedWalkToggle) els.feedWalkToggle.checked = state.feedWalk;
+  if (els.feedAnimal) els.feedAnimal.classList.toggle("walking", state.feedWalk);
+}
+
+function loadSoundVolumePref() {
+  try {
+    const n = Number(localStorage.getItem(SOUND_VOL_KEY));
+    if (n >= 0 && n <= 1) state.soundVolume = n;
+  } catch (_) {}
+}
+
+function setSoundVolume(v) {
+  const n = Math.max(0, Math.min(1, Number(v)));
+  state.soundVolume = Number.isFinite(n) ? n : 0.6;
+  try { localStorage.setItem(SOUND_VOL_KEY, String(state.soundVolume)); } catch (_) {}
+  if (els.soundVolume) els.soundVolume.value = String(Math.round(state.soundVolume * 100));
+  if (els.soundVolumeValue) els.soundVolumeValue.textContent = `${Math.round(state.soundVolume * 100)}%`;
+}
+
 function loadFeedMealsPref() {
   try {
     const n = Number(localStorage.getItem(FEED_MEALS_KEY));
@@ -6055,7 +6192,10 @@ function renderFeedView() {
     els.feedAnimalFace.dataset.animal = animal.id;
     els.feedAnimalFace.innerHTML = animalFaceSVG(animalLookFor(animal));
   }
-  if (els.feedAnimal) els.feedAnimal.classList.remove("happy");
+  if (els.feedAnimal) {
+    els.feedAnimal.classList.remove("happy");
+    els.feedAnimal.classList.toggle("walking", state.feedWalk);
+  }
   if (els.feedAnimalName) {
     els.feedAnimalName.textContent = state.hideCardWords ? "" : wordText(animal);
   }
@@ -6067,6 +6207,10 @@ function renderFeedView() {
   const tray = els.feedTray;
   tray.innerHTML = "";
   const waiting = feedRemaining();
+  // Fewer things on the tray means bigger pictures; five means smaller ones,
+  // so the column still ends above the bottom of the screen.
+  const tile = waiting.length <= 2 ? 92 : waiting.length === 3 ? 80 : waiting.length === 4 ? 68 : 58;
+  tray.style.setProperty("--feed-tile", `${tile}px`);
   waiting.forEach((item) => {
     const card = document.createElement("div");
     card.className = "pack-card feed-card";
@@ -6089,7 +6233,22 @@ function renderFeedView() {
     tray.appendChild(card);
   });
   renderFeedEaten();
+  sizeFeedAnimal();
   updatePlayBar();
+}
+
+// The animal takes whatever the stage can spare, within reason: big enough to
+// be recognised, never so big it walks off the bottom of a landscape screen.
+function sizeFeedAnimal() {
+  if (!els.feedSection || !els.feedAnimalFace || els.feedSection.classList.contains("hidden")) return;
+  const stage = els.feedSection.getBoundingClientRect();
+  if (!stage.height || !stage.width) return;
+  const tray = els.feedTray ? els.feedTray.getBoundingClientRect().width : 0;
+  const nameRoom = state.hideCardWords ? 6 : 28;
+  // The walk swings it by about a sixth of its own width, so leave that much.
+  const room = Math.min(stage.height - nameRoom, (stage.width - tray - 14) * 0.92);
+  const size = Math.max(84, Math.min(220, Math.round(room)));
+  els.feedAnimalFace.style.width = `${size}px`;
 }
 
 function renderFeedEaten() {
@@ -8443,6 +8602,13 @@ function onlineTtsUrls(text) {
       client: "tw-ob",
       tl: langCfg().speech.split("-")[0],
       q: text,
+      // The parameters the translator itself sends. Without them the endpoint
+      // takes a shorter path through its text analysis, which is where a bare
+      // ひつじ could come back slurred as "hijji".
+      total: "1",
+      idx: "0",
+      textlen: String(text.length),
+      prev: "input",
     });
     urls.push(`https://translate.googleapis.com/translate_tts?${q.toString()}`);
   }
@@ -9153,17 +9319,38 @@ function getAudioCtx() {
   return audioCtx;
 }
 
+// Everything the app plays goes through one gain node, so the volume slider
+// in settings moves the chime and the buzzer together.
+let soundBus = null;
+function getSoundBus() {
+  const ctx = getAudioCtx();
+  if (!ctx) return null;
+  if (!soundBus || soundBus.context !== ctx) {
+    soundBus = ctx.createGain();
+    soundBus.connect(ctx.destination);
+  }
+  // Set it outright rather than schedule it: a value scheduled for "now" lands
+  // a tick later, which is a confusing thing to read back.
+  soundBus.gain.cancelScheduledValues(ctx.currentTime);
+  soundBus.gain.value = state.soundVolume;
+  return soundBus;
+}
+
 function buzz() {
   if (!state.soundEnabled) return;
   const ctx = getAudioCtx();
   if (!ctx) return;
   const now = ctx.currentTime;
   const duration = 0.55;
+  const bus = getSoundBus();
+  if (!bus) return;
   const master = ctx.createGain();
-  master.gain.setValueAtTime(0.9, now);
-  master.gain.setValueAtTime(0.9, now + duration - 0.05);
+  // The buzzer used to be louder than the chime it answers; at full volume in
+  // a quiet room that is a fright rather than feedback.
+  master.gain.setValueAtTime(0.55, now);
+  master.gain.setValueAtTime(0.55, now + duration - 0.05);
   master.gain.exponentialRampToValueAtTime(0.001, now + duration);
-  master.connect(ctx.destination);
+  master.connect(bus);
 
   // Square-wave fundamentals for that harsh game-show buzzer feel
   [
@@ -9213,9 +9400,11 @@ function playBellTone(freq, duration, delay = 0) {
   fundamental.frequency.value = freq;
   overtone.frequency.value = freq * 2.76;
   overtoneGain.gain.value = 0.22;
+  const bus = getSoundBus();
+  if (!bus) return;
   fundamental.connect(gain);
   overtone.connect(overtoneGain).connect(gain);
-  gain.connect(ctx.destination);
+  gain.connect(bus);
   gain.gain.setValueAtTime(0.0001, start);
   gain.gain.exponentialRampToValueAtTime(0.55, start + 0.01);
   gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);

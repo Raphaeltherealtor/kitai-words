@@ -3236,6 +3236,44 @@ body.playing .card img {
 #dock-rotate.rotate-landscape { transform: rotate(90deg); }
 #dock-rotate.active { opacity: 1; background: rgba(47, 224, 192, 0.18); color: #2fe0c0; }
 
+/* A slider the size of a thumb, in the app's accent. */
+#settings .bp-range {
+  width: 100%;
+  height: 32px;
+  margin: 0;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+#settings .bp-range::-webkit-slider-runnable-track {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+}
+#settings .bp-range::-moz-range-track {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+}
+#settings .bp-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 28px;
+  height: 28px;
+  margin-top: -9px;
+  border: none;
+  border-radius: 50%;
+  background: var(--bp-ac);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+#settings .bp-range::-moz-range-thumb {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: var(--bp-ac);
+}
+
 /* ---- Feed the Animal -----------------------------------------------------
    The tray of food sits above; the animal waits at the bottom, which is the
    drop target. Same drag the box mode uses, so a child who has played one
@@ -3254,64 +3292,117 @@ body.playing .card img {
    column and cropping it square leaves the animal the room it needs to be
    recognised — a thumbnail of a dolphin under three enormous food cards was
    the wrong way round. */
+/* Food down the left as tiles that hug their picture — a card stretched to
+   the column with nothing in it was all the eye saw. */
 .feed-tray {
-  flex: 0 0 42%;
+  flex: 0 1 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
+  align-items: flex-start;   /* tiles size to their own contents */
   justify-content: center;
   gap: 8px;
-  overflow: hidden;
+  padding-left: 2px;
+  overflow-y: auto;          /* a long tray scrolls rather than falls off */
+  scrollbar-width: none;
 }
+.feed-tray::-webkit-scrollbar { width: 0; height: 0; }
 .feed-card.pack-card {
-  flex: 0 1 auto;
+  flex: 0 0 auto;
   min-height: 0;
   flex-direction: row;
   align-items: center;
-  gap: 9px;
-  padding: 6px 10px 6px 6px;
+  gap: 8px;
+  padding: 6px;
   border-radius: 18px;
 }
 .feed-card.pack-card img {
-  width: 58px;
-  height: 58px;
+  /* The tile shrinks as the tray fills, so five of them still fit the screen. */
+  width: var(--feed-tile, 76px);
+  height: var(--feed-tile, 76px);
   flex: none;
   object-fit: cover;      /* cropped, so a tall photo still fills its square */
-  border-radius: 13px;
+  border-radius: 14px;
   background: #f4f6fb;
+  min-height: 0;
 }
 .feed-card.pack-card .pack-card-label {
-  flex: 1;
+  flex: 0 1 auto;
   min-width: 0;
+  max-width: 27vw;
+  padding-right: 2px;
   text-align: left;
   font-size: 0.95rem;
   white-space: normal;
   overflow-wrap: anywhere;
 }
 
+/* The animal is just the animal: no frame, no dashed yard. Its hit area is
+   padded out in code, so a big empty box was decoration standing in the way. */
 .feed-animal {
   position: relative;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-width: 0;
-  align-self: stretch;
+  margin: auto;            /* centred in whatever the tray leaves */
+  align-self: center;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 8px 10px 10px;
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.18);
-  border: 3px dashed rgba(255, 255, 255, 0.45);
-  transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+  gap: 2px;
+  padding: 0;
+  border: none;
+  background: none;
 }
 .feed-animal.hidden { display: none; }
 .feed-animal-img {
-  width: min(190px, 100%);
+  position: relative;
+  /* Sized in code from the room the stage actually has: a percentage here has
+     nothing definite to resolve against once the box hugs its contents. */
+  width: 150px;
   aspect-ratio: 1;
-  flex: 0 1 auto;
-  min-height: 0;
+  flex: none;
 }
+
+/* It wanders about its half of the screen, which is what makes it something
+   to chase. It stops the moment food is over it, so the catch is winnable. */
+.feed-animal.walking { animation: feed-walk 15s ease-in-out infinite; }
+@keyframes feed-walk {
+  0%   { transform: translate(0, 0); }
+  14%  { transform: translate(13%, -17%); }
+  30%  { transform: translate(-11%, -6%); }
+  46%  { transform: translate(8%, 15%); }
+  62%  { transform: translate(-13%, 9%); }
+  80%  { transform: translate(10%, -11%); }
+  100% { transform: translate(0, 0); }
+}
+.feed-animal.walking .feed-face { animation: feed-bob 0.95s ease-in-out infinite; }
+@keyframes feed-bob {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-5px) rotate(2deg); }
+}
+/* Holding still to be fed, to chew, to refuse, to be pleased with itself. */
+.feed-animal.walking.over,
+.feed-animal.walking.chew,
+.feed-animal.walking.refuse,
+.feed-animal.walking.happy { animation-play-state: paused; }
+.feed-animal.walking.over .feed-face,
+.feed-animal.walking.chew .feed-face,
+.feed-animal.walking.refuse .feed-face,
+.feed-animal.walking.happy .feed-face { animation: none; }
+
+/* Food held over it: a glow where the dashed box used to be. */
+.feed-animal-img::after {
+  content: "";
+  position: absolute;
+  inset: -6%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(47, 224, 192, 0.55), rgba(47, 224, 192, 0) 70%);
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  pointer-events: none;
+}
+.feed-animal.over .feed-animal-img::after { opacity: 1; }
 
 /* ---- The animal, drawn ----------------------------------------------------
    A photograph cannot open its mouth, and the mouth is the whole game. The
@@ -3430,6 +3521,7 @@ body.playing .card img {
 
 @media (prefers-reduced-motion: reduce) {
   .af-breathe, .af-eyes, .af-ears, .af-trunk,
+  .feed-animal.walking, .feed-animal.walking .feed-face,
   .feed-animal .af-mouth, .feed-animal.happy .af-root { animation: none; }
 }
 .feed-animal-name {
@@ -4011,11 +4103,9 @@ body.playing .card img {
     align-self: center;
     width: min(230px, 34%);
   }
-  /* Sideways there is width to spare, so the food column takes a little less
-     and the animal a little more. */
-  .feed-tray { flex: 0 0 34%; }
-  .feed-card.pack-card img { width: 50px; height: 50px; }
-  .feed-animal-img { width: min(150px, 100%); }
+  /* Sideways there is height to spare sideways, not down: keep the tiles small
+     so three or four of them still stack. */
+  .feed-card.pack-card .pack-card-label { max-width: 22vw; }
   /* The finish card is the whole stage, whichever way up. */
   .pack-sentence,
   .feed-sentence { flex: 1 1 auto; }
@@ -4045,7 +4135,6 @@ body.playing .card img {
   .pack-card img { min-height: 40px; }
   .pack-card-label { font-size: 0.85rem; }
   .feed-animal { padding: 6px 10px 8px; }
-  .feed-animal-img { width: min(130px, 100%); }
   .feed-animal-name { font-size: 0.85rem; }
   .pack-box { width: min(200px, 100%); padding-top: 14px; }
   .pack-front { min-height: 56px; margin-top: 20px; }

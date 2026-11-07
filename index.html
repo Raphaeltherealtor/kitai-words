@@ -652,6 +652,14 @@
                 </div>
                 <span class="bp-hint" data-i18n="s_feed_meals_hint">The tray always holds more than it eats, so most of what is on it is the wrong answer.</span>
               </div>
+              <label class="bp-toggle bp-field-divided">
+                <span class="bp-row-text">
+                  <span class="bp-row-title" data-i18n="s_feed_walk">The animal walks around</span>
+                  <span class="bp-row-sub" data-i18n="s_feed_walk_sub">It wanders instead of sitting still, so the food has to catch it. Turn it off for a younger child.</span>
+                </span>
+                <input type="checkbox" id="feed-walk-toggle" checked />
+                <span class="bp-switch" aria-hidden="true"></span>
+              </label>
               <select id="feed-meals" class="bp-shadow-control" aria-hidden="true" tabindex="-1">
                 <option value="1" selected>1</option>
                 <option value="2">2</option>
@@ -698,6 +706,14 @@
               <input type="checkbox" id="vibration-toggle" checked />
               <span class="bp-switch" aria-hidden="true"></span>
             </label>
+            <div class="bp-card">
+              <div class="bp-card-head">
+                <span class="bp-card-title" data-i18n="s_sound_volume">Chime &amp; buzzer volume</span>
+                <span id="sound-volume-value" class="bp-head-sub">60%</span>
+              </div>
+              <input type="range" id="sound-volume" class="bp-range" min="0" max="100" step="5" value="60" aria-label="Chime and buzzer volume" />
+              <button type="button" id="sound-test" class="bp-btn bp-btn-soft" data-i18n="s_sound_test">▶︎ Hear them</button>
+            </div>
           </div>
 
           <div class="bp-group">

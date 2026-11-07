@@ -48,7 +48,8 @@ By default it eats **one** food, and the tray holds more than it eats, so most o
 
 When it has eaten its fill the animal says what it liked, built from what it was actually fed: "The elephant likes the mango and the cheese." Tap any picture to hear its word, 🔊 for the sentence, or **🦁 Feed another** for a new animal and a new tray.
 
-- **The animal is a drawn character, not the photograph** — a photo cannot open its mouth, and the mouth is the whole game. The face is built from a handful of traits (fur, ears, nose, a pattern, the odd trunk or beak), so every animal on the list has one and a word a parent adds to Animals gets a creature of its own, coloured from its name. It blinks, breathes, mouths the word it just asked for, opens wide when food comes near, chews what it is given, shakes its head at what it isn't, and grins at the end. The real photograph is still there in the closing line-up. `prefers-reduced-motion` stops the idle animation.
+- **It walks around.** The animal wanders its half of the screen so the food has to catch it, and stands still the moment food is over it. Parent settings → Game turns it off for a younger child.
+- **The animal is a drawn character, not the photograph** — a photo cannot open its mouth, and the mouth is the whole game. The face is built from a handful of traits (fur, ears, nose, a pattern, the odd trunk or beak); fifty-odd animals have their own, from gorilla and zebra to penguin and dolphin, nicknames (bunny, puppy) and descriptions ("baby elephant", "sea turtle") land on the right one, and anything unrecognised gets a creature of its own, coloured from its name. It blinks, breathes, mouths the word it just asked for, opens wide when food comes near, chews what it is given, shakes its head at what it isn't, and grins at the end. The real photograph is still there in the closing line-up. `prefers-reduced-motion` stops the idle animation.
 - **"The dog wants milk"**, not "wants to eat the milk": a drink is drunk (のみたい / 마시고 싶어요 / beber), a mass noun drops its article, and something that isn't food at all is simply wanted.
 - The animal is drawn at random from the **Animals** category as it stands right now, so a word added there is in the hat the very next round — and the same animal never comes up twice in a row while another is available.
 - This mode needs two categories at once, so it ignores the category chip and draws from everything that is in play.
@@ -60,6 +61,9 @@ When it has eaten its fill the animal says what it liked, built from what it was
 - **A drag lands the moment it touches.** In Pack the Box and Feed the Animal the drop fires as soon as the picture reaches the box or the animal — no need to let go. A finger that carries straight on and off the edge of the screen has already counted, and a swipe fast enough to jump the target between two touch samples is caught by testing the line between them. Letting go on the target still works for anyone who drags the careful way.
 - **🔄 in the dock** cycles the screen between *device decides*, *locked upright* and *locked sideways*, and remembers the choice. Locking the rotation needs the Screen Orientation API and, on Android, fullscreen — the app goes fullscreen on the way. Where the API is missing (iOS) the button doesn't appear and the device's own rotation lock is the answer.
 - **Sideways**, the two drag modes turn on their side: the pictures take the left and the box or animal stands at the right, where the dragging hand already is.
+
+## Sound
+- Parent settings → **Game → Chime & buzzer volume** sets how loud the feedback sounds are (the buzzer used to be louder than the chime it answers; it isn't any more), with a button to hear both at the level you picked.
 
 ## Choose which words the games use (parents)
 Open parent settings → **Words in play** (also on the **Game** screen). Every category is one row — Animals, Numbers, Things, and any category you made — with a checkbox that summarises it:

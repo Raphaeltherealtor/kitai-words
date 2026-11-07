@@ -163,7 +163,15 @@ function wordText(item) {
 // though the tile still shows the ambiguous kana. Falls back to the shown word.
 function speechText(item) {
   if (!item) return "";
-  if (state.lang === "ja") return item.jaSpeech || item.jaKana || item.en || "";
+  if (state.lang === "ja") {
+    // Never hand the voice kanji when the reading is on the card: it guesses
+    // the reading, and guesses wrong (消防車 → しょうほうしゃ). A kanji
+    // jaSpeech that slipped through — an old copy synced from another device —
+    // is ignored in favour of the kana.
+    const sp = item.jaSpeech || "";
+    if (sp && /[一-鿿]/.test(sp) && item.jaKana && !/[一-鿿]/.test(item.jaKana)) return item.jaKana;
+    return sp || item.jaKana || item.en || "";
+  }
   return wordText(item);
 }
 // The romanization line (under the word). Only the Japanese and Korean tracks
@@ -1332,9 +1340,9 @@ function normalizeManifest(m) {
 
 // Words added before the kana/kanji split kept the translator's kanji in the
 // *kana* field, so a child learning hiragana met 蝶 on the card and the voice
-// was handed a spelling whose reading it had to guess. Move the kanji to
-// `jaSpeech` — where it still earns the right pitch accent — and put the
-// reading back on the tile. Nothing is thrown away, and a word whose romaji
+// was handed a spelling whose reading it had to guess. Put the reading back on
+// the tile — and, since a kanji spoken form makes the voice guess too, drop any
+// kanji `jaSpeech` so every word says the reading on its card. Nothing is thrown away, and a word whose romaji
 // doesn't convert is left exactly as it was. Idempotent: the second pass over
 // an already-repaired word finds no kanji in `jaKana` and does nothing.
 // `updatedAt` is deliberately NOT bumped — this is a repair, not an edit, and
@@ -1343,12 +1351,20 @@ function normalizeManifest(m) {
 function repairKanjiReadings(m) {
   let changed = 0;
   Object.values((m && m.items) || {}).forEach((w) => {
-    if (!w || !w.jaKana || scriptTag(w.jaKana) !== "Kanji") return;
-    const hira = romajiToHiragana(w.jaRomaji || "");
-    if (!hira) return;
-    if (!w.jaSpeech) w.jaSpeech = w.jaKana;
-    w.jaKana = hira;
-    changed++;
+    if (!w) return;
+    if (w.jaKana && scriptTag(w.jaKana) === "Kanji") {
+      const hira = romajiToHiragana(w.jaRomaji || "");
+      if (hira) {
+        w.jaKana = hira;
+        changed++;
+      }
+    }
+    // Every word speaks its reading (2026-11): a kanji spoken form made the
+    // voice guess, and it guessed wrong. Drop it once the card carries kana.
+    if (w.jaSpeech && /[一-鿿]/.test(w.jaSpeech) && w.jaKana && !/[一-鿿]/.test(w.jaKana)) {
+      delete w.jaSpeech;
+      changed++;
+    }
   });
   return changed;
 }
@@ -2265,7 +2281,9 @@ function buildSuggestChip(r, container, onPick) {
   play.setAttribute("aria-label", "Hear it");
   play.addEventListener("click", (e) => {
     e.stopPropagation();
-    synthesize(r.speech || r.display, { showErrors: false });
+    // Hear the reading, not the kanji — see speechText.
+    const say = r.speech && !/[一-鿿]/.test(r.speech) ? r.speech : r.display;
+    synthesize(say, { showErrors: false });
   });
   const body = document.createElement("button");
   body.type = "button";
@@ -2283,7 +2301,8 @@ function buildSuggestChip(r, container, onPick) {
   body.addEventListener("click", () => {
     container.querySelectorAll(".suggest-chip").forEach((el) => el.classList.remove("selected"));
     chip.classList.add("selected");
-    onPick(r.display, r.romaji || "", r.speech && r.speech !== r.display ? r.speech : "");
+    const keep = r.speech && r.speech !== r.display && !/[一-鿿]/.test(r.speech) ? r.speech : "";
+    onPick(r.display, r.romaji || "", keep);
   });
   chip.appendChild(play);
   chip.appendChild(body);

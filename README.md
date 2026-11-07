@@ -28,6 +28,7 @@ A touch-friendly Japanese vocab game for toddlers. Runs on mobile browsers and a
 Open parent settings → **Words** → **＋ Add a word**. You can now:
 - **Type just the English** and tap **✨ Suggest from English** — the app translates it and offers the native spelling to pick from (kanji, hiragana, and katakana chips, plus the romaji reading). Tap a chip to fill the word/romaji fields; you can still edit them. Needs internet; falls back to manual entry if the translator can't be reached.
 - After you tap **+ Add Word**, the **photo picker opens automatically** (seeded with the English term) so you can pick pictures right away.
+- **Move a word to another group:** tap the word tile → **✏️ Edit word** → **Group**. A pumpkin filed under Animals goes to Vegetables from there, and the move follows it into every game and syncs to your other devices. Works for the built-in words too.
 - **Fix a wrong reading/pronunciation:** tap any word tile → **✏️ Edit word**. Change the kana that the app shows and speaks (or tap **✨ Suggest** for other readings), then **Save word**. Works for your own words and the built-in ones; the change syncs through the Shared Library.
 - **Fix the pitch accent (箸 vs 橋):** the same kana can be two words with different pitch — 箸 (chopsticks, *HA‑shi*) vs 橋 (bridge, *ha‑SHI*), 桃 vs 腿 for もも. Bare kana carries no accent, and the Web Speech API has no per‑syllable pitch control. The lever is the **spoken form**: in **✏️ Edit word** fill **"🔊 Say it as"** with the kanji (箸/橋/桃). The tile still shows the kana, but the voice is handed the kanji so a good Japanese voice applies the right accent from its dictionary. Stored as the word's optional `jaSpeech`; leave blank to just speak the kana. Suggestions auto‑fill it from the kanji they generate. (Accent fidelity depends on the voice — high‑quality Japanese voices honor it; robotic/VoiceRSS voices may flatten it.)
 
@@ -41,12 +42,14 @@ When the box is full, the six words are read back as **one sentence**, and which
 - It honours the same selection as every other mode, so a box only ever contains words that are in play.
 
 ## Feed the Animal (vocab mode)
-An animal waits at the bottom with a tray of food above it. The voice asks for one — "the lion wants to eat the apple" — and the child drags that one down. The animal chews it and asks for the next; the wrong one makes it turn its head away, the food goes back and the request is repeated.
+The food stands in a column down the left, cropped square; the animal is drawn large on the right. The voice asks for one — "the lion wants to eat the apple" — and the child drags that one down. The animal chews it and asks for the next; the wrong one makes it turn its head away, the food goes back and the request is repeated.
 
 By default it eats **one** food, and the tray holds more than it eats, so most of what is on offer is the wrong answer. Parent settings → **Game** sets how many it eats (1–5); how many wrong choices sit alongside comes from the same "Pictures to choose from" setting the other modes use.
 
 When it has eaten its fill the animal says what it liked, built from what it was actually fed: "The elephant likes the mango and the cheese." Tap any picture to hear its word, 🔊 for the sentence, or **🦁 Feed another** for a new animal and a new tray.
 
+- **The animal is a drawn character, not the photograph** — a photo cannot open its mouth, and the mouth is the whole game. The face is built from a handful of traits (fur, ears, nose, a pattern, the odd trunk or beak), so every animal on the list has one and a word a parent adds to Animals gets a creature of its own, coloured from its name. It blinks, breathes, mouths the word it just asked for, opens wide when food comes near, chews what it is given, shakes its head at what it isn't, and grins at the end. The real photograph is still there in the closing line-up. `prefers-reduced-motion` stops the idle animation.
+- **"The dog wants milk"**, not "wants to eat the milk": a drink is drunk (のみたい / 마시고 싶어요 / beber), a mass noun drops its article, and something that isn't food at all is simply wanted.
 - The animal is drawn at random from the **Animals** category as it stands right now, so a word added there is in the hat the very next round — and the same animal never comes up twice in a row while another is available.
 - This mode needs two categories at once, so it ignores the category chip and draws from everything that is in play.
 - Needs at least one animal and two things to feed it among the words in play; it says so plainly if *Words in play* has switched those off.

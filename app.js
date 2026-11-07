@@ -307,6 +307,7 @@ const I18N = {
     s_words_unit: "words", s_need_photo: "need a photo", s_add_photo: "add photo",
     s_add_more_options: "Add with more options",
     im_photos: "Photos", im_word_sound: "Word & sound",
+    im_group: "Group",
     im_shows_says: "What the app shows & says", im_romaji: "Romaji (optional)",
     s_my_words: "My words",
     im_photo_help: "Up to 30 photos per word — the game picks a random one each round. GIFs work and stay animated.",
@@ -392,6 +393,7 @@ const I18N = {
     s_words_unit: "palabras", s_need_photo: "sin foto", s_add_photo: "añadir foto",
     s_add_more_options: "Añadir con más opciones",
     im_photos: "Fotos", im_word_sound: "Palabra y sonido",
+    im_group: "Grupo",
     im_shows_says: "Lo que la app muestra y dice", im_romaji: "Romaji (opcional)",
     s_my_words: "Mis palabras",
     im_photo_help: "Hasta 30 fotos por palabra — el juego elige una al azar en cada ronda. Los GIF funcionan y se mueven.",
@@ -477,6 +479,7 @@ const I18N = {
     s_words_unit: "palavras", s_need_photo: "sem foto", s_add_photo: "adicionar foto",
     s_add_more_options: "Adicionar com mais opções",
     im_photos: "Fotos", im_word_sound: "Palavra e som",
+    im_group: "Grupo",
     im_shows_says: "O que o app mostra e diz", im_romaji: "Romaji (opcional)",
     s_my_words: "Minhas palavras",
     im_photo_help: "Até 30 fotos por palavra — o jogo escolhe uma ao acaso em cada rodada. GIFs funcionam e continuam animados.",
@@ -562,6 +565,7 @@ const I18N = {
     s_words_unit: "ことば", s_need_photo: "しゃしん なし", s_add_photo: "しゃしんを ついか",
     s_add_more_options: "くわしく ついか",
     im_photos: "しゃしん", im_word_sound: "ことばと おと",
+    im_group: "グループ",
     im_shows_says: "アプリが みせて はなす ことば", im_romaji: "ローマじ（にんい）",
     s_my_words: "ことばリスト",
     im_photo_help: "1つの ことばに 30まいまで。まいかい ランダムに えらばれます。GIF も うごきます。",
@@ -647,6 +651,7 @@ const I18N = {
     s_words_unit: "단어", s_need_photo: "사진 없음", s_add_photo: "사진 추가",
     s_add_more_options: "옵션 더보기로 추가",
     im_photos: "사진", im_word_sound: "단어와 소리",
+    im_group: "분류",
     im_shows_says: "앱이 보여주고 말하는 것", im_romaji: "로마자 (선택)",
     s_my_words: "내 단어",
     im_photo_help: "단어당 최대 30장 — 매 라운드 무작위로 한 장을 씁니다. GIF도 움직입니다.",
@@ -783,7 +788,7 @@ const els = {
   feedSection: document.getElementById("feed-section"),
   feedTray: document.getElementById("feed-tray"),
   feedAnimal: document.getElementById("feed-animal"),
-  feedAnimalImg: document.getElementById("feed-animal-img"),
+  feedAnimalFace: document.getElementById("feed-animal-face"),
   feedAnimalName: document.getElementById("feed-animal-name"),
   feedEaten: document.getElementById("feed-eaten"),
   feedSentence: document.getElementById("feed-sentence"),
@@ -878,6 +883,7 @@ const els = {
   readingEditor: document.getElementById("reading-editor"),
   readingInput: document.getElementById("reading-input"),
   readingRomaji: document.getElementById("reading-romaji"),
+  readingCategory: document.getElementById("reading-category"),
   readingSpeechRow: document.getElementById("reading-speech-row"),
   readingSpeech: document.getElementById("reading-speech"),
   readingSuggest: document.getElementById("reading-suggest"),
@@ -1527,6 +1533,8 @@ function wordToItem(w) {
 // Patch an existing (built-in) item in place with a manifest record's reading
 // fields — used when a parent fixes a built-in word's pronunciation.
 function applyWordOverride(item, w) {
+  // A built-in can be moved to another group; the record keeps the new one.
+  if (w.categoryId) item.categoryId = w.categoryId;
   if (w.en) item.en = w.en;
   if (w.jaKana) item.jaKana = w.jaKana;
   if ("jaRomaji" in w) item.jaRomaji = w.jaRomaji;
@@ -4578,6 +4586,19 @@ function fillReadingEditor(item) {
   // The "say it as" (accent) field is Japanese-only.
   if (els.readingSpeechRow) els.readingSpeechRow.classList.toggle("hidden", isKo);
   if (els.readingSpeech) els.readingSpeech.value = isKo ? "" : item.jaSpeech || "";
+  // Which group the word belongs to — a word in the wrong one (a pumpkin
+  // filed under Animals) is moved from here, and the move follows it into
+  // every game and every device.
+  if (els.readingCategory) {
+    els.readingCategory.innerHTML = "";
+    state.categories.forEach((cat) => {
+      const opt = document.createElement("option");
+      opt.value = cat.id;
+      opt.textContent = `${cat.emoji} ${cat.label_en}`;
+      els.readingCategory.appendChild(opt);
+    });
+    els.readingCategory.value = item.categoryId;
+  }
   hideReadingEditor();
 }
 
@@ -4610,6 +4631,9 @@ function saveWordReading() {
         koRomaji: item.koRomaji || "",
       };
   if (item.photoUrl && !rec.photoUrl) rec.photoUrl = item.photoUrl;
+  const movedTo = els.readingCategory && els.readingCategory.value;
+  const moved = movedTo && movedTo !== item.categoryId;
+  if (movedTo) rec.categoryId = movedTo;
   if (state.lang === "ko") {
     rec.ko = kana;
     rec.koRomaji = romaji;
@@ -4626,8 +4650,17 @@ function saveWordReading() {
   applyWordManifestToState();
 
   if (els.readingStatus) {
-    els.readingStatus.textContent = "Saved. ✓";
+    const cat = state.categories.find((c) => c.id === movedTo);
+    els.readingStatus.textContent = moved && cat
+      ? `Saved — moved to ${cat.emoji} ${cat.label_en}. ✓`
+      : "Saved. ✓";
     els.readingStatus.style.color = BP_OK;
+  }
+  // The pills filter by category, so a word that just left the one being
+  // shown would otherwise vanish without explanation.
+  if (moved && state.imageCategoryId !== "all" && state.imageCategoryId !== movedTo) {
+    state.imageCategoryId = movedTo;
+    syncQuickAddCategory();
   }
   const fresh = state.items.find((i) => i.id === itemId);
   if (fresh) setImageModalTitle(fresh);
@@ -5682,6 +5715,240 @@ function resetFindSession() {
   state.findRepsDone = 0;
 }
 
+// ---- The animal's face -----------------------------------------------------
+// Feed the Animal shows a drawn character rather than the photograph: a photo
+// cannot open its mouth, and the mouth is the whole game. The face is built
+// from a handful of traits — fur, ears, nose, a pattern, the odd trunk — so
+// every animal on the list gets one, and a word a parent adds to Animals gets
+// a creature of its own (colour from its name) instead of nothing.
+// Everything that moves is a class the CSS animates: the eyes blink, the chest
+// breathes, the mouth opens when food comes near, chews what it is given and
+// clamps shut on what it isn't.
+
+const ANIMAL_LOOKS = {
+  cat:      { fur: "#f6b352", muzzle: "#fde7c7", nose: "#e8766b", ear: "pointy", inner: "#f3a0a8", whiskers: true },
+  dog:      { fur: "#bd8552", muzzle: "#f3dcc2", nose: "#4a3a33", ear: "droopy", inner: "#9b6a40", tongue: true },
+  bird:     { fur: "#53b7e8", ear: "none", beak: true, crest: "#f2a03f" },
+  fish:     { fur: "#49a8c9", ear: "none", fins: "#2f8aa8", pout: true },
+  cow:      { fur: "#f4f3f6", muzzle: "#f7c6cf", nose: "#d98fa0", ear: "round", inner: "#f0b9c4", horns: "#efe3c8", spots: "#3b3b44" },
+  horse:    { fur: "#b4713f", muzzle: "#d9a271", nose: "#4a3a33", ear: "pointy", inner: "#8d5630", mane: "#5a3a22" },
+  sheep:    { fur: "#3f3a3d", muzzle: "#4a4447", nose: "#2d282b", ear: "droopy", inner: "#5b5355", wool: "#f6f3ee" },
+  pig:      { fur: "#f3a7bb", muzzle: "#ef8ba6", nose: "#d9718f", ear: "pointy", inner: "#e98aa4", snout: true },
+  rabbit:   { fur: "#f1ece6", muzzle: "#fbe3e8", nose: "#e8859b", ear: "long", inner: "#f6bdc8", whiskers: true },
+  lion:     { fur: "#f0b457", muzzle: "#fbe2bb", nose: "#8a5a33", ear: "round", inner: "#d98f52", mane: "#c9752e" },
+  elephant: { fur: "#9aa6b5", muzzle: "#aab4c1", nose: "#7c8795", ear: "huge", inner: "#8793a3", trunk: true },
+  monkey:   { fur: "#9a6a45", muzzle: "#e8c49a", nose: "#6b4a33", ear: "huge", inner: "#e8c49a" },
+  bear:     { fur: "#9c6b4a", muzzle: "#dcb894", nose: "#4a332a", ear: "round", inner: "#7d5238" },
+  tiger:    { fur: "#f2a03f", muzzle: "#fde7c7", nose: "#e8766b", ear: "round", inner: "#f3a0a8", stripes: "#3a2a22", whiskers: true },
+  panda:    { fur: "#fbfbfd", muzzle: "#fbfbfd", nose: "#2f2f36", ear: "round", inner: "#2f2f36", earDark: "#2f2f36", eyePatch: "#2f2f36" },
+  giraffe:  { fur: "#f0c56a", muzzle: "#f7e0ab", nose: "#8a6a3a", ear: "pointy", inner: "#d9a85a", spots: "#c08a3e", ossicones: "#8a6a3a" },
+};
+
+// A name with no entry still gets a creature, and the same creature every
+// time: the colour comes from the letters of the word.
+function animalLookFor(item) {
+  const key = String((item && item.en) || "").trim().toLowerCase();
+  if (ANIMAL_LOOKS[key]) return ANIMAL_LOOKS[key];
+  for (const k of Object.keys(ANIMAL_LOOKS)) {
+    if (key.includes(k)) return ANIMAL_LOOKS[k];
+  }
+  let h = 0;
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) % 360;
+  return {
+    fur: `hsl(${h}, 55%, 66%)`,
+    muzzle: `hsl(${h}, 60%, 86%)`,
+    nose: `hsl(${h}, 40%, 32%)`,
+    ear: "round",
+    inner: `hsl(${h}, 55%, 78%)`,
+  };
+}
+
+let animalFaceUid = 0;
+
+function animalFaceSVG(look) {
+  const uid = `af${++animalFaceUid}`;
+  const L = look;
+  const parts = [];
+
+  // --- behind the head ---
+  if (L.mane) {
+    parts.push(`<circle cx="60" cy="62" r="45" fill="${L.mane}" class="af-mane"/>`);
+  }
+  if (L.wool) {
+    parts.push(
+      `<g class="af-wool" fill="${L.wool}">
+         <circle cx="30" cy="40" r="15"/><circle cx="60" cy="28" r="17"/><circle cx="90" cy="40" r="15"/>
+         <circle cx="24" cy="64" r="13"/><circle cx="96" cy="64" r="13"/>
+       </g>`
+    );
+  }
+  if (L.ossicones) {
+    parts.push(
+      `<g fill="${L.ossicones}" class="af-horns">
+         <rect x="40" y="12" width="5" height="18" rx="2.5"/><circle cx="42.5" cy="12" r="5"/>
+         <rect x="75" y="12" width="5" height="18" rx="2.5"/><circle cx="77.5" cy="12" r="5"/>
+       </g>`
+    );
+  }
+  if (L.horns) {
+    parts.push(
+      `<g fill="${L.horns}" class="af-horns">
+         <path d="M30 34 q-16 -6 -18 -18 q12 2 20 10 z"/>
+         <path d="M90 34 q16 -6 18 -18 q-12 2 -20 10 z"/>
+       </g>`
+    );
+  }
+  if (L.fins) {
+    parts.push(
+      `<g fill="${L.fins}" class="af-fins">
+         <path d="M18 62 q-14 -16 -14 0 q0 16 14 0 z"/>
+         <path d="M102 62 q14 -16 14 0 q0 16 -14 0 z"/>
+         <path d="M60 24 q-10 -14 10 -12 q18 2 12 14 z"/>
+       </g>`
+    );
+  }
+
+  // --- ears ---
+  const earFill = L.earDark || L.fur;
+  const ears = {
+    round: `<circle cx="28" cy="34" r="14" fill="${earFill}"/><circle cx="28" cy="34" r="7" fill="${L.inner}"/>
+            <circle cx="92" cy="34" r="14" fill="${earFill}"/><circle cx="92" cy="34" r="7" fill="${L.inner}"/>`,
+    huge:  `<ellipse cx="22" cy="54" rx="18" ry="24" fill="${earFill}"/><ellipse cx="24" cy="54" rx="10" ry="15" fill="${L.inner}"/>
+            <ellipse cx="98" cy="54" rx="18" ry="24" fill="${earFill}"/><ellipse cx="96" cy="54" rx="10" ry="15" fill="${L.inner}"/>`,
+    pointy:`<path d="M26 44 L32 14 L50 32 z" fill="${earFill}"/><path d="M31 40 L34 23 L43 32 z" fill="${L.inner}"/>
+            <path d="M94 44 L88 14 L70 32 z" fill="${earFill}"/><path d="M89 40 L86 23 L77 32 z" fill="${L.inner}"/>`,
+    droopy:`<ellipse cx="22" cy="60" rx="12" ry="22" fill="${earFill}" transform="rotate(14 22 60)"/>
+            <ellipse cx="98" cy="60" rx="12" ry="22" fill="${earFill}" transform="rotate(-14 98 60)"/>`,
+    long:  `<ellipse cx="42" cy="18" rx="9" ry="26" fill="${earFill}" transform="rotate(-10 42 18)"/>
+            <ellipse cx="42" cy="20" rx="4.5" ry="19" fill="${L.inner}" transform="rotate(-10 42 20)"/>
+            <ellipse cx="78" cy="18" rx="9" ry="26" fill="${earFill}" transform="rotate(10 78 18)"/>
+            <ellipse cx="78" cy="20" rx="4.5" ry="19" fill="${L.inner}" transform="rotate(10 78 20)"/>`,
+    none:  "",
+  };
+  parts.push(`<g class="af-ears">${ears[L.ear] || ears.round}</g>`);
+  if (L.crest) {
+    parts.push(`<path d="M60 22 q-6 -16 6 -16 q10 2 6 16 z" fill="${L.crest}" class="af-crest"/>`);
+  }
+
+  // --- head, and whatever is painted on it ---
+  parts.push(`<ellipse class="af-head" cx="60" cy="64" rx="38" ry="35" fill="${L.fur}"/>`);
+  const painted = [];
+  if (L.stripes) {
+    painted.push(
+      `<g fill="${L.stripes}" opacity="0.9">
+         <path d="M60 29 l-5 14 l10 0 z"/>
+         <path d="M27 48 q10 4 14 10 l-16 2 z"/>
+         <path d="M93 48 q-10 4 -14 10 l16 2 z"/>
+         <path d="M24 70 q10 2 15 7 l-17 4 z"/>
+         <path d="M96 70 q-10 2 -15 7 l17 4 z"/>
+       </g>`
+    );
+  }
+  if (L.spots) {
+    painted.push(
+      `<g fill="${L.spots}" opacity="0.85">
+         <ellipse cx="34" cy="48" rx="9" ry="7"/><ellipse cx="86" cy="52" rx="8" ry="6"/>
+         <ellipse cx="44" cy="84" rx="7" ry="5"/><ellipse cx="78" cy="36" rx="6" ry="5"/>
+       </g>`
+    );
+  }
+  if (L.eyePatch) {
+    painted.push(
+      `<g fill="${L.eyePatch}">
+         <ellipse cx="45" cy="55" rx="12" ry="14" transform="rotate(-12 45 55)"/>
+         <ellipse cx="75" cy="55" rx="12" ry="14" transform="rotate(12 75 55)"/>
+       </g>`
+    );
+  }
+  if (L.mane) {
+    painted.push(`<ellipse cx="60" cy="66" rx="36" ry="33" fill="${L.fur}"/>`);
+  }
+  if (painted.length) {
+    parts.push(
+      `<clipPath id="${uid}-head"><ellipse cx="60" cy="64" rx="38" ry="35"/></clipPath>
+       <g clip-path="url(#${uid}-head)">${painted.join("")}</g>`
+    );
+  }
+
+  // --- eyes: open, blinking, or happy arcs ---
+  const eyeWhite = L.eyePatch ? "#ffffff" : "#ffffff";
+  parts.push(
+    `<g class="af-eyes">
+       <g class="af-eye-open">
+         <ellipse cx="46" cy="56" rx="8" ry="9" fill="${eyeWhite}"/>
+         <ellipse cx="74" cy="56" rx="8" ry="9" fill="${eyeWhite}"/>
+         <circle class="af-pupil" cx="47" cy="57" r="4.2" fill="#2b2b33"/>
+         <circle class="af-pupil" cx="75" cy="57" r="4.2" fill="#2b2b33"/>
+         <circle cx="48.6" cy="54.6" r="1.6" fill="#fff"/>
+         <circle cx="76.6" cy="54.6" r="1.6" fill="#fff"/>
+       </g>
+       <g class="af-eye-happy">
+         <path d="M38 58 q8 -11 16 0" stroke="#2b2b33" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+         <path d="M66 58 q8 -11 16 0" stroke="#2b2b33" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+       </g>
+     </g>
+     <g class="af-brows">
+       <path d="M37 44 l16 5" stroke="#2b2b33" stroke-width="3" stroke-linecap="round"/>
+       <path d="M83 44 l-16 5" stroke="#2b2b33" stroke-width="3" stroke-linecap="round"/>
+     </g>`
+  );
+
+  // --- muzzle, nose and the mouth that does the eating ---
+  const mouthY = L.snout ? 88 : 86;
+  if (L.beak) {
+    parts.push(
+      `<g class="af-beak">
+         <path class="af-beak-top" d="M46 72 L74 72 L60 82 z" fill="#f2a03f"/>
+         <path class="af-beak-bottom" d="M48 74 L72 74 L60 84 z" fill="#d9821f"/>
+       </g>`
+    );
+  } else if (L.snout) {
+    parts.push(
+      `<ellipse cx="60" cy="80" rx="19" ry="14" fill="${L.muzzle}"/>
+       <ellipse cx="53" cy="78" rx="3.2" ry="4" fill="${L.nose}"/>
+       <ellipse cx="67" cy="78" rx="3.2" ry="4" fill="${L.nose}"/>`
+    );
+  } else if (L.pout) {
+    parts.push(`<ellipse cx="60" cy="80" rx="12" ry="9" fill="${L.fur}" opacity="0.65"/>`);
+  } else {
+    if (L.muzzle) parts.push(`<ellipse cx="60" cy="80" rx="21" ry="15" fill="${L.muzzle}"/>`);
+    parts.push(
+      `<path class="af-nose" d="M53 74 q7 -6 14 0 q-5 8 -7 8 q-2 0 -7 -8 z" fill="${L.nose || "#4a3a33"}"/>`
+    );
+  }
+  if (L.trunk) {
+    parts.push(
+      `<path class="af-trunk" d="M55 80 q5 16 1 26 q-1 7 6 7 q7 0 6 -8" fill="none" stroke="${L.fur}" stroke-width="11" stroke-linecap="round"/>`
+    );
+  }
+  if (L.whiskers) {
+    parts.push(
+      `<g class="af-whiskers" stroke="#4a3a33" stroke-width="1.6" stroke-linecap="round" opacity="0.6">
+         <path d="M34 78 l-16 -4"/><path d="M34 83 l-17 3"/>
+         <path d="M86 78 l16 -4"/><path d="M86 83 l17 3"/>
+       </g>`
+    );
+  }
+  // The mouth. Closed it is a line; open it is a dark ellipse food goes into.
+  parts.push(
+    `<g class="af-mouth-group">
+       <ellipse class="af-mouth" cx="60" cy="${mouthY}" rx="11" ry="4.5" fill="#6b2b33"/>
+       ${L.tongue ? `<ellipse class="af-tongue" cx="60" cy="${mouthY + 3}" rx="6" ry="3" fill="#ef8ba6"/>` : ""}
+     </g>`
+  );
+  parts.push(
+    `<g class="af-blush" opacity="0.35">
+       <ellipse cx="30" cy="74" rx="7" ry="4.5" fill="#ef6f8a"/>
+       <ellipse cx="90" cy="74" rx="7" ry="4.5" fill="#ef6f8a"/>
+     </g>`
+  );
+
+  return (
+    `<svg class="feed-face" viewBox="0 0 120 120" role="img" aria-hidden="true" focusable="false">` +
+    `<g class="af-root"><g class="af-breathe">${parts.join("")}</g></g></svg>`
+  );
+}
+
 // ---- Feed the Animal -------------------------------------------------------
 // One animal at the bottom with its mouth open, a tray of food above it. The
 // voice asks for one — "the lion wants to eat the apple" — and the child drags
@@ -5782,10 +6049,13 @@ function renderFeedView() {
   els.modeLabel.textContent = t("mode_feed");
 
   const animal = state.feed.animal;
-  if (els.feedAnimalImg && animal) {
-    applyItemImage(els.feedAnimalImg, animal);
-    els.feedAnimalImg.alt = animal.en;
+  // Only redraw the face when the animal changes — rebuilding the SVG every
+  // round would restart its blink and breathing mid-blink.
+  if (els.feedAnimalFace && animal && els.feedAnimalFace.dataset.animal !== animal.id) {
+    els.feedAnimalFace.dataset.animal = animal.id;
+    els.feedAnimalFace.innerHTML = animalFaceSVG(animalLookFor(animal));
   }
+  if (els.feedAnimal) els.feedAnimal.classList.remove("happy");
   if (els.feedAnimalName) {
     els.feedAnimalName.textContent = state.hideCardWords ? "" : wordText(animal);
   }
@@ -5797,7 +6067,6 @@ function renderFeedView() {
   const tray = els.feedTray;
   tray.innerHTML = "";
   const waiting = feedRemaining();
-  tray.style.setProperty("--feed-cols", String(waiting.length >= 4 ? 3 : Math.max(1, waiting.length)));
   waiting.forEach((item) => {
     const card = document.createElement("div");
     card.className = "pack-card feed-card";
@@ -5877,7 +6146,10 @@ function finishFeedSession() {
   showPromptArea(false);
   els.feedSection.classList.remove("hidden");
   if (els.feedTray) els.feedTray.innerHTML = "";
-  if (els.feedAnimal) els.feedAnimal.classList.add("hidden");
+  if (els.feedAnimal) {
+    els.feedAnimal.classList.remove("hidden");
+    els.feedAnimal.classList.add("happy");
+  }
   renderFeedSentence();
   playCorrect();
   launchFireworks();
@@ -5888,6 +6160,32 @@ function finishFeedSession() {
 // --- what the animal says ---------------------------------------------------
 // Two sentences: the request, said every round, and the verdict at the end.
 // Same five languages as everywhere else, each with its own frame.
+
+// What you do with it, in words. "The donkey wants to eat milk" is not a
+// sentence anyone says — milk is drunk, and it takes no article either. Three
+// kinds, then: something you drink, something you eat, and something that is
+// not food at all, which the animal simply wants.
+const FEED_DRINKS = ["milk", "water", "juice", "tea", "soup"];
+// Mass nouns: "wants to eat rice", never "wants to eat the rice".
+const FEED_MASS = ["rice", "bread", "cheese", "corn", "meat", "honey", "butter", "jam", "pasta", "cereal"];
+
+function feedVerbFor(item) {
+  if (!item) return "want";
+  const en = String(item.en || "").trim().toLowerCase();
+  if (FEED_DRINKS.includes(en)) return "drink";
+  return PACK_FOOD_CATS.includes(item.categoryId) ? "eat" : "want";
+}
+
+function feedIsMass(item) {
+  const en = String((item && item.en) || "").trim().toLowerCase();
+  return FEED_DRINKS.includes(en) || FEED_MASS.includes(en);
+}
+
+// "the apple", but "milk" — a mass noun stands on its own.
+function feedEnName(item) {
+  const en = String((item && item.en) || "").trim().toLowerCase();
+  return feedIsMass(item) ? en : `the ${en}`;
+}
 
 function feedIsEdible(item) {
   return item && PACK_FOOD_CATS.includes(item.categoryId);
@@ -5906,27 +6204,32 @@ function buildFeedPrompt() {
   const food = state.currentTarget;
   if (!animal || !food) return { text: "", gloss: "" };
   const lang = state.lang;
-  const eat = feedIsEdible(food);
-  const foodEn = String(food.en || "").toLowerCase();
-  const gloss = eat
-    ? `${capitalizeFirst(feedTheAnimal("en"))} wants to eat the ${foodEn}.`
-    : `${capitalizeFirst(feedTheAnimal("en"))} wants the ${foodEn}.`;
+  const verb = feedVerbFor(food);
+  const who = capitalizeFirst(feedTheAnimal("en"));
+  const gloss =
+    verb === "eat" ? `${who} wants to eat ${feedEnName(food)}.`
+    : verb === "drink" ? `${who} wants ${feedEnName(food)}.`
+    : `${who} wants ${feedEnName(food)}.`;
 
   let text = gloss;
   const a = wordText(animal);
   const f = wordText(food);
   if (lang === "ja") {
-    text = eat ? `${a}は ${f}が たべたいです。` : `${a}は ${f}が ほしいです。`;
+    // 食べたい for food, 飲みたい for a drink, ほしい for anything else.
+    const jaVerb = verb === "eat" ? "たべたいです" : verb === "drink" ? "のみたいです" : "ほしいです";
+    text = `${a}は ${f}が ${jaVerb}。`;
   } else if (lang === "ko") {
-    text = eat
-      ? `${a}${koParticle(a, "은", "는")} ${f}${koParticle(f, "을", "를")} 먹고 싶어요.`
-      : `${a}${koParticle(a, "은", "는")} ${f}${koParticle(f, "이", "가")} 갖고 싶어요.`;
+    const topic = `${a}${koParticle(a, "은", "는")}`;
+    text =
+      verb === "eat" ? `${topic} ${f}${koParticle(f, "을", "를")} 먹고 싶어요.`
+      : verb === "drink" ? `${topic} ${f}${koParticle(f, "을", "를")} 마시고 싶어요.`
+      : `${topic} ${f}${koParticle(f, "이", "가")} 갖고 싶어요.`;
   } else if (lang === "es" || lang === "pt") {
-    const who = `${romanceArticle(a, lang)} ${a.toLowerCase()}`;
+    const subject = `${romanceArticle(a, lang)} ${a.toLowerCase()}`;
     const what = `${romanceArticle(f, lang)} ${f.toLowerCase()}`;
     const wants = lang === "es" ? "quiere" : "quer";
-    const toEat = lang === "es" ? " comer" : " comer";
-    text = `${capitalizeFirst(who)} ${wants}${eat ? toEat : ""} ${what}.`;
+    const action = verb === "eat" ? " comer" : verb === "drink" ? (lang === "es" ? " beber" : " beber") : "";
+    text = `${capitalizeFirst(subject)} ${wants}${action} ${what}.`;
   }
   return { text, gloss };
 }
@@ -5936,7 +6239,7 @@ function buildFeedSentence() {
   const eaten = state.feed.eaten;
   const lang = state.lang;
   const names = eaten.map((i) => wordText(i));
-  const enList = joinList(eaten.map((i) => `the ${String(i.en || "").toLowerCase()}`), "and");
+  const enList = joinList(eaten.map((i) => feedEnName(i)), "and");
   const gloss = `${capitalizeFirst(feedTheAnimal("en"))} likes ${enList || "everything"}!`;
 
   let text = gloss;
@@ -6352,10 +6655,14 @@ function romanceIsPlural(word) {
   const w = String(word || "").trim().toLowerCase();
   return /s$/.test(w) && w.length > 3;
 }
+// Spanish gives a feminine noun starting with a stressed "a" the masculine
+// article in the singular: el agua, not la agua. (Las aguas keeps las.)
+const ES_EL_FEM = ["agua", "águila", "alma", "hambre", "ala", "aula"];
 function romanceArticle(word, lang) {
   const fem = romanceIsFeminine(word);
   const plural = romanceIsPlural(word);
   if (lang === "pt") return fem ? (plural ? "as" : "a") : plural ? "os" : "o";
+  if (fem && !plural && ES_EL_FEM.includes(String(word || "").trim().toLowerCase())) return "el";
   return fem ? (plural ? "las" : "la") : plural ? "los" : "el";
 }
 // Mamá and Vovó are names; a role (la hermana, o médico) takes its article.

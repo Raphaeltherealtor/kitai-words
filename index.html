@@ -197,7 +197,7 @@
       <section id="feed-section" class="hidden">
         <div id="feed-tray" class="feed-tray"></div>
         <div id="feed-animal" class="feed-animal">
-          <img id="feed-animal-img" class="feed-animal-img" alt="" />
+          <div id="feed-animal-face" class="feed-animal-img" aria-hidden="true"></div>
           <div id="feed-animal-name" class="feed-animal-name"></div>
           <div id="feed-eaten" class="feed-eaten"></div>
         </div>
@@ -951,6 +951,10 @@
           <label class="reading-field">
             <span class="reading-field-label" data-i18n="im_romaji">Romaji (optional)</span>
             <input type="text" id="reading-romaji" autocomplete="off" placeholder="neko" />
+          </label>
+          <label class="reading-field">
+            <span class="reading-field-label" data-i18n="im_group">Group</span>
+            <select id="reading-category"></select>
           </label>
           <div id="reading-speech-row" class="reading-speech-row hidden">
             <label class="reading-speech-label" for="reading-speech">🔊 Say it as (fixes accent)</label>

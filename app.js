@@ -2128,16 +2128,21 @@ async function fetchWordSuggestions(english, lang) {
     const v = (value || "").trim();
     if (v && !seen.has(v)) { seen.add(v); candidates.push({ value: v, tag }); }
   };
-  // The kanji form (when there is one) is the best thing to *speak*: it lets the
-  // voice's dictionary apply the right pitch accent even if the parent chooses to
-  // *display* the plain kana. Only meaningful when kanji is present.
+  // `speech` used to be the kanji, on the theory that the voice's dictionary
+  // gets the pitch accent right from it. It also has to *guess the reading*,
+  // and it guessed wrong: 消防車 came out しょうほうしゃ, not しょうぼうしゃ —
+  // and since every chip was given that kanji to say, even the HIRAGANA chip
+  // said it wrong. The reading here comes from the translator's romaji, which
+  // is right, so that is what gets spoken. (The homophone picker still speaks
+  // kanji: telling 箸 from 橋 is the whole point there, and its reading comes
+  // from a dictionary rather than a guess.)
   let speech = "";
   if (lang === "ja") {
     let hira = "";
     if (isKanaOnly(native)) hira = kataToHira(native);
     else if (romaji) hira = romajiToHiragana(romaji);
     const kata = hira ? hiraToKata(hira) : "";
-    if (/[一-鿿]/.test(native)) speech = native;
+    if (/[一-鿿]/.test(native)) speech = hira || "";
     push(native, scriptTag(native));
     push(hira, "Hiragana");
     push(kata, "Katakana");
@@ -2319,7 +2324,8 @@ async function renderRichSuggestions(container, english, lang, onPick) {
       const key = c.value + "|" + c.value;
       if (seen.has(key)) return;
       seen.add(key);
-      const sp = tr.speech && /[一-鿿]/.test(tr.speech) ? tr.speech : c.value;
+      // Each chip says what it shows; the kanji chip says its reading.
+      const sp = c.tag === "Kanji" ? tr.speech || c.value : c.value;
       rows.push({ display: c.value, speech: sp, label: c.value, sub: c.tag });
     });
     container.innerHTML = "";

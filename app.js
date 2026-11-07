@@ -95,6 +95,18 @@ const state = {
   // flip; `memoryArmed` gates taps so they only count once the cards are down.
   memoryFlipTimer: null,
   memoryArmed: false,
+  // Feed the Animal: one animal and a tray of food. The voice asks for one of
+  // them at a time; `tray` is where the food sits, `queue` the order it is
+  // asked for, `eaten` what has gone in — which is what the closing sentence
+  // ("the lion likes the apple and the banana") is built from.
+  feed: {
+    active: false,
+    animal: null,
+    tray: [],
+    queue: [],
+    eaten: [],
+    done: false,
+  },
   // Pack the Box: six words chosen so they can make one sentence — someone,
   // somewhere, and things. `queue` is what is left to call, `packed` what is
   // already in the box, `roles` remembers which word is the who and the where
@@ -103,6 +115,7 @@ const state = {
     active: false,
     size: 6,
     queue: [],
+    board: [],
     packed: [],
     roles: { person: null, place: null, objects: [] },
     done: false,
@@ -241,6 +254,9 @@ const I18N = {
     mode_tap: "Listen & Tap", mode_drag: "Drag to Complete", mode_find: "Find It 🔍",
     mode_flash: "Flash Cards 🎴", mode_memory: "Memory 🧠",
     mode_pack: "Pack the Box 📦", pack_again: "📦 Pack another",
+    mode_feed: "Feed the Animal 🦁", feed_again: "🦁 Feed another",
+    fb_yum: "Yum!", fb_feed_no_animal: "No animals in play — switch some on in Parent Settings.",
+    fb_feed_no_food: "Nothing to feed it — switch on some food in Parent Settings.",
     pack_drag_hint: "Drag it into the box",
     mode_kana_tap: "Sound & Pick", mode_alphabet: "Alphabet", mode_quiz: "Quiz",
     flash_finish: "Finish ✓", flash_live_default: "Tap the right picture",
@@ -318,6 +334,9 @@ const I18N = {
     mode_tap: "Escucha y Toca", mode_drag: "Arrastra y Completa", mode_find: "Encuéntralo 🔍",
     mode_flash: "Tarjetas 🎴", mode_memory: "Memoria 🧠",
     mode_pack: "Llena la Caja 📦", pack_again: "📦 Otra caja",
+    mode_feed: "Alimenta al Animal 🦁", feed_again: "🦁 Otro animal",
+    fb_yum: "¡Ñam!", fb_feed_no_animal: "No hay animales en juego — actívalos en Ajustes.",
+    fb_feed_no_food: "No hay comida — activa comida en Ajustes.",
     pack_drag_hint: "Arrástralo a la caja",
     mode_kana_tap: "Sonido y Elige", mode_alphabet: "Alfabeto", mode_quiz: "Prueba",
     flash_finish: "Terminar ✓", flash_live_default: "Toca la imagen correcta",
@@ -395,6 +414,9 @@ const I18N = {
     mode_tap: "Ouça e Toque", mode_drag: "Arraste e Complete", mode_find: "Encontre 🔍",
     mode_flash: "Cartões 🎴", mode_memory: "Memória 🧠",
     mode_pack: "Encha a Caixa 📦", pack_again: "📦 Outra caixa",
+    mode_feed: "Alimente o Animal 🦁", feed_again: "🦁 Outro animal",
+    fb_yum: "Nham!", fb_feed_no_animal: "Nenhum animal em jogo — ative nas Configurações.",
+    fb_feed_no_food: "Nada para dar — ative comidas nas Configurações.",
     pack_drag_hint: "Arraste para a caixa",
     mode_kana_tap: "Som e Escolha", mode_alphabet: "Alfabeto", mode_quiz: "Quiz",
     flash_finish: "Terminar ✓", flash_live_default: "Toque na imagem certa",
@@ -472,6 +494,9 @@ const I18N = {
     mode_tap: "きいて タッチ", mode_drag: "ドラッグで かんせい", mode_find: "さがそう 🔍",
     mode_flash: "フラッシュカード 🎴", mode_memory: "きおくゲーム 🧠",
     mode_pack: "はこに いれよう 📦", pack_again: "📦 もういちど",
+    mode_feed: "どうぶつに あげよう 🦁", feed_again: "🦁 つぎの どうぶつ",
+    fb_yum: "おいしい！", fb_feed_no_animal: "どうぶつが オフです。せっていで オンに してね。",
+    fb_feed_no_food: "たべものが ありません。せっていで オンに してね。",
     pack_drag_hint: "はこに いれてね",
     mode_kana_tap: "おと で えらぶ", mode_alphabet: "あいうえお", mode_quiz: "クイズ",
     flash_finish: "おわり ✓", flash_live_default: "ただしい えを タッチ",
@@ -549,6 +574,9 @@ const I18N = {
     mode_tap: "듣고 터치", mode_drag: "끌어서 완성", mode_find: "찾아봐 🔍",
     mode_flash: "플래시 카드 🎴", mode_memory: "기억 게임 🧠",
     mode_pack: "상자에 담기 📦", pack_again: "📦 한 번 더",
+    mode_feed: "동물에게 주기 🦁", feed_again: "🦁 다른 동물",
+    fb_yum: "냠냠!", fb_feed_no_animal: "동물이 꺼져 있어요. 부모 설정에서 켜 주세요.",
+    fb_feed_no_food: "줄 음식이 없어요. 부모 설정에서 켜 주세요.",
     pack_drag_hint: "상자에 넣어요",
     mode_kana_tap: "소리로 고르기", mode_alphabet: "글자", mode_quiz: "퀴즈",
     flash_finish: "끝내기 ✓", flash_live_default: "맞는 그림을 터치",
@@ -717,6 +745,18 @@ const els = {
   addWordForm: document.getElementById("add-word-form"),
   speakBtn: document.getElementById("speak-btn"),
   dropzoneSection: document.getElementById("dropzone-section"),
+  feedSection: document.getElementById("feed-section"),
+  feedTray: document.getElementById("feed-tray"),
+  feedAnimal: document.getElementById("feed-animal"),
+  feedAnimalImg: document.getElementById("feed-animal-img"),
+  feedAnimalName: document.getElementById("feed-animal-name"),
+  feedEaten: document.getElementById("feed-eaten"),
+  feedSentence: document.getElementById("feed-sentence"),
+  feedSentenceWords: document.getElementById("feed-sentence-words"),
+  feedSentenceText: document.getElementById("feed-sentence-text"),
+  feedSentenceGloss: document.getElementById("feed-sentence-gloss"),
+  feedSay: document.getElementById("feed-say"),
+  feedAgain: document.getElementById("feed-again"),
   packSection: document.getElementById("pack-section"),
   packGrid: document.getElementById("pack-grid"),
   packBox: document.getElementById("pack-box"),
@@ -843,6 +883,7 @@ const els = {
   flashAgain: document.getElementById("flash-again"),
   flashHome: document.getElementById("flash-home"),
   lockButton: document.getElementById("lock-button"),
+  dockLock: document.getElementById("dock-lock"),
   lockBadge: document.getElementById("lock-badge"),
   lockRingFill: document.getElementById("lock-ring-fill"),
   catAddClose: document.getElementById("cat-add-close"),
@@ -1034,7 +1075,7 @@ function setHideCardWords(hidden) {
 // a word, the kana tracks and the sentence builder are *about* the letters.
 function viewHasCardWords() {
   if (state.currentTrack === "vocab") {
-    return ["tap", "find", "flash", "memory", "pack"].includes(state.currentGameType);
+    return ["tap", "find", "flash", "memory", "pack", "feed"].includes(state.currentGameType);
   }
   if (state.currentTrack === "colors") return true;
   if (state.currentTrack === "prepositions") return state.currentGameType === "prep-tap";
@@ -3595,6 +3636,8 @@ function bindUI() {
     if (state.currentGameType === "flash") startFlashSession();
     else if (state.currentGameType === "memory") startMemorySession();
     else if (state.currentGameType === "pack") startPackSession();
+    else if (state.currentGameType === "feed") startFeedSession();
+  else if (state.currentGameType === "feed") startFeedSession();
     else startRound();
   });
 
@@ -3637,6 +3680,9 @@ function bindUI() {
       if (state.currentGameType === "flash") startFlashSession();
       else if (state.currentGameType === "memory") startMemorySession();
       else if (state.currentGameType === "pack") startPackSession();
+      else if (state.currentGameType === "feed") startFeedSession();
+    else if (state.currentGameType === "feed") startFeedSession();
+  else if (state.currentGameType === "feed") startFeedSession();
       else startRound();
     });
   }
@@ -3653,6 +3699,8 @@ function bindUI() {
 
   if (els.packSay) onTap(els.packSay, () => speakPackSentence());
   if (els.packAgain) onTap(els.packAgain, () => { stopFireworks(); startPackSession(); });
+  if (els.feedSay) onTap(els.feedSay, () => speakFeedSentence());
+  if (els.feedAgain) onTap(els.feedAgain, () => { stopFireworks(); startFeedSession(); });
   // The gear in the dock: the header one is out of reach mid-game.
   if (els.dockSettings) onTap(els.dockSettings, showSettings);
 
@@ -3814,10 +3862,12 @@ function bindUI() {
       btn.classList.add("active");
       state.currentGameType = btn.dataset.gametype;
       if (state.currentGameType !== "pack") state.pack.active = false;
+      if (state.currentGameType !== "feed") state.feed.active = false;
       if (state.currentGameType === "find") resetFindSession();
       if (state.currentGameType === "flash") { startFlashSession(); return; }
       if (state.currentGameType === "memory") { startMemorySession(); return; }
       if (state.currentGameType === "pack") { startPackSession(); return; }
+      if (state.currentGameType === "feed") { startFeedSession(); return; }
       if (state.currentGameType === "articles") state.lessonIndex = 0;
       startRound();
     });
@@ -3940,6 +3990,7 @@ function bindUI() {
   }
 
   if (els.lockButton) onTap(els.lockButton, () => lockApp());
+  if (els.dockLock) onTap(els.dockLock, () => lockApp());
   if (els.lockBadge) {
     els.lockBadge.addEventListener("pointerdown", beginUnlockHold);
     els.lockBadge.addEventListener("pointerup", endUnlockHold);
@@ -3949,7 +4000,7 @@ function bindUI() {
   }
   // Re-grab the wake lock when the tab becomes visible again (it's dropped on hide).
   document.addEventListener("visibilitychange", () => {
-    if (state.locked && document.visibilityState === "visible") requestWakeLock();
+    if (document.visibilityState === "visible") syncWakeLock();
   });
 
   buildFindCountBar();
@@ -5125,8 +5176,10 @@ function setActiveModeButton(type) {
 
 function updateModeButtonsForTrack(track) {
   closeCategoryMenu(true);
-  const [btn1, btn2, btn3, btn4, btn5, btn6] = els.modeButtons;
-  state.pack.active = false; // a track change ends any half-packed box
+  const [btn1, btn2, btn3, btn4, btn5, btn6, btn7] = els.modeButtons;
+  // A track change ends any half-packed box or half-fed animal.
+  state.pack.active = false;
+  state.feed.active = false;
   // The grammar tracks have nothing to say in the context slot, and a bar that
   // narrow turns "Prepositions" into "P.".
   if (els.playBar) {
@@ -5170,6 +5223,12 @@ function updateModeButtonsForTrack(track) {
       btn6.classList.remove("hidden");
       btn6.disabled = false;
     }
+    if (btn7) {
+      btn7.dataset.gametype = "feed";
+      btn7.textContent = t("mode_feed");
+      btn7.classList.remove("hidden");
+      btn7.disabled = false;
+    }
     state.currentGameType = "tap";
     setActiveModeButton("tap");
   } else if (track === "hiragana" || track === "katakana") {
@@ -5195,7 +5254,7 @@ function updateModeButtonsForTrack(track) {
       btn4.classList.remove("hidden");
       btn4.disabled = false;
     }
-    [btn5, btn6].forEach((b) => b && b.classList.add("hidden"));
+    [btn5, btn6, btn7].forEach((b) => b && b.classList.add("hidden"));
     state.currentGameType = "kana-tap";
     setActiveModeButton("kana-tap");
   } else if (track === "colors") {
@@ -5211,7 +5270,7 @@ function updateModeButtonsForTrack(track) {
     btn2.textContent = t("mode_color_shape");
     btn2.classList.remove("hidden");
     btn2.disabled = false;
-    [btn3, btn4, btn5, btn6].forEach((b) => b && b.classList.add("hidden"));
+    [btn3, btn4, btn5, btn6, btn7].forEach((b) => b && b.classList.add("hidden"));
     state.currentGameType = "color-only";
     setActiveModeButton("color-only");
   } else if (track === "prepositions" || track === "sentences") {
@@ -5229,7 +5288,7 @@ function updateModeButtonsForTrack(track) {
     btn2.textContent = t(track === "prepositions" ? "mode_prep_drag" : "mode_articles");
     btn2.classList.remove("hidden");
     btn2.disabled = false;
-    [btn3, btn4, btn5, btn6].forEach((b) => { if (b) b.classList.add("hidden"); });
+    [btn3, btn4, btn5, btn6, btn7].forEach((b) => { if (b) b.classList.add("hidden"); });
     state.currentGameType = first;
     setActiveModeButton(first);
   } else {
@@ -5275,6 +5334,7 @@ function restartCurrentSession() {
   if (state.currentGameType === "flash") startFlashSession();
   else if (state.currentGameType === "memory") startMemorySession();
   else if (state.currentGameType === "pack") startPackSession();
+  else if (state.currentGameType === "feed") startFeedSession();
   else startRound();
 }
 
@@ -5301,13 +5361,14 @@ async function lockApp() {
   document.body.classList.add("locked");
   if (els.lockBadge) els.lockBadge.classList.remove("hidden");
   if (els.lockButton) els.lockButton.textContent = "🔒";
+  if (els.dockLock) els.dockLock.textContent = "🔒";
   cancelLongPress();
   try {
     const el = document.documentElement;
     if (el.requestFullscreen) await el.requestFullscreen();
     else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
   } catch (_) {}
-  requestWakeLock();
+  syncWakeLock();
 }
 
 function unlockApp() {
@@ -5315,19 +5376,31 @@ function unlockApp() {
   document.body.classList.remove("locked");
   if (els.lockBadge) els.lockBadge.classList.add("hidden");
   if (els.lockButton) els.lockButton.textContent = "🔓";
+  if (els.dockLock) els.dockLock.textContent = "🔓";
   try {
     if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen();
     else if (document.webkitFullscreenElement && document.webkitExitFullscreen) document.webkitExitFullscreen();
   } catch (_) {}
-  releaseWakeLock();
+  syncWakeLock();
 }
 
 async function requestWakeLock() {
   try {
+    if (state.wakeLock && !state.wakeLock.released) return; // already holding one
     if ("wakeLock" in navigator && navigator.wakeLock && navigator.wakeLock.request) {
       state.wakeLock = await navigator.wakeLock.request("screen");
     }
   } catch (_) {}
+}
+
+// The screen should stay on for the whole of a game, not only under the child
+// lock: a toddler looking at a picture isn't "activity" to the OS, and a screen
+// that dims mid-round ends the game for them. Held while a game is on or the
+// app is locked, dropped otherwise. The OS takes the lock back whenever the tab
+// is hidden, so this is also what the visibility handler calls on the way back.
+function syncWakeLock() {
+  if (state.locked || state.currentSection === "game") requestWakeLock();
+  else releaseWakeLock();
 }
 
 function releaseWakeLock() {
@@ -5427,6 +5500,7 @@ function setPlayChrome(playing) {
   if (els.appHeader) els.appHeader.classList.toggle("hidden", playing);
   if (els.modeDock) els.modeDock.classList.toggle("hidden", !playing);
   if (playing) updatePlayBar();
+  syncWakeLock();
 }
 
 function pickPool() {
@@ -5477,6 +5551,289 @@ function resetFindSession() {
   state.findRepsDone = 0;
 }
 
+// ---- Feed the Animal -------------------------------------------------------
+// One animal at the bottom with its mouth open, a tray of food above it. The
+// voice asks for one — "the lion wants to eat the apple" — and the child drags
+// that one down. The animal chews it and asks for the next. When the tray is
+// empty it says what it liked, which is the whole list of what it was fed.
+//
+// Feeding it the wrong thing is harmless: the animal turns its head away, the
+// food goes back on the tray and the sentence is said again.
+
+const FEED_TRAY_SIZE = 5;
+
+function feedFoodPool(pool) {
+  return pool.filter((i) => PACK_FOOD_CATS.includes(i.categoryId));
+}
+
+function startFeedSession() {
+  state.currentGameType = "feed";
+  setActiveModeButton("feed");
+  showGame();
+  const pool = pickPool();
+  const animals = pool.filter((i) => i.categoryId === "animals");
+  const foods = feedFoodPool(pool);
+  // A hungry animal and at least two things to feed it. If the words in play
+  // have no animals (or nothing to eat), say so rather than improvise.
+  const edible = foods.length >= 2 ? foods : pool.filter((i) => i.categoryId !== "animals");
+  if (!animals.length || edible.length < 2) {
+    hideAllGameViews();
+    showPromptArea(true);
+    els.modeLabel.textContent = t("mode_feed");
+    els.feedback.textContent = animals.length ? t("fb_feed_no_food") : t("fb_feed_no_animal");
+    if (els.promptWord) els.promptWord.textContent = "—";
+    state.feed.active = false;
+    return;
+  }
+  const animal = animals[Math.floor(Math.random() * animals.length)];
+  const tray = shuffle([...edible]).slice(0, Math.min(FEED_TRAY_SIZE, edible.length));
+  state.feed.active = true;
+  state.feed.done = false;
+  state.feed.animal = animal;
+  state.feed.tray = tray;             // where the food sits
+  state.feed.queue = shuffle([...tray]); // the order it is asked for
+  state.feed.eaten = [];
+  nextFeedTarget();
+}
+
+function nextFeedTarget() {
+  if (!state.feed.queue.length) { finishFeedSession(); return; }
+  state.currentTarget = state.feed.queue[0];
+  renderFeedView();
+  speakCurrent();
+}
+
+function feedRemaining() {
+  const eaten = new Set(state.feed.eaten.map((i) => i.id));
+  return (state.feed.tray || []).filter((i) => !eaten.has(i.id));
+}
+
+function renderFeedView() {
+  hideFlashComplete();
+  hideAllGameViews();
+  showPromptArea(true);
+  els.feedSection.classList.remove("hidden");
+  if (els.feedSentence) els.feedSentence.classList.add("hidden");
+  if (els.feedAnimal) els.feedAnimal.classList.remove("hidden");
+  els.modeLabel.textContent = t("mode_feed");
+
+  const animal = state.feed.animal;
+  if (els.feedAnimalImg && animal) {
+    applyItemImage(els.feedAnimalImg, animal);
+    els.feedAnimalImg.alt = animal.en;
+  }
+  if (els.feedAnimalName) {
+    els.feedAnimalName.textContent = state.hideCardWords ? "" : wordText(animal);
+  }
+  // The prompt line is the whole request, not one word: that is the sentence
+  // the child is being asked to understand.
+  els.promptWord.textContent = state.currentTarget ? buildFeedPrompt().text : "—";
+  els.promptWord.classList.add("phrase");
+
+  const tray = els.feedTray;
+  tray.innerHTML = "";
+  const waiting = feedRemaining();
+  tray.style.setProperty("--feed-cols", String(waiting.length >= 4 ? 3 : Math.max(1, waiting.length)));
+  waiting.forEach((item) => {
+    const card = document.createElement("div");
+    card.className = "pack-card feed-card";
+    card.dataset.id = item.id;
+    const img = document.createElement("img");
+    applyItemImage(img, item);
+    img.alt = item.en;
+    img.draggable = false;
+    card.appendChild(img);
+    if (!state.hideCardWords) {
+      const label = document.createElement("div");
+      label.className = "pack-card-label";
+      label.textContent = wordText(item);
+      card.appendChild(label);
+    }
+    card.addEventListener("pointerdown", (e) => {
+      if (state.feed.done) return;
+      startCardDrag(e, card, item, els.feedAnimal, handleFeedDrop);
+    });
+    tray.appendChild(card);
+  });
+  renderFeedEaten();
+  updatePlayBar();
+}
+
+function renderFeedEaten() {
+  if (!els.feedEaten) return;
+  els.feedEaten.innerHTML = "";
+  state.feed.eaten.forEach((item) => {
+    const chip = document.createElement("img");
+    chip.className = "pack-chip";
+    applyItemImage(chip, item);
+    chip.alt = item.en;
+    els.feedEaten.appendChild(chip);
+  });
+}
+
+function handleFeedDrop(item, cardEl) {
+  if (state.feed.done) return;
+  const target = state.currentTarget;
+  if (!target || item.id !== target.id) {
+    // Not what it asked for: the animal turns away, nothing is lost.
+    els.feedback.textContent = t("fb_try_again");
+    buzz();
+    showWrongOverlay();
+    if (els.feedAnimal) {
+      els.feedAnimal.classList.add("refuse");
+      setTimeout(() => els.feedAnimal && els.feedAnimal.classList.remove("refuse"), 500);
+    }
+    if (cardEl) {
+      cardEl.classList.add("reject");
+      setTimeout(() => cardEl.classList.remove("reject"), 400);
+    }
+    setTimeout(() => speakCurrent(), REPEAT_MS);
+    return;
+  }
+  state.feed.queue = state.feed.queue.filter((i) => i.id !== item.id);
+  state.feed.eaten.push(item);
+  els.feedback.textContent = t("fb_yum");
+  playCorrect();
+  if (els.feedAnimal) {
+    els.feedAnimal.classList.add("chew");
+    setTimeout(() => els.feedAnimal && els.feedAnimal.classList.remove("chew"), 600);
+  }
+  if (cardEl) cardEl.classList.add("packed-away");
+  renderFeedEaten();
+  setTimeout(() => {
+    if (state.currentGameType !== "feed") return;
+    nextFeedTarget();
+  }, 620);
+}
+
+function finishFeedSession() {
+  state.feed.done = true;
+  state.currentTarget = null;
+  hideAllGameViews();
+  showPromptArea(false);
+  els.feedSection.classList.remove("hidden");
+  if (els.feedTray) els.feedTray.innerHTML = "";
+  if (els.feedAnimal) els.feedAnimal.classList.add("hidden");
+  renderFeedSentence();
+  playCorrect();
+  launchFireworks();
+  setTimeout(() => speakFeedSentence(), 600);
+  updatePlayBar();
+}
+
+// --- what the animal says ---------------------------------------------------
+// Two sentences: the request, said every round, and the verdict at the end.
+// Same five languages as everywhere else, each with its own frame.
+
+function feedIsEdible(item) {
+  return item && PACK_FOOD_CATS.includes(item.categoryId);
+}
+
+// "the lion" / "el león" / "o leão" — an animal is always a common noun here.
+function feedTheAnimal(lang) {
+  const a = state.feed.animal;
+  if (!a) return "";
+  if (lang === "en") return `the ${String(a.en || "").toLowerCase()}`;
+  return wordText(a);
+}
+
+function buildFeedPrompt() {
+  const animal = state.feed.animal;
+  const food = state.currentTarget;
+  if (!animal || !food) return { text: "", gloss: "" };
+  const lang = state.lang;
+  const eat = feedIsEdible(food);
+  const foodEn = String(food.en || "").toLowerCase();
+  const gloss = eat
+    ? `${capitalizeFirst(feedTheAnimal("en"))} wants to eat the ${foodEn}.`
+    : `${capitalizeFirst(feedTheAnimal("en"))} wants the ${foodEn}.`;
+
+  let text = gloss;
+  const a = wordText(animal);
+  const f = wordText(food);
+  if (lang === "ja") {
+    text = eat ? `${a}は ${f}が たべたいです。` : `${a}は ${f}が ほしいです。`;
+  } else if (lang === "ko") {
+    text = eat
+      ? `${a}${koParticle(a, "은", "는")} ${f}${koParticle(f, "을", "를")} 먹고 싶어요.`
+      : `${a}${koParticle(a, "은", "는")} ${f}${koParticle(f, "이", "가")} 갖고 싶어요.`;
+  } else if (lang === "es" || lang === "pt") {
+    const who = `${romanceArticle(a, lang)} ${a.toLowerCase()}`;
+    const what = `${romanceArticle(f, lang)} ${f.toLowerCase()}`;
+    const wants = lang === "es" ? "quiere" : "quer";
+    const toEat = lang === "es" ? " comer" : " comer";
+    text = `${capitalizeFirst(who)} ${wants}${eat ? toEat : ""} ${what}.`;
+  }
+  return { text, gloss };
+}
+
+function buildFeedSentence() {
+  const animal = state.feed.animal;
+  const eaten = state.feed.eaten;
+  const lang = state.lang;
+  const names = eaten.map((i) => wordText(i));
+  const enList = joinList(eaten.map((i) => `the ${String(i.en || "").toLowerCase()}`), "and");
+  const gloss = `${capitalizeFirst(feedTheAnimal("en"))} likes ${enList || "everything"}!`;
+
+  let text = gloss;
+  const a = wordText(animal);
+  if (lang === "ja") {
+    text = `${a}は ${names.join("と ")}が すきです。`;
+  } else if (lang === "ko") {
+    const last = names[names.length - 1] || "";
+    const joined = names.length > 1
+      ? names.slice(0, -1).map((o) => `${o}${koParticle(o, "과", "와")}`).join(" ") + " " + last
+      : last;
+    text = `${a}${koParticle(a, "은", "는")} ${joined}${koParticle(last, "을", "를")} 좋아해요.`;
+  } else if (lang === "es") {
+    // gustar agrees with what is liked, so one thing takes "gusta".
+    const list = joinList(names.map((n) => `${romanceArticle(n, "es")} ${n.toLowerCase()}`), "y");
+    const art = romanceArticle(a, "es");
+    const who = art === "el" ? `Al ${a.toLowerCase()}` : `A ${art} ${a.toLowerCase()}`;
+    text = `${who} le ${names.length > 1 ? "gustan" : "gusta"} ${list}.`;
+  } else if (lang === "pt") {
+    // gostar de: de + o = do, de + a = da.
+    const list = joinList(
+      names.map((n) => `${romanceArticle(n, "pt") === "a" ? "da" : "do"} ${n.toLowerCase()}`),
+      "e"
+    );
+    const who = `${capitalizeFirst(romanceArticle(a, "pt"))} ${a.toLowerCase()}`;
+    text = `${who} gosta ${list}.`;
+  }
+  return { text, gloss, parts: eaten };
+}
+
+function speakFeedSentence() {
+  synthesize(buildFeedSentence().text, { showErrors: true });
+}
+
+function renderFeedSentence() {
+  const built = buildFeedSentence();
+  if (els.feedSentenceWords) {
+    els.feedSentenceWords.innerHTML = "";
+    [state.feed.animal].concat(built.parts).forEach((item) => {
+      if (!item) return;
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "pack-word";
+      const img = document.createElement("img");
+      applyItemImage(img, item);
+      img.alt = item.en;
+      chip.appendChild(img);
+      const label = document.createElement("span");
+      label.textContent = wordText(item);
+      chip.appendChild(label);
+      onTap(chip, () => synthesize(speechText(item), { showErrors: false }));
+      els.feedSentenceWords.appendChild(chip);
+    });
+  }
+  if (els.feedSentenceText) els.feedSentenceText.textContent = built.text;
+  if (els.feedSentenceGloss) {
+    els.feedSentenceGloss.textContent = state.lang === "en" ? "" : built.gloss;
+  }
+  if (els.feedSentence) els.feedSentence.classList.remove("hidden");
+}
+
 // ---- Pack the Box ----------------------------------------------------------
 // Six pictures and a cardboard box. The app says one word; the child drags
 // that picture into the box. A wrong picture springs back and the word is said
@@ -5522,8 +5879,14 @@ function startPackSession() {
   state.pack.done = false;
   state.pack.size = six.length;
   state.pack.packed = [];
-  state.pack.queue = shuffle([...six]); // called in a different order than they sit
+  // Two orders, deliberately different: `board` is where the pictures sit and
+  // stays put as they leave, `queue` is the order they are called in. One list
+  // doing both jobs meant the word asked for was always the first card on the
+  // left, which a child spots in two rounds and then stops listening.
+  state.pack.board = shuffle([...six]);
+  state.pack.queue = shuffle([...six]);
   state.pack.roles = packRoles(six);
+  state.pack.frame = choosePackFrame(state.pack.roles.objects);
   nextPackTarget();
 }
 
@@ -5569,7 +5932,9 @@ function nextPackTarget() {
 }
 
 function packRemaining() {
-  return state.pack.queue;
+  // Board order, minus whatever is already in the box.
+  const packed = new Set(state.pack.packed.map((i) => i.id));
+  return (state.pack.board || []).filter((i) => !packed.has(i.id));
 }
 
 function renderPackView() {
@@ -5629,61 +5994,82 @@ function updatePackCount() {
 // Same shape as the sentence chips' drag: capture on the document so a fast
 // finger that leaves the card still drags it, and hit-test on release.
 
-let packDrag = { item: null, el: null, startX: 0, startY: 0, pointerId: null, moved: false };
+// Shared by Pack the Box and Feed the Animal: lift a picture, drag it onto a
+// target (a box, an animal), drop. Capture on the document so a fast finger
+// that leaves the card still drags it, and hit-test on release.
+let cardDrag = {
+  item: null, el: null, startX: 0, startY: 0, pointerId: null, moved: false,
+  targetEl: null, onDrop: null,
+};
 
-function packDragStart(e, cardEl, item) {
+function startCardDrag(e, cardEl, item, targetEl, onDrop) {
   if (e.button != null && e.button !== 0) return;
-  if (state.pack.done) return;
   e.preventDefault();
-  packDrag = { item, el: cardEl, startX: e.clientX, startY: e.clientY, pointerId: e.pointerId, moved: false };
-  document.addEventListener("pointermove", packDragMove);
-  document.addEventListener("pointerup", packDragEnd);
-  document.addEventListener("pointercancel", packDragEnd);
+  cardDrag = {
+    item, el: cardEl, startX: e.clientX, startY: e.clientY,
+    pointerId: e.pointerId, moved: false, targetEl, onDrop,
+  };
+  document.addEventListener("pointermove", cardDragMove);
+  document.addEventListener("pointerup", cardDragEnd);
+  document.addEventListener("pointercancel", cardDragEnd);
 }
 
-function packBoxHit(x, y) {
-  if (!els.packBox) return false;
-  const r = els.packBox.getBoundingClientRect();
+function cardDragHit(x, y) {
+  const el = cardDrag.targetEl;
+  if (!el) return false;
+  const r = el.getBoundingClientRect();
   // Generous: a toddler aiming for the box should not need to be accurate.
   const pad = 36;
   return x >= r.left - pad && x <= r.right + pad && y >= r.top - pad && y <= r.bottom + pad;
 }
 
-function packDragMove(e) {
-  if (packDrag.pointerId != null && e.pointerId !== packDrag.pointerId) return;
-  const el = packDrag.el;
+function cardDragMove(e) {
+  if (cardDrag.pointerId != null && e.pointerId !== cardDrag.pointerId) return;
+  const el = cardDrag.el;
   if (!el) return;
-  const dx = e.clientX - packDrag.startX;
-  const dy = e.clientY - packDrag.startY;
-  if (!packDrag.moved) {
+  const dx = e.clientX - cardDrag.startX;
+  const dy = e.clientY - cardDrag.startY;
+  if (!cardDrag.moved) {
     if (Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
-    packDrag.moved = true;
+    cardDrag.moved = true;
     el.classList.add("dragging");
   }
   el.style.transform = `translate(${dx}px, ${dy}px) scale(1.06)`;
-  const over = packBoxHit(e.clientX, e.clientY);
-  if (els.packBox) els.packBox.classList.toggle("over", over);
+  if (cardDrag.targetEl) cardDrag.targetEl.classList.toggle("over", cardDragHit(e.clientX, e.clientY));
 }
 
-function packDragEnd(e) {
-  if (packDrag.pointerId != null && e.pointerId !== packDrag.pointerId) return;
-  document.removeEventListener("pointermove", packDragMove);
-  document.removeEventListener("pointerup", packDragEnd);
-  document.removeEventListener("pointercancel", packDragEnd);
-  const { el, item, moved } = packDrag;
-  packDrag = { item: null, el: null, startX: 0, startY: 0, pointerId: null, moved: false };
-  if (els.packBox) els.packBox.classList.remove("over");
+function cardDragEnd(e) {
+  if (cardDrag.pointerId != null && e.pointerId !== cardDrag.pointerId) return;
+  document.removeEventListener("pointermove", cardDragMove);
+  document.removeEventListener("pointerup", cardDragEnd);
+  document.removeEventListener("pointercancel", cardDragEnd);
+  const { el, item, moved, onDrop, targetEl } = cardDrag;
+  cardDrag = {
+    item: null, el: null, startX: 0, startY: 0, pointerId: null, moved: false,
+    targetEl: null, onDrop: null,
+  };
+  if (targetEl) targetEl.classList.remove("over");
   if (!el) return;
   el.classList.remove("dragging");
   el.style.transform = "";
-  const dropped = moved && e.clientX != null && packBoxHit(e.clientX, e.clientY);
+  const r = targetEl ? targetEl.getBoundingClientRect() : null;
+  const pad = 36;
+  const dropped =
+    moved && e.clientX != null && r &&
+    e.clientX >= r.left - pad && e.clientX <= r.right + pad &&
+    e.clientY >= r.top - pad && e.clientY <= r.bottom + pad;
   if (!dropped) {
     // A tap, or a drag that landed somewhere else: say the word again rather
     // than leave the child wondering what to look for.
     if (!moved) speakCurrent();
     return;
   }
-  handlePackDrop(item, el);
+  if (onDrop) onDrop(item, el);
+}
+
+function packDragStart(e, cardEl, item) {
+  if (state.pack.done) return;
+  startCardDrag(e, cardEl, item, els.packBox, handlePackDrop);
 }
 
 function handlePackDrop(item, cardEl) {
@@ -5798,40 +6184,112 @@ function packEnPerson(item) {
 // Builds both the sentence the voice reads (in the language being taught) and
 // the English underneath it, so a parent who cannot read the kana still knows
 // what was said.
+// Which frames a round can use. The box one was the whole mode at first and
+// got old fast — six words always "put in the box". Now the round picks a
+// frame that suits what it packed: food gets eaten, animals get seen, and the
+// rest get carried, found, wanted or boxed. `needs` is checked against the
+// objects, `place` says how the location attaches (or that it is left out).
+const PACK_FRAMES = [
+  { id: "box", place: "at" },
+  { id: "took", place: "to" },
+  { id: "found", place: "at" },
+  { id: "wants", place: null },
+  { id: "ate", needs: "food", place: "at" },
+  { id: "saw", needs: "animal", place: "at" },
+];
+const PACK_FOOD_CATS = ["food", "fruits", "vegetables"];
+
+function packFrameFits(frame, objects) {
+  if (!objects.length) return frame.id === "box";
+  if (frame.needs === "food") return objects.every((i) => PACK_FOOD_CATS.includes(i.categoryId));
+  if (frame.needs === "animal") return objects.every((i) => i.categoryId === "animals");
+  return true;
+}
+
+function choosePackFrame(objects) {
+  const fits = PACK_FRAMES.filter((f) => packFrameFits(f, objects));
+  // A frame that needs something (ate, saw) is the interesting one when it
+  // fits, so give it two tickets in the draw.
+  const bag = fits.concat(fits.filter((f) => f.needs));
+  return bag[Math.floor(Math.random() * bag.length)] || PACK_FRAMES[0];
+}
+
+// Every language supplies the same six frames; only the joiner and the
+// particles or articles differ.
+const PACK_VERBS = {
+  en: { box: "put", took: "took", found: "found", wants: "wanted", ate: "ate", saw: "saw" },
+  es: {
+    box: ["puso", "pusimos"], took: ["llevó", "llevamos"], found: ["encontró", "encontramos"],
+    wants: ["quería", "queríamos"], ate: ["comió", "comimos"], saw: ["vio", "vimos"],
+  },
+  pt: {
+    box: ["colocou", "colocamos"], took: ["levou", "levamos"], found: ["encontrou", "encontramos"],
+    wants: ["queria", "queríamos"], ate: ["comeu", "comemos"], saw: ["viu", "vimos"],
+  },
+  ja: {
+    box: "はこに いれました", took: "もっていきました", found: "みつけました",
+    wants: "ほしかったです", ate: "たべました", saw: "みました",
+  },
+  ko: {
+    box: "상자에 넣었어요", took: "가져갔어요", found: "찾았어요",
+    wants: "갖고 싶었어요", ate: "먹었어요", saw: "봤어요",
+  },
+};
+
 function buildPackSentence() {
   const { person, place, objects } = state.pack.roles;
+  const frame = state.pack.frame || choosePackFrame(objects);
   const lang = state.lang;
   const w = (item) => wordText(item);
   const objWords = objects.map(w);
-  const objEn = objects.map((i) => String(i.en || "").toLowerCase());
+  const usePlace = place && frame.place;
 
-  const enList = joinList(objEn.map((n) => `the ${n}`), "and");
+  // --- English, which is also the gloss under a non-English sentence ---
+  const objEn = objects.map((i) => String(i.en || "").toLowerCase());
+  const enList = joinList(objEn.map((n) => `the ${n}`), "and") || "everything";
   const enPerson = person ? packEnPerson(person) : "We";
   const placeEn = place ? String(place.en).toLowerCase() : "";
-  const enPlace = place
-    ? ` at ${PACK_BARE_PLACES.includes(placeEn) ? placeEn : `the ${placeEn}`}`
-    : "";
-  const gloss = `${enPerson} put ${enList || "everything"} in the box${enPlace}.`;
+  const enPlaceName = PACK_BARE_PLACES.includes(placeEn) ? placeEn : `the ${placeEn}`;
+  // "took it home", never "took it to home".
+  const enWhere = !usePlace
+    ? ""
+    : frame.place === "to" && placeEn === "home"
+    ? " home"
+    : ` ${frame.place} ${enPlaceName}`;
+  const enVerb = PACK_VERBS.en[frame.id];
+  const gloss =
+    frame.id === "box"
+      ? `${enPerson} put ${enList} in the box${enWhere}.`
+      : `${enPerson} ${enVerb} ${enList}${enWhere}.`;
 
   let text = gloss;
   if (lang === "ja") {
     const bits = [];
-    if (person) bits.push(`${w(person)}が`);
-    if (place) bits.push(`${w(place)}で`);
-    if (objWords.length) bits.push(`${objWords.join("と ")}を`);
-    text = `${bits.join(" ")} はこに いれました。`.replace(/\s+/g, " ").trim();
+    if (person) bits.push(`${w(person)}${frame.id === "wants" ? "は" : "が"}`);
+    // "took" sends things somewhere (に); everything else happens there (で).
+    if (usePlace && frame.place === "at") bits.push(`${w(place)}で`);
+    if (objWords.length) {
+      const list = objWords.join("と ");
+      bits.push(frame.id === "wants" ? `${list}が` : `${list}を`);
+    }
+    if (usePlace && frame.place === "to") bits.push(`${w(place)}に`);
+    text = `${bits.join(" ")} ${PACK_VERBS.ja[frame.id]}。`.replace(/\s+/g, " ").trim();
   } else if (lang === "ko") {
     const bits = [];
-    if (person) bits.push(`${w(person)}${koParticle(w(person), "이", "가")}`);
-    if (place) bits.push(`${w(place)}에서`);
+    if (person) {
+      const p = w(person);
+      bits.push(`${p}${frame.id === "wants" ? koParticle(p, "은", "는") : koParticle(p, "이", "가")}`);
+    }
+    if (usePlace && frame.place === "at") bits.push(`${w(place)}에서`);
     if (objWords.length) {
       const last = objWords[objWords.length - 1];
       const joined = objWords.length > 1
         ? objWords.slice(0, -1).map((o) => `${o}${koParticle(o, "과", "와")}`).join(" ") + " " + last
         : last;
-      bits.push(`${joined}${koParticle(last, "을", "를")}`);
+      bits.push(`${joined}${frame.id === "wants" ? koParticle(last, "이", "가") : koParticle(last, "을", "를")}`);
     }
-    text = `${bits.join(" ")} 상자에 넣었어요.`.trim();
+    if (usePlace && frame.place === "to") bits.push(`${w(place)}에`);
+    text = `${bits.join(" ")} ${PACK_VERBS.ko[frame.id]}.`.trim();
   } else if (lang === "es" || lang === "pt") {
     const theWord = (word) => romanceArticle(word, lang);
     const list = joinList(
@@ -5843,18 +6301,24 @@ function buildPackSentence() {
       const art = romanceArticle(w(person), lang);
       who = `${art.charAt(0).toUpperCase()}${art.slice(1)} ${w(person).toLowerCase()}`;
     }
-    const verb = person ? (lang === "es" ? "puso" : "colocou") : lang === "es" ? "pusimos" : "colocamos";
-    const box = lang === "es" ? "en la caja" : "na caixa";
+    const verb = PACK_VERBS[lang][frame.id][person ? 0 : 1];
     let where = "";
-    if (place) {
+    if (usePlace) {
       const art = theWord(w(place));
       const nm = w(place).toLowerCase();
-      // "en casa", not "en la casa" — the idiom drops the article for home.
-      if (nm === "casa") where = lang === "pt" ? " em casa" : " en casa";
-      // em + a = na, em + o = no. Spanish leaves "en la/el" alone.
-      else where = lang === "pt" ? ` ${art === "a" ? "na" : "no"} ${nm}` : ` en ${art} ${nm}`;
+      if (nm === "casa") {
+        where = frame.place === "to" ? (lang === "es" ? " a casa" : " para casa") : lang === "es" ? " en casa" : " em casa";
+      } else if (frame.place === "to") {
+        // a + el = al in Spanish; Portuguese contracts para + o/a too.
+        where = lang === "es"
+          ? art === "el" ? ` al ${nm}` : ` a ${art} ${nm}`
+          : ` para ${art === "a" ? "a" : "o"} ${nm}`;
+      } else {
+        where = lang === "pt" ? ` ${art === "a" ? "na" : "no"} ${nm}` : ` en ${art} ${nm}`;
+      }
     }
-    text = `${who} ${verb} ${list} ${box}${where}.`;
+    const box = frame.id === "box" ? (lang === "es" ? " en la caja" : " na caixa") : "";
+    text = `${who} ${verb} ${list}${box}${where}.`;
   }
   return { text, gloss, parts: [person, place].filter(Boolean).concat(objects) };
 }
@@ -6843,6 +7307,12 @@ function startRound() {
       speakCurrent();
       return;
     }
+    if (state.currentGameType === "feed") {
+      if (!state.feed.active || state.feed.done) { startFeedSession(); return; }
+      renderFeedView();
+      speakCurrent();
+      return;
+    }
     if (state.currentGameType === "memory") {
       if (!state.flash.active) { startMemorySession(); return; }
       if (!state.flash.deck.length) { showFlashComplete(); return; }
@@ -6873,6 +7343,8 @@ function renderCurrentView() {
       renderMemoryView();
     } else if (state.currentGameType === "pack") {
       renderPackView();
+    } else if (state.currentGameType === "feed") {
+      renderFeedView();
     } else {
       renderDragCompleteView();
     }
@@ -6926,6 +7398,11 @@ function updatePlayBar() {
       round = idx + 1;
       showBar = true;
     }
+  } else if (state.currentGameType === "feed" && state.feed.active && state.feed.tray.length) {
+    const eaten = state.feed.eaten.length;
+    pct = (eaten / state.feed.tray.length) * 100;
+    round = Math.min(eaten + 1, state.feed.tray.length);
+    showBar = true;
   } else if (state.currentGameType === "pack" && state.pack.active && state.pack.size) {
     const packed = state.pack.packed.length;
     pct = (packed / state.pack.size) * 100;
@@ -6967,6 +7444,7 @@ function hideAllGameViews() {
   if (els.alphabetQuizSection) els.alphabetQuizSection.classList.add("hidden");
   if (els.flashBar) els.flashBar.classList.add("hidden");
   if (els.packSection) els.packSection.classList.add("hidden");
+  if (els.feedSection) els.feedSection.classList.add("hidden");
   if (els.prepDragSection) els.prepDragSection.classList.add("hidden");
   if (els.sentenceSection) els.sentenceSection.classList.add("hidden");
   if (els.lessonSection) els.lessonSection.classList.add("hidden");
@@ -8138,6 +8616,12 @@ function speakCurrent() {
     return;
   }
   if (!state.currentTarget) return;
+  // Feed the Animal asks for something in a sentence; the word on its own
+  // ("apple") would not be the thing the child has to understand.
+  if (state.currentGameType === "feed") {
+    const p = buildFeedPrompt();
+    if (p.text) { synthesize(p.text, { showErrors: true }); return; }
+  }
   if (state.currentTrack === "prepositions") {
     const p = state.currentTarget;
     // "Where is it?" asks for the word; "Move the Ball" asks for the whole

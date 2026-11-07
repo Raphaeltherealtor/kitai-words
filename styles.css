@@ -1665,7 +1665,8 @@ main {
 body.locked .header-actions #home-button,
 body.locked .header-actions #parent-button,
 body.locked .header-actions #lock-button,
-body.locked #dock-settings {
+body.locked #dock-settings,
+body.locked #dock-lock {
   display: none;
 }
 body.locked {
@@ -3230,6 +3231,94 @@ body.playing .card img {
    One box on legs in the middle and a labelled place on every side of it. The
    zones are dashed on purpose: a two-year-old needs to see where a thing may
    be dropped, and the labels give the parent the word to say. */
+/* ---- Feed the Animal -----------------------------------------------------
+   The tray of food sits above; the animal waits at the bottom, which is the
+   drop target. Same drag the box mode uses, so a child who has played one
+   already knows this one. */
+#feed-section {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+#feed-section.hidden { display: none; }
+
+/* The food never shrinks to a dot, however little room the tray has. */
+.feed-card img { min-height: 48px; }
+.feed-tray {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--feed-cols, 3), 1fr);
+  grid-auto-rows: 1fr;
+  gap: 10px;
+  align-content: stretch;
+  overflow: hidden;
+}
+
+.feed-animal {
+  position: relative;
+  flex: none;
+  align-self: center;
+  width: min(320px, 90%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 14px 9px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.18);
+  border: 3px dashed rgba(255, 255, 255, 0.45);
+  transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+}
+.feed-animal.hidden { display: none; }
+.feed-animal-img {
+  width: 76px;
+  height: 76px;
+  object-fit: contain;
+  border-radius: 18px;
+  background: var(--card);
+  padding: 4px;
+}
+.feed-animal-name {
+  font-weight: 900;
+  font-size: 1rem;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+.feed-animal-name:empty { display: none; }
+.feed-eaten {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 5px;
+  min-height: 0;
+}
+
+/* Food held over the animal: it leans in, mouth ready. */
+.feed-animal.over {
+  transform: scale(1.06);
+  background: rgba(47, 224, 192, 0.3);
+  border-color: #2fe0c0;
+  border-style: solid;
+}
+.feed-animal.chew { animation: feed-chew 0.6s ease; }
+@keyframes feed-chew {
+  0% { transform: scale(1); }
+  25% { transform: scale(1.1, 0.9); }
+  50% { transform: scale(0.94, 1.08); }
+  75% { transform: scale(1.05, 0.96); }
+  100% { transform: scale(1); }
+}
+/* Wrong food: the animal turns its head away. */
+.feed-animal.refuse .feed-animal-img { animation: feed-refuse 0.5s ease; }
+@keyframes feed-refuse {
+  0%, 100% { transform: rotate(0); }
+  25% { transform: rotate(-16deg) translateX(-8px); }
+  75% { transform: rotate(16deg) translateX(8px); }
+}
+
 /* ---- Pack the Box --------------------------------------------------------
    Pictures on top, a cardboard box at the bottom with its flaps open. The box
    is drawn rather than loaded: it has to recolour with the theme and scale to

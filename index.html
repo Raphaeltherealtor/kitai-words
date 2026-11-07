@@ -60,11 +60,13 @@
       <button data-gametype="kana-alphabet-quiz" class="mode-btn hidden">Quiz</button>
       <button data-gametype="memory" class="mode-btn hidden">Memory 🧠</button>
       <button data-gametype="pack" class="mode-btn hidden">Pack the Box 📦</button>
+      <button data-gametype="feed" class="mode-btn hidden">Feed the Animal 🦁</button>
     </div>
     <div id="flash-bar" class="hidden">
       <button id="flash-finish" class="flash-finish" data-i18n="flash_finish">Finish ✓</button>
     </div>
     <button id="words-peek" class="words-peek hidden" aria-label="Show or hide the words on the pictures" data-i18n-aria="aria_peek">👁</button>
+    <button id="dock-lock" class="dock-settings" aria-label="Child lock" data-i18n-aria="aria_lock">🔓</button>
     <button id="dock-settings" class="dock-settings" aria-label="Parent settings" data-i18n-aria="aria_parent">⚙️</button>
   </div>
 
@@ -184,6 +186,27 @@
           <div class="pack-sentence-actions">
             <button id="pack-say" class="pack-btn">🔊</button>
             <button id="pack-again" class="pack-btn pack-btn-go" data-i18n="pack_again">📦 Pack another</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Feed the Animal: an animal at the bottom with its mouth open and a
+           tray of food above it. The voice asks for one — "the lion wants to
+           eat the apple" — and the child drags that one down to be eaten. -->
+      <section id="feed-section" class="hidden">
+        <div id="feed-tray" class="feed-tray"></div>
+        <div id="feed-animal" class="feed-animal">
+          <img id="feed-animal-img" class="feed-animal-img" alt="" />
+          <div id="feed-animal-name" class="feed-animal-name"></div>
+          <div id="feed-eaten" class="feed-eaten"></div>
+        </div>
+        <div id="feed-sentence" class="pack-sentence feed-sentence hidden">
+          <div id="feed-sentence-words" class="pack-sentence-words"></div>
+          <div id="feed-sentence-text" class="pack-sentence-text"></div>
+          <div id="feed-sentence-gloss" class="pack-sentence-gloss"></div>
+          <div class="pack-sentence-actions">
+            <button id="feed-say" class="pack-btn">🔊</button>
+            <button id="feed-again" class="pack-btn pack-btn-go" data-i18n="feed_again">🦁 Feed another</button>
           </div>
         </div>
       </section>

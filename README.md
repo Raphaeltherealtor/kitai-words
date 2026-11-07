@@ -34,11 +34,20 @@ Open parent settings → **Words** → **＋ Add a word**. You can now:
 ## Pack the Box (vocab mode)
 Six pictures and a cardboard box. The app says one word; the child drags that picture into the box. A wrong picture shakes and springs back and the word is said again, so a guess costs nothing. Each correct one leaves the grid, so the choice narrows as the box fills.
 
-When the box is full, the six words are read back as **one sentence**. The round does not pick its six at random: it reaches for someone (from **People**), somewhere (from **Places**) and four things, so the sentence has a subject, a location and objects — "Okaasan put the lemon, the corn, the milk and the rice in the box at school." Tap any picture on that screen to hear its word again, 🔊 to hear the whole sentence, or **📦 Pack another** for a fresh six.
+When the box is full, the six words are read back as **one sentence**, and which sentence varies: the round picks a frame that suits what it packed — food gets eaten, animals get seen, and the rest get put in the box, carried somewhere, found or wanted. The round does not pick its six at random: it reaches for someone (from **People**), somewhere (from **Places**) and four things, so the sentence has a subject, a location and objects — "Okaasan put the lemon, the corn, the milk and the rice in the box at school." Tap any picture on that screen to hear its word again, 🔊 to hear the whole sentence, or **📦 Pack another** for a fresh six.
 
 - The sentence is built in whichever language the words are in (Japanese, Korean, English, Spanish, Portuguese), each with its own particles or articles, and the English is shown underneath when the words are not English.
 - If **People** or **Places** are switched off in *Words in play* — or the category chip is set to one group — the sentence simply does without that part ("We put the ball and the book in the box at school").
 - It honours the same selection as every other mode, so a box only ever contains words that are in play.
+
+## Feed the Animal (vocab mode)
+An animal waits at the bottom with a tray of food above it. The voice asks for one — "the lion wants to eat the apple" — and the child drags that one down. The animal chews it and asks for the next; the wrong one makes it turn its head away, the food goes back and the request is repeated.
+
+When the tray is empty the animal says what it liked, built from everything it was actually fed: "The elephant likes the mango, the cheese and the tomato." Tap any picture to hear its word, 🔊 for the sentence, or **🦁 Feed another** for a new animal and a new tray.
+
+- Needs at least one animal and two things to feed it among the words in play; it says so plainly if *Words in play* has switched those off.
+- With no food in play it falls back to whatever else is there, and asks for it with "wants" instead of "wants to eat".
+- The closing sentence is built in the language being taught, with its own grammar: 「ぞうは マンゴーと チーズが すきです。」, "Al elefante le gustan el mango y el queso.", "O elefante gosta da manga e do queijo."
 
 ## Choose which words the games use (parents)
 Open parent settings → **Words in play** (also on the **Game** screen). Every category is one row — Animals, Numbers, Things, and any category you made — with a checkbox that summarises it:
